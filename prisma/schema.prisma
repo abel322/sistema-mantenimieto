@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  name          String
+  password      String
+  role          UserRole    @default(TECHNICIAN)
+  workOrders    WorkOrder[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Asset {
+  id              String           @id @default(uuid())
+  name            String
+  code            String           @unique
+  area            AssetArea
+  criticality     Int              @default(2)
+  description     String?
+  imageUrl        String?
+  workOrders      WorkOrder[]
+  maintenanceLogs MaintenanceLog[]
+  failureLogs     FailureLog[]
+  schedules       Schedule[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([area])
+  @@index([code])
+}
+
+model WorkOrder {
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  type         OrderType
+  status       Status        @default(OPEN)
+  priority     Priority      @default(MEDIUM)
+  assetId      String
+  asset        Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  checklist    Json?
+  partsUsed    PartOnOrder[]
+  technicianId String
+  technician   User          @relation(fields: [technicianId], references: [id])
+  images       String[]      @default([])
+  laborHours   Float?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  closedAt     DateTime?
+
+  @@index([status])
+  @@index([assetId])
+  @@index([technicianId])
+}
+
+model Part {
+  id         String        @id @default(uuid())
+  name       String
+  code       String        @unique
+  stock      Int           @default(0)
+  minStock   Int           @default(5)
+  price      Float
+  unit       String        @default("unidad")
+  category   String?
+  workOrders PartOnOrder[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([code])
+}
+
+model PartOnOrder {
+  id          String    @id @default(uuid())
+  workOrderId String
+  partId      String
+  quantity    Int
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  part        Part      @relation(fields: [partId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([workOrderId])
+  @@index([partId])
+}
+
+model Schedule {
+  id            String   @id @default(uuid())
+  assetId       String
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  frequencyDays Int?
+  frequencyType FrequencyType @default(CALENDAR)
+  nextDueDate   DateTime
+  taskTemplate  String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([assetId])
+  @@index([nextDueDate])
+}
+
+model FailureLog {
+  id            String   @id @default(uuid())
+  assetId       String
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  symptom       String
+  rootCause     String?
+  downtimeHours Float    @default(0)
+  reportedAt    DateTime @default(now())
+  resolvedAt    DateTime?
+
+  @@index([assetId])
+  @@index([reportedAt])
+}
+
+model MaintenanceLog {
+  id            String   @id @default(uuid())
+  assetId       String
+  asset         Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  workOrderId   String   @unique
+  summary       String
+  totalCost     Float    @default(0)
+  executionDate DateTime @default(now())
+
+  @@index([assetId])
+  @@index([executionDate])
+}
+
+enum UserRole {
+  ADMIN
+  SUPERVISOR
+  TECHNICIAN
+}
+
+enum AssetArea {
+  EXTRUSION
+  PRINTING
+  SEALING
+  AUXILIARY
+}
+
+enum OrderType {
+  PREVENTIVE
+  CORRECTIVE
+  PREDICTIVE
+}
+
+enum Status {
+  OPEN
+  IN_PROGRESS
+  ON_HOLD
+  CLOSED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FrequencyType {
+  CALENDAR
+  USAGE_HOURS
+  USAGE_METERS
+}
