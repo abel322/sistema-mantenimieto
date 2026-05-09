@@ -1,8 +1,9 @@
+'use client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
-'use client'
+
 
 import { ArrowLeft, AlertTriangle, Wrench, Calendar, FileText } from 'lucide-react'
 import { generateAssetPDF } from '@/lib/pdf-generator'
