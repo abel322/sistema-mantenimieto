@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
 import { InventoryList } from '@/components/inventory/inventory-list'
+export const dynamic = 'force-dynamic';
 
 export default function InventoryPage() {
   return (

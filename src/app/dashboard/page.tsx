@@ -4,6 +4,7 @@ import { RecentWorkOrders } from '@/components/dashboard/recent-work-orders'
 import { TopFailures } from '@/components/dashboard/top-failures'
 import { MaintenanceChart } from '@/components/dashboard/maintenance-chart'
 import { LowStockAlerts } from '@/components/dashboard/low-stock-alerts'
+export const dynamic = 'force-dynamic';
 
 export default function DashboardPage() {
   return (
@@ -11,7 +12,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
       </div>
-      
+
       <Suspense fallback={<div>Cargando estadísticas...</div>}>
         <DashboardStats />
       </Suspense>

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
 import { AssetsList } from '@/components/assets/assets-list'
+export const dynamic = 'force-dynamic';
 
 export default function AssetsPage() {
   return (
