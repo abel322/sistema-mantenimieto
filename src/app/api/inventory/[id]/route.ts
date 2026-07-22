@@ -1,31 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const body = await request.json()
-    const { stock } = body
-
-    const part = await prisma.part.update({
-      where: { id: params.id },
-      data: {
-        stock: Math.max(0, stock), // No permitir stock negativo
-      },
-    })
-
-    return NextResponse.json(part)
-  } catch (error) {
-    console.error('Error updating part:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar el repuesto' },
-      { status: 500 }
-    )
-  }
-}
-
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -58,6 +33,96 @@ export async function GET(
     console.error('Error fetching part:', error)
     return NextResponse.json(
       { error: 'Error al obtener el repuesto' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json()
+    const { stock, adjustment } = body
+
+    let newStock = stock
+
+    if (adjustment !== undefined) {
+      const currentPart = await prisma.part.findUnique({
+        where: { id: params.id },
+        select: { stock: true },
+      })
+      if (!currentPart) {
+        return NextResponse.json({ error: 'Repuesto no encontrado' }, { status: 404 })
+      }
+      newStock = currentPart.stock + adjustment
+    }
+
+    const part = await prisma.part.update({
+      where: { id: params.id },
+      data: {
+        stock: Math.max(0, newStock), // Prevent negative stock
+      },
+    })
+
+    return NextResponse.json(part)
+  } catch (error) {
+    console.error('Error updating part stock:', error)
+    return NextResponse.json(
+      { error: 'Error al actualizar el stock del repuesto' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json()
+    const { name, code, category, stock, minStock, unit, price, location, description } = body
+
+    const part = await prisma.part.update({
+      where: { id: params.id },
+      data: {
+        name,
+        code,
+        category,
+        stock: parseInt(stock) || 0,
+        minStock: parseInt(minStock) || 0,
+        unit,
+        price: parseFloat(price) || 0,
+        location,
+        description,
+      },
+    })
+
+    return NextResponse.json(part)
+  } catch (error) {
+    console.error('Error updating part details:', error)
+    return NextResponse.json(
+      { error: 'Error al editar el repuesto' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await prisma.part.delete({
+      where: { id: params.id },
+    })
+
+    return NextResponse.json({ message: 'Repuesto eliminado exitosamente' })
+  } catch (error) {
+    console.error('Error deleting part:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar el repuesto' },
       { status: 500 }
     )
   }

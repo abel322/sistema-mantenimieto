@@ -45,8 +45,10 @@ async function main() {
   console.log('✅ Usuarios creados')
 
   // Crear activos
-  const extrusora1 = await prisma.asset.create({
-    data: {
+  const extrusora1 = await prisma.asset.upsert({
+    where: { code: 'EXT-01' },
+    update: {},
+    create: {
       name: 'Extrusora 1',
       code: 'EXT-01',
       area: 'EXTRUSION',
@@ -55,8 +57,10 @@ async function main() {
     },
   })
 
-  const extrusora2 = await prisma.asset.create({
-    data: {
+  const extrusora2 = await prisma.asset.upsert({
+    where: { code: 'EXT-02' },
+    update: {},
+    create: {
       name: 'Extrusora 2',
       code: 'EXT-02',
       area: 'EXTRUSION',
@@ -65,8 +69,10 @@ async function main() {
     },
   })
 
-  const impresora1 = await prisma.asset.create({
-    data: {
+  const impresora1 = await prisma.asset.upsert({
+    where: { code: 'IMP-01' },
+    update: {},
+    create: {
       name: 'Impresora Flexográfica 1',
       code: 'IMP-01',
       area: 'PRINTING',
@@ -75,8 +81,10 @@ async function main() {
     },
   })
 
-  const bolsera1 = await prisma.asset.create({
-    data: {
+  const bolsera1 = await prisma.asset.upsert({
+    where: { code: 'SEL-01' },
+    update: {},
+    create: {
       name: 'Bolsera 1',
       code: 'SEL-01',
       area: 'SEALING',
@@ -85,8 +93,10 @@ async function main() {
     },
   })
 
-  const compresor = await prisma.asset.create({
-    data: {
+  const compresor = await prisma.asset.upsert({
+    where: { code: 'AUX-01' },
+    update: {},
+    create: {
       name: 'Compresor Principal',
       code: 'AUX-01',
       area: 'AUXILIARY',
@@ -155,6 +165,7 @@ async function main() {
         category: 'Eléctrico',
       },
     ],
+    skipDuplicates: true,
   })
 
   console.log('✅ Repuestos creados')
@@ -271,6 +282,231 @@ async function main() {
   })
 
   console.log('✅ Logs de fallas creados')
+
+  // Crear Plantillas de Inspección (Checklists)
+  let templateBolseras = await prisma.checklistTemplate.findFirst({
+    where: { title: 'Inspección Preventiva Diaria - Bolseras' },
+    include: { items: true },
+  })
+
+  if (!templateBolseras) {
+    templateBolseras = await prisma.checklistTemplate.create({
+      data: {
+        title: 'Inspección Preventiva Diaria - Bolseras',
+        description: 'Checklist diario de parámetros críticos para máquinas selladoras y cortadoras de bolsas.',
+        assetType: 'SEALING',
+        items: {
+          create: [
+            {
+              label: 'Estado y tensión de cinta teflonada en barra selladora',
+              type: 'BOOLEAN',
+              isRequired: true,
+            },
+            {
+              label: 'Temperatura de barretas de sellado (°C)',
+              type: 'NUMERIC',
+              isRequired: true,
+              minValue: 140,
+              maxValue: 200,
+            },
+            {
+              label: 'Presión de aire en cilindros de corte/impacto (Bar)',
+              type: 'NUMERIC',
+              isRequired: true,
+              minValue: 4,
+              maxValue: 7,
+            },
+            {
+              label: 'Alineación de fotocélula de registro',
+              type: 'BOOLEAN',
+              isRequired: true,
+            },
+          ],
+        },
+      },
+      include: { items: true },
+    })
+  }
+
+  let templateExtrusoras = await prisma.checklistTemplate.findFirst({
+    where: { title: 'Inspección Preventiva Diaria - Extrusoras' },
+    include: { items: true },
+  })
+
+  if (!templateExtrusoras) {
+    templateExtrusoras = await prisma.checklistTemplate.create({
+      data: {
+        title: 'Inspección Preventiva Diaria - Extrusoras',
+        description: 'Verificación diaria de temperaturas, presiones y niveles en extrusoras de plástico.',
+        assetType: 'EXTRUSION',
+        items: {
+          create: [
+            {
+              label: 'Amperaje y temperatura en zonas del cañón (°C)',
+              type: 'NUMERIC',
+              isRequired: true,
+              minValue: 180,
+              maxValue: 240,
+            },
+            {
+              label: 'Presión de masa en el dado/cabezal (PSI)',
+              type: 'NUMERIC',
+              isRequired: true,
+              minValue: 150,
+              maxValue: 300,
+            },
+            {
+              label: 'Nivel de aceite en caja reductora',
+              type: 'BOOLEAN',
+              isRequired: true,
+            },
+          ],
+        },
+      },
+      include: { items: true },
+    })
+  }
+
+  console.log('✅ Plantillas de inspección creadas')
+
+  // Crear una ejecución de ejemplo para demo si no hay ejecuciones
+  const existingExecutionCount = await prisma.checklistExecution.count()
+  if (existingExecutionCount === 0 && templateBolseras) {
+    await prisma.checklistExecution.create({
+      data: {
+        templateId: templateBolseras.id,
+        assetId: bolsera1.id,
+        technicianId: tech1.id,
+        status: 'PASSED',
+        notes: 'Inspección matutina realizada sin novedad.',
+        completedAt: new Date(),
+        responses: {
+          create: templateBolseras.items.map((item) => {
+            if (item.type === 'BOOLEAN') {
+              return { itemId: item.id, valueBoolean: true, isFlagged: false }
+            } else if (item.label.includes('Temperatura')) {
+              return { itemId: item.id, valueNumeric: 165, isFlagged: false }
+            } else {
+              return { itemId: item.id, valueNumeric: 5.5, isFlagged: false }
+            }
+          }),
+        },
+      },
+    })
+    console.log('✅ Ejecución de prueba creada')
+  }
+
+  // Crear Pautas Técnicas / SOPs de Mantenimiento
+  let planBolseras = await prisma.taskPlan.findFirst({
+    where: { title: 'Mantenimiento Preventivo Mensual - Bolseras' },
+  })
+
+  if (!planBolseras) {
+    const teflonPart = await prisma.part.findFirst({ where: { code: 'TEF-001' } })
+    const resPart = await prisma.part.findFirst({ where: { code: 'RES-001' } })
+
+    planBolseras = await prisma.taskPlan.create({
+      data: {
+        title: 'Mantenimiento Preventivo Mensual - Bolseras',
+        description: 'Protocolo estándar de mantenimiento para la barra selladora y corte neumático en máquinas bolseras.',
+        assetType: 'SEALING',
+        frequency: 'MENSUAL',
+        estimatedMinutes: 60,
+        machineStatus: 'STOPPED_LOTO',
+        requiredSkill: 'Mecánico / Electricista',
+        tools: ['Llave Allen set', 'Cepillo de bronce', 'Multímetro'],
+        safetyEquipment: ['Guantes térmicos', 'Lentes de seguridad', 'Tarjeta LOTO'],
+        steps: {
+          create: [
+            {
+              stepNumber: 1,
+              description: 'Aplicar consignación LOTO en tablero principal y corte neumático.',
+              referenceVal: 'Verificar cero energía con multímetro y presiones en 0 Bar',
+              isMandatory: true,
+            },
+            {
+              stepNumber: 2,
+              description: 'Retirar cinta teflonada desgastada y limpiar la barra con cepillo de bronce.',
+              referenceVal: 'Superficie libre de residuos de polietileno quemado',
+              isMandatory: true,
+            },
+            {
+              stepNumber: 3,
+              description: 'Inspeccionar resistencia de barra selladora.',
+              referenceVal: 'Continuidad con multímetro - Referencia: Rango 22-25 Ω',
+              isMandatory: true,
+            },
+            {
+              stepNumber: 4,
+              description: 'Instalar teflón nuevo garantizando tensión uniforme.',
+              referenceVal: 'Superficie lisa sin burbujas ni arrugas',
+              isMandatory: true,
+            },
+          ],
+        },
+        materials: {
+          create: [
+            {
+              partId: teflonPart?.id || null,
+              materialName: 'Cinta teflonada 50mm',
+              quantity: 2.0,
+              unit: 'rollo',
+            },
+            {
+              partId: resPart?.id || null,
+              materialName: 'Resistencia tipo banda 220V',
+              quantity: 1.0,
+              unit: 'pieza',
+            },
+          ],
+        },
+      },
+    })
+  }
+
+  let planExtrusoras = await prisma.taskPlan.findFirst({
+    where: { title: 'Ruta de Inspección y Termografía - Extrusora' },
+  })
+
+  if (!planExtrusoras) {
+    planExtrusoras = await prisma.taskPlan.create({
+      data: {
+        title: 'Ruta de Inspección y Termografía - Extrusora',
+        description: 'Verificación en marcha de puntos calientes en cañón, consumos eléctricos y transmisión.',
+        assetType: 'EXTRUSION',
+        frequency: 'SEMANAL',
+        estimatedMinutes: 30,
+        machineStatus: 'RUNNING',
+        requiredSkill: 'Instrumentista / Termógrafo',
+        tools: ['Cámara/Pistola Termográfica', 'Amperímetro de gancho'],
+        safetyEquipment: ['Lentes de seguridad', 'Calzado dieléctrico'],
+        steps: {
+          create: [
+            {
+              stepNumber: 1,
+              description: 'Medir temperatura de radiación en Zonas de Cañón 1 a 4.',
+              referenceVal: 'Setpoint: 170°C - 190°C (Diferencial máximo: ± 5°C)',
+              isMandatory: true,
+            },
+            {
+              stepNumber: 2,
+              description: 'Verificar amperaje de consumo en motor principal de extrusión.',
+              referenceVal: 'Amperaje nominal < 45A',
+              isMandatory: true,
+            },
+            {
+              stepNumber: 3,
+              description: 'Inspeccionar nivel de aceite en visor de caja reductora.',
+              referenceVal: 'Nivel entre marcas MIN y MAX (Sin fugas visibles)',
+              isMandatory: true,
+            },
+          ],
+        },
+      },
+    })
+  }
+
+  console.log('✅ Pautas técnicas y SOPs creados')
 
   console.log('🎉 Seed completado exitosamente!')
 }

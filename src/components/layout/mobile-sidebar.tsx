@@ -9,6 +9,8 @@ import {
   Package, 
   Boxes, 
   Calendar, 
+  ClipboardCheck,
+  BookOpen,
   FileText,
   X
 } from 'lucide-react'
@@ -42,6 +44,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       active: pathname?.startsWith('/dashboard/assets'),
     },
     {
+      href: '/dashboard/procedures',
+      label: 'Pautas Técnicas',
+      icon: BookOpen,
+      active: pathname?.startsWith('/dashboard/procedures'),
+    },
+    {
       href: '/dashboard/inventory',
       label: 'Inventario',
       icon: Boxes,
@@ -52,6 +60,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       label: 'Programación',
       icon: Calendar,
       active: pathname?.startsWith('/dashboard/schedule'),
+    },
+    {
+      href: '/dashboard/checklists',
+      label: 'Inspecciones',
+      icon: ClipboardCheck,
+      active: pathname?.startsWith('/dashboard/checklists'),
     },
     {
       href: '/dashboard/reports',

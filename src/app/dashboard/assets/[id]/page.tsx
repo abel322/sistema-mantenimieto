@@ -9,23 +9,33 @@ async function getAsset(id: string) {
       workOrders: {
         include: {
           technician: true,
+          partsUsed: {
+            include: { part: true },
+          },
         },
         orderBy: {
           createdAt: 'desc',
         },
-        take: 10,
       },
       failureLogs: {
         orderBy: {
           reportedAt: 'desc',
         },
-        take: 10,
       },
       maintenanceLogs: {
         orderBy: {
           executionDate: 'desc',
         },
-        take: 10,
+      },
+      checklistExecutions: {
+        include: {
+          template: true,
+          technician: true,
+          workOrders: true,
+        },
+        orderBy: {
+          completedAt: 'desc',
+        },
       },
       schedules: {
         where: {

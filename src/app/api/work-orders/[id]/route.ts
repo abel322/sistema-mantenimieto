@@ -1,32 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const body = await request.json()
-    const { status, closedAt } = body
-
-    const workOrder = await prisma.workOrder.update({
-      where: { id: params.id },
-      data: {
-        status,
-        closedAt: closedAt ? new Date(closedAt) : null,
-      },
-    })
-
-    return NextResponse.json(workOrder)
-  } catch (error) {
-    console.error('Error updating work order:', error)
-    return NextResponse.json(
-      { error: 'Error al actualizar la orden de trabajo' },
-      { status: 500 }
-    )
-  }
-}
-
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
@@ -42,6 +16,7 @@ export async function GET(
             part: true,
           },
         },
+        taskPlan: true,
       },
     })
 
@@ -57,6 +32,84 @@ export async function GET(
     console.error('Error fetching work order:', error)
     return NextResponse.json(
       { error: 'Error al obtener la orden de trabajo' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json()
+    const { status, closedAt } = body
+
+    const workOrder = await prisma.workOrder.update({
+      where: { id: params.id },
+      data: {
+        ...(status && { status }),
+        ...(closedAt !== undefined && { closedAt: closedAt ? new Date(closedAt) : null }),
+      },
+    })
+
+    return NextResponse.json(workOrder)
+  } catch (error) {
+    console.error('Error updating work order status:', error)
+    return NextResponse.json(
+      { error: 'Error al actualizar el estado de la orden de trabajo' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json()
+    const { title, description, assetId, priority, type, technicianId, status, laborHours } = body
+
+    const workOrder = await prisma.workOrder.update({
+      where: { id: params.id },
+      data: {
+        title,
+        description,
+        assetId,
+        priority,
+        type,
+        technicianId,
+        status,
+        laborHours: laborHours !== undefined ? parseFloat(laborHours) : undefined,
+        closedAt: status === 'CLOSED' ? new Date() : null,
+      },
+    })
+
+    return NextResponse.json(workOrder)
+  } catch (error) {
+    console.error('Error updating work order details:', error)
+    return NextResponse.json(
+      { error: 'Error al editar la orden de trabajo' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await prisma.workOrder.delete({
+      where: { id: params.id },
+    })
+
+    return NextResponse.json({ message: 'Orden de trabajo eliminada exitosamente' })
+  } catch (error) {
+    console.error('Error deleting work order:', error)
+    return NextResponse.json(
+      { error: 'Error al eliminar la orden de trabajo' },
       { status: 500 }
     )
   }

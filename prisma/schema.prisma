@@ -8,71 +8,80 @@ datasource db {
 }
 
 model User {
-  id            String      @id @default(cuid())
-  email         String      @unique
-  name          String
-  password      String
-  role          UserRole    @default(TECHNICIAN)
-  workOrders    WorkOrder[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                 String               @id @default(cuid())
+  email              String               @unique
+  name               String
+  password           String
+  role               UserRole             @default(TECHNICIAN)
+  workOrders         WorkOrder[]
+  checklistExecutions ChecklistExecution[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 }
 
 model Asset {
-  id              String           @id @default(uuid())
-  name            String
-  code            String           @unique
-  area            AssetArea
-  criticality     Int              @default(2)
-  description     String?
-  imageUrl        String?
-  workOrders      WorkOrder[]
-  maintenanceLogs MaintenanceLog[]
-  failureLogs     FailureLog[]
-  schedules       Schedule[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                  String               @id @default(uuid())
+  name                String
+  code                String               @unique
+  area                AssetArea
+  criticality         Int                  @default(2)
+  description         String?
+  imageUrl            String?
+  workOrders          WorkOrder[]
+  maintenanceLogs     MaintenanceLog[]
+  failureLogs         FailureLog[]
+  schedules           Schedule[]
+  checklistExecutions ChecklistExecution[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   @@index([area])
   @@index([code])
 }
 
 model WorkOrder {
-  id           String        @id @default(cuid())
-  title        String
-  description  String
-  type         OrderType
-  status       Status        @default(OPEN)
-  priority     Priority      @default(MEDIUM)
-  assetId      String
-  asset        Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  checklist    Json?
-  partsUsed    PartOnOrder[]
-  technicianId String
-  technician   User          @relation(fields: [technicianId], references: [id])
-  images       String[]      @default([])
-  laborHours   Float?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  closedAt     DateTime?
+  id                   String              @id @default(cuid())
+  title                String
+  description          String
+  type                 OrderType
+  status               Status              @default(OPEN)
+  priority             Priority            @default(MEDIUM)
+  assetId              String
+  asset                Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  checklist            Json?
+  checklistExecutionId String?
+  checklistExecution   ChecklistExecution? @relation(fields: [checklistExecutionId], references: [id], onDelete: SetNull)
+  taskPlanId           String?
+  taskPlan             TaskPlan?           @relation(fields: [taskPlanId], references: [id], onDelete: SetNull)
+  partsUsed            PartOnOrder[]
+  technicianId         String
+  technician           User                @relation(fields: [technicianId], references: [id])
+  images               String[]            @default([])
+  laborHours           Float?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  closedAt             DateTime?
 
   @@index([status])
   @@index([assetId])
   @@index([technicianId])
+  @@index([checklistExecutionId])
+  @@index([taskPlanId])
 }
 
 model Part {
-  id         String        @id @default(uuid())
-  name       String
-  code       String        @unique
-  stock      Int           @default(0)
-  minStock   Int           @default(5)
-  price      Float
-  unit       String        @default("unidad")
-  category   String?
-  workOrders PartOnOrder[]
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id            String         @id @default(uuid())
+  name          String
+  code          String         @unique
+  stock         Int            @default(0)
+  minStock      Int            @default(5)
+  price         Float
+  unit          String         @default("unidad")
+  category      String?
+  workOrders    PartOnOrder[]
+  planMaterials PlanMaterial[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([code])
 }
@@ -133,6 +142,126 @@ model MaintenanceLog {
   @@index([executionDate])
 }
 
+model ChecklistTemplate {
+  id          String               @id @default(uuid())
+  title       String
+  description String?
+  assetType   String?
+  items       ChecklistItem[]
+  executions  ChecklistExecution[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([assetType])
+}
+
+model ChecklistItem {
+  id            String            @id @default(uuid())
+  templateId    String
+  template      ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  label         String
+  type          ChecklistItemType @default(BOOLEAN)
+  isRequired    Boolean           @default(true)
+  defaultOption String?
+  minValue      Float?
+  maxValue      Float?
+  responses     ChecklistResponse[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([templateId])
+}
+
+model ChecklistExecution {
+  id           String            @id @default(uuid())
+  templateId   String
+  template     ChecklistTemplate @relation(fields: [templateId], references: [id])
+  assetId      String
+  asset        Asset             @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  technicianId String
+  technician   User              @relation(fields: [technicianId], references: [id])
+  status       ExecutionStatus   @default(PASSED)
+  completedAt  DateTime          @default(now())
+  notes        String?
+  responses    ChecklistResponse[]
+  workOrders   WorkOrder[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([assetId])
+  @@index([technicianId])
+  @@index([templateId])
+  @@index([status])
+}
+
+model ChecklistResponse {
+  id           String             @id @default(uuid())
+  executionId  String
+  execution    ChecklistExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  itemId       String
+  item         ChecklistItem      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  valueBoolean Boolean?
+  valueNumeric Float?
+  valueText    String?
+  isFlagged    Boolean            @default(false)
+  notes        String?
+  createdAt    DateTime           @default(now())
+
+  @@index([executionId])
+  @@index([itemId])
+}
+
+model TaskPlan {
+  id               String        @id @default(uuid())
+  title            String
+  description      String?
+  assetType        String
+  frequency        String
+  estimatedMinutes Int
+  machineStatus    MachineStatus @default(STOPPED_LOTO)
+  requiredSkill    String
+  tools            String[]      @default([])
+  safetyEquipment  String[]      @default([])
+  steps            TaskStep[]
+  materials        PlanMaterial[]
+  workOrders       WorkOrder[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([assetType])
+  @@index([frequency])
+}
+
+model TaskStep {
+  id           String   @id @default(uuid())
+  planId       String
+  plan         TaskPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  stepNumber   Int
+  description  String
+  referenceVal String?
+  isMandatory  Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([planId])
+}
+
+model PlanMaterial {
+  id           String   @id @default(uuid())
+  planId       String
+  plan         TaskPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  partId       String?
+  part         Part?    @relation(fields: [partId], references: [id], onDelete: SetNull)
+  materialName String
+  quantity     Float
+  unit         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([planId])
+  @@index([partId])
+}
+
 enum UserRole {
   ADMIN
   SUPERVISOR
@@ -171,3 +300,22 @@ enum FrequencyType {
   USAGE_HOURS
   USAGE_METERS
 }
+
+enum ChecklistItemType {
+  BOOLEAN
+  NUMERIC
+  TEXT
+}
+
+enum ExecutionStatus {
+  PASSED
+  FLAGGED
+  FAILED
+}
+
+enum MachineStatus {
+  STOPPED_LOTO
+  RUNNING
+}
+
+

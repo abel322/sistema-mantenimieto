@@ -9,6 +9,8 @@ import {
   Package, 
   Boxes, 
   Calendar, 
+  ClipboardCheck,
+  BookOpen,
   FileText,
   ChevronLeft,
   ChevronRight
@@ -40,6 +42,12 @@ export function Sidebar() {
       active: pathname?.startsWith('/dashboard/assets'),
     },
     {
+      href: '/dashboard/procedures',
+      label: 'Pautas Técnicas',
+      icon: BookOpen,
+      active: pathname?.startsWith('/dashboard/procedures'),
+    },
+    {
       href: '/dashboard/inventory',
       label: 'Inventario',
       icon: Boxes,
@@ -50,6 +58,12 @@ export function Sidebar() {
       label: 'Programación',
       icon: Calendar,
       active: pathname?.startsWith('/dashboard/schedule'),
+    },
+    {
+      href: '/dashboard/checklists',
+      label: 'Inspecciones',
+      icon: ClipboardCheck,
+      active: pathname?.startsWith('/dashboard/checklists'),
     },
     {
       href: '/dashboard/reports',

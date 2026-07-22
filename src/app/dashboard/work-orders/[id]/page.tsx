@@ -13,6 +13,12 @@ async function getWorkOrder(id: string) {
           part: true,
         },
       },
+      taskPlan: {
+        include: {
+          steps: { orderBy: { stepNumber: 'asc' } },
+          materials: { include: { part: true } },
+        },
+      },
     },
   })
 
