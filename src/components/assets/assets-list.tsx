@@ -17,6 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { getAreaLabel } from '@/lib/constants'
 
 export interface AssetWithCounts {

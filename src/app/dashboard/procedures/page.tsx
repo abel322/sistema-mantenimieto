@@ -23,6 +23,7 @@ import {
   Box, 
   CheckSquare 
 } from 'lucide-react'
+import Link from 'next/link'
 import { PLANT_AREAS } from '@/lib/constants'
 
 export default function ProceduresListPage() {

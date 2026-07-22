@@ -16,6 +16,7 @@ import {
   RefreshCw, 
   SlidersHorizontal 
 } from 'lucide-react'
+import Link from 'next/link'
 import { getAreaLabel } from '@/lib/constants'
 
 export default function ChecklistTemplatesPage() {
