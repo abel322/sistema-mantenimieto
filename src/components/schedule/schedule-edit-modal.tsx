@@ -54,7 +54,7 @@ export function ScheduleEditModal({
       setFrequencyType(schedule.frequencyType)
       setNextDueDate(new Date(schedule.nextDueDate).toISOString().slice(0, 10))
 
-      fetch('/api/assets')
+      fetch('/api/assets', { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => setAssets(Array.isArray(data) ? data : []))
         .catch(console.error)

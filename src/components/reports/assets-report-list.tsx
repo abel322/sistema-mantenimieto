@@ -25,7 +25,7 @@ export function AssetsReportList() {
   const [loading, setLoading] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/assets')
+    fetch('/api/assets', { cache: 'no-store' })
       .then((res) => res.json())
       .then(setAssets)
   }, [])

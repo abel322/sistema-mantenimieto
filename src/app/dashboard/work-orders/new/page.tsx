@@ -1,6 +1,8 @@
 import { WorkOrderForm } from '@/components/work-orders/work-order-form'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 async function getFormData() {
   const [assets, technicians] = await Promise.all([
     prisma.asset.findMany({ orderBy: { name: 'asc' } }),

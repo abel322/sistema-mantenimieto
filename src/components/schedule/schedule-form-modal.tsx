@@ -45,7 +45,7 @@ export function ScheduleFormModal({
         setNextDueDate(new Date().toISOString().slice(0, 10))
       }
 
-      fetch('/api/assets')
+      fetch('/api/assets', { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data) && data.length > 0) {

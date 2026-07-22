@@ -31,6 +31,8 @@ interface Asset {
   area: string
 }
 
+export const dynamic = 'force-dynamic'
+
 function NewInspectionForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -70,8 +72,8 @@ function NewInspectionForm() {
     async function loadData() {
       try {
         const [assetsRes, templatesRes] = await Promise.all([
-          fetch('/api/assets'),
-          fetch('/api/checklists/templates'),
+          fetch('/api/assets', { cache: 'no-store' }),
+          fetch('/api/checklists/templates', { cache: 'no-store' }),
         ])
 
         if (assetsRes.ok && templatesRes.ok) {

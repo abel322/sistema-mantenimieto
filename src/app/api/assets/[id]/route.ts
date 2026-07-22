@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { AssetArea } from '@prisma/client'
+import { revalidatePath } from 'next/cache'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: Request,
@@ -29,7 +32,11 @@ export async function GET(
       )
     }
 
-    return NextResponse.json(asset)
+    return NextResponse.json(asset, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+      },
+    })
   } catch (error) {
     console.error('Error fetching asset:', error)
     return NextResponse.json(
@@ -65,6 +72,16 @@ export async function PUT(
         imageUrl: imageUrl || null,
       },
     })
+
+    // Revalidate paths that display asset options/cards
+    revalidatePath('/dashboard/assets')
+    revalidatePath('/dashboard/activos')
+    revalidatePath('/dashboard/work-orders/new')
+    revalidatePath('/dashboard/work-orders')
+    revalidatePath('/dashboard/schedule/new')
+    revalidatePath('/dashboard/schedule')
+    revalidatePath('/dashboard/checklists/new')
+    revalidatePath('/dashboard/checklists')
 
     return NextResponse.json(updatedAsset)
   } catch (error: any) {
@@ -108,6 +125,16 @@ export async function DELETE(
     await prisma.asset.delete({
       where: { id: params.id },
     })
+
+    // Revalidate all pages with asset dropdowns & listings
+    revalidatePath('/dashboard/assets')
+    revalidatePath('/dashboard/activos')
+    revalidatePath('/dashboard/work-orders/new')
+    revalidatePath('/dashboard/work-orders')
+    revalidatePath('/dashboard/schedule/new')
+    revalidatePath('/dashboard/schedule')
+    revalidatePath('/dashboard/checklists/new')
+    revalidatePath('/dashboard/checklists')
 
     return NextResponse.json({ message: 'Activo eliminado exitosamente' })
   } catch (error) {

@@ -70,7 +70,7 @@ export function AssetsList({ initialAssets }: AssetsListProps) {
   // Fetch assets from API
   const fetchAssets = async () => {
     try {
-      const res = await fetch('/api/assets')
+      const res = await fetch('/api/assets', { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         setAssets(Array.isArray(data) ? data : [])

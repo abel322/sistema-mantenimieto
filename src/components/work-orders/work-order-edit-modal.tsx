@@ -69,7 +69,7 @@ export function WorkOrderEditModal({
       setLaborHours(workOrder.laborHours?.toString() || '0')
 
       // Fetch assets & technicians
-      fetch('/api/assets')
+      fetch('/api/assets', { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => setAssets(Array.isArray(data) ? data : []))
         .catch(console.error)

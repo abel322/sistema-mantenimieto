@@ -1,6 +1,8 @@
 import { ScheduleForm } from '@/components/schedule/schedule-form'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 async function getAssets() {
   return prisma.asset.findMany({ orderBy: { name: 'asc' } })
 }
