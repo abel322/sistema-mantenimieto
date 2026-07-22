@@ -11,6 +11,7 @@ export async function GET(
       include: {
         asset: true,
         technician: true,
+        externalVendor: true,
         partsUsed: {
           include: {
             part: true,
@@ -69,7 +70,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { title, description, assetId, priority, type, technicianId, status, laborHours } = body
+    const { title, description, assetId, priority, type, technicianId, status, laborHours, externalVendorId } = body
 
     const workOrder = await prisma.workOrder.update({
       where: { id: params.id },
@@ -82,6 +83,7 @@ export async function PUT(
         technicianId,
         status,
         laborHours: laborHours !== undefined ? parseFloat(laborHours) : undefined,
+        externalVendorId: externalVendorId || null,
         closedAt: status === 'CLOSED' ? new Date() : null,
       },
     })

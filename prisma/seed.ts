@@ -107,6 +107,54 @@ async function main() {
 
   console.log('✅ Activos creados')
 
+  // Crear proveedores y contratistas externos
+  const supplier1 = await prisma.supplier.create({
+    data: {
+      name: 'TecnoSellos & Teflones',
+      taxId: 'J-30495821-0',
+      category: 'Repuestos Mecánicos',
+      contactName: 'Carlos Mendoza',
+      phone: '+58 414-555-0101',
+      email: 'ventas@tecnosellos.com',
+      address: 'Zona Industrial Paramillo, Galpón 12, San Cristóbal',
+      status: 'ACTIVE',
+      rating: 5,
+      notes: 'Especialista en sellos de teflón, empaquetaduras y resistencias para extrusoras y selladoras.',
+    },
+  })
+
+  const supplier2 = await prisma.supplier.create({
+    data: {
+      name: 'Servicios Electromecánicos Industriales C.A.',
+      taxId: 'J-40192837-4',
+      category: 'Automatización/Electricidad',
+      contactName: 'Ing. Roberto Rivas',
+      phone: '+58 412-555-0202',
+      email: 'contacto@seielectro.com',
+      address: 'Av. Las Industrias, Sector Los Dolores, Valencia',
+      status: 'ACTIVE',
+      rating: 4,
+      notes: 'Servicios de rebobinado de motores, mantenimiento de tableros, PLCs y variadores de frecuencia.',
+    },
+  })
+
+  const supplier3 = await prisma.supplier.create({
+    data: {
+      name: 'Tornería y Mecanizados de Precisión',
+      taxId: 'J-29384756-1',
+      category: 'Mecanizado/Tornería',
+      contactName: 'Pedro Bastidas',
+      phone: '+58 424-555-0303',
+      email: 'torneria.precision@gmail.com',
+      address: 'Calle 4 con Carrera 8, Zona Industrial I, Barquisimeto',
+      status: 'ACTIVE',
+      rating: 5,
+      notes: 'Fabricación y rectificado de rodillos, ejes de transmisión y engranajes industriales de alta precisión.',
+    },
+  })
+
+  console.log('✅ Proveedores creados')
+
   // Crear repuestos
   await prisma.part.createMany({
     data: [
@@ -118,6 +166,7 @@ async function main() {
         price: 450.0,
         unit: 'pieza',
         category: 'Eléctrico',
+        preferredSupplierId: supplier1.id,
       },
       {
         name: 'Cinta teflonada 50mm',
@@ -127,6 +176,7 @@ async function main() {
         price: 280.0,
         unit: 'rollo',
         category: 'Consumible',
+        preferredSupplierId: supplier1.id,
       },
       {
         name: 'Cuchilla de corte industrial',
@@ -136,6 +186,7 @@ async function main() {
         price: 320.0,
         unit: 'pieza',
         category: 'Herramienta',
+        preferredSupplierId: supplier3.id,
       },
       {
         name: 'Malla filtrante 80 mesh',
@@ -163,6 +214,7 @@ async function main() {
         price: 680.0,
         unit: 'pieza',
         category: 'Eléctrico',
+        preferredSupplierId: supplier2.id,
       },
     ],
     skipDuplicates: true,
@@ -173,15 +225,16 @@ async function main() {
   // Crear órdenes de trabajo
   await prisma.workOrder.create({
     data: {
-      title: 'Cambio de resistencias zona 3',
+      title: 'Rebobinado de motor principal Extrusora 1',
       description:
-        'Reemplazar resistencias quemadas en zona de calentamiento 3 del cañón',
+        'Servicio externo de rebobinado y mantenimiento preventivo del motor principal de extrusión.',
       type: 'CORRECTIVE',
       status: 'IN_PROGRESS',
       priority: 'HIGH',
       assetId: extrusora1.id,
       technicianId: tech1.id,
-      laborHours: 2.5,
+      externalVendorId: supplier2.id,
+      laborHours: 8.0,
     },
   })
 

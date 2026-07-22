@@ -16,6 +16,14 @@ import { ShieldAlert, Wrench, Box, CheckSquare, Zap, AlertTriangle, BookOpen } f
 type WorkOrderWithRelations = WorkOrder & {
   asset: Asset
   technician: User
+  externalVendor?: {
+    id: string
+    name: string
+    category: string
+    contactName?: string | null
+    phone?: string | null
+    email?: string | null
+  } | null
   partsUsed: (PartOnOrder & { part: Part })[]
   taskPlan?: {
     id: string
@@ -204,6 +212,21 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
                   {workOrder.technician.name}
                 </p>
               </div>
+              {workOrder.externalVendor && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Contratista / Proveedor Externo
+                  </p>
+                  <p className="text-base md:text-lg font-semibold text-primary">
+                    {workOrder.externalVendor.name}
+                  </p>
+                  {workOrder.externalVendor.phone && (
+                    <p className="text-xs text-muted-foreground">
+                      Tel: {workOrder.externalVendor.phone} {workOrder.externalVendor.contactName ? `(${workOrder.externalVendor.contactName})` : ''}
+                    </p>
+                  )}
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Horas de Trabajo

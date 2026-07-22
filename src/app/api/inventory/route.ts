@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, code, stock, minStock, price, unit, category } = body
+    const { name, code, stock, minStock, price, unit, category, preferredSupplierId } = body
 
     const part = await prisma.part.create({
       data: {
@@ -15,6 +15,7 @@ export async function POST(request: Request) {
         price,
         unit,
         category,
+        preferredSupplierId: preferredSupplierId || null,
       },
     })
 
@@ -32,6 +33,9 @@ export async function GET() {
   try {
     const parts = await prisma.part.findMany({
       orderBy: { name: 'asc' },
+      include: {
+        preferredSupplier: true,
+      },
     })
 
     return NextResponse.json(parts)

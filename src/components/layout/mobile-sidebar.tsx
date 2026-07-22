@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   BookOpen,
   FileText,
+  Truck,
   X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -54,6 +55,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       label: 'Inventario',
       icon: Boxes,
       active: pathname?.startsWith('/dashboard/inventory'),
+    },
+    {
+      href: '/dashboard/suppliers',
+      label: 'Proveedores',
+      icon: Truck,
+      active: pathname?.startsWith('/dashboard/suppliers') || pathname?.startsWith('/dashboard/proveedores'),
     },
     {
       href: '/dashboard/schedule',

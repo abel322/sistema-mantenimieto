@@ -49,6 +49,18 @@ type AssetWithRelations = Asset & {
 
 import { getAreaLabel } from '@/lib/constants'
 
+const areaLabels: Record<string, string> = {
+  SEALING: 'Bolseras / Selladoras',
+  EXTRUSION: 'Extrusoras',
+  PRINTING: 'Impresoras Flexográficas',
+  SLITTING: 'Refilado / Rebobinado',
+  RECYCLING: 'Peletizado / Reciclado',
+  MIXING: 'Mezclado / Mezcladoras',
+  POWER_PLANT: 'Planta Eléctrica / Subestación',
+  AUXILIARY: 'Auxiliares / Compresores',
+  GENERAL: 'General Planta',
+}
+
 interface AssetDetailProps {
   asset: AssetWithRelations
 }

@@ -15,7 +15,8 @@ import {
   Minus,
   Eye,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Truck
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -31,6 +32,11 @@ interface Part {
   price: number
   location?: string | null
   description?: string | null
+  preferredSupplierId?: string | null
+  preferredSupplier?: {
+    id: string
+    name: string
+  } | null
 }
 
 export function InventoryList() {
@@ -225,6 +231,18 @@ export function InventoryList() {
                       {formatCurrency(part.price)}
                     </span>
                   </div>
+
+                  {part.preferredSupplier && (
+                    <div className="flex items-center justify-between text-xs pt-1.5 text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Truck className="w-3 h-3 text-primary shrink-0" />
+                        Proveedor:
+                      </span>
+                      <span className="font-medium text-foreground truncate max-w-[140px]" title={part.preferredSupplier.name}>
+                        {part.preferredSupplier.name}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -20,6 +20,12 @@ interface TechnicianOption {
   role: string
 }
 
+interface SupplierOption {
+  id: string
+  name: string
+  category: string
+}
+
 interface WorkOrderEditModalProps {
   isOpen: boolean
   onClose: () => void
@@ -34,6 +40,7 @@ interface WorkOrderEditModalProps {
     technicianId: string
     status: string
     laborHours?: number | null
+    externalVendorId?: string | null
   }
 }
 
@@ -51,9 +58,11 @@ export function WorkOrderEditModal({
   const [technicianId, setTechnicianId] = useState(workOrder.technicianId)
   const [status, setStatus] = useState(workOrder.status)
   const [laborHours, setLaborHours] = useState(workOrder.laborHours?.toString() || '0')
+  const [externalVendorId, setExternalVendorId] = useState(workOrder.externalVendorId || '')
 
   const [assets, setAssets] = useState<AssetOption[]>([])
   const [technicians, setTechnicians] = useState<TechnicianOption[]>([])
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -67,17 +76,22 @@ export function WorkOrderEditModal({
       setTechnicianId(workOrder.technicianId)
       setStatus(workOrder.status)
       setLaborHours(workOrder.laborHours?.toString() || '0')
+      setExternalVendorId(workOrder.externalVendorId || '')
 
-      // Fetch assets & technicians
+      // Fetch assets & technicians & suppliers
       fetch('/api/assets', { cache: 'no-store' })
         .then((res) => res.json())
         .then((data) => setAssets(Array.isArray(data) ? data : []))
         .catch(console.error)
 
+      fetch('/api/suppliers?status=ACTIVE')
+        .then((res) => res.json())
+        .then((data) => setSuppliers(Array.isArray(data) ? data : []))
+        .catch(console.error)
+
       fetch('/api/work-orders')
         .then((res) => res.json())
         .then((data) => {
-          // Extract technicians from work orders or default list
           if (Array.isArray(data)) {
             const techsMap: Record<string, TechnicianOption> = {}
             data.forEach((wo) => {
@@ -118,6 +132,7 @@ export function WorkOrderEditModal({
           technicianId,
           status,
           laborHours: parseFloat(laborHours) || 0,
+          externalVendorId: externalVendorId || null,
         }),
       })
 
@@ -138,7 +153,7 @@ export function WorkOrderEditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="bg-background border rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-background border rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/40">
           <h3 className="text-lg font-bold">Editar Orden de Trabajo</h3>
@@ -266,18 +281,38 @@ export function WorkOrderEditModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="laborHours" className="font-semibold text-sm">
-              Horas Hombre de Mano de Obra
-            </Label>
-            <Input
-              id="laborHours"
-              type="number"
-              step="0.5"
-              min="0"
-              value={laborHours}
-              onChange={(e) => setLaborHours(e.target.value)}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="laborHours" className="font-semibold text-sm">
+                Horas Hombre de Mano de Obra
+              </Label>
+              <Input
+                id="laborHours"
+                type="number"
+                step="0.5"
+                min="0"
+                value={laborHours}
+                onChange={(e) => setLaborHours(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="externalVendorId" className="font-semibold text-sm">
+                Contratista / Proveedor Externo
+              </Label>
+              <Select
+                id="externalVendorId"
+                value={externalVendorId}
+                onChange={(e) => setExternalVendorId(e.target.value)}
+              >
+                <option value="">-- Sin Contratista --</option>
+                {suppliers.map((sup) => (
+                  <option key={sup.id} value={sup.id}>
+                    {sup.name} ({sup.category})
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
 
           {/* Footer */}

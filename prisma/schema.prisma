@@ -56,6 +56,8 @@ model WorkOrder {
   partsUsed            PartOnOrder[]
   technicianId         String
   technician           User                @relation(fields: [technicianId], references: [id])
+  externalVendorId     String?
+  externalVendor       Supplier?           @relation(fields: [externalVendorId], references: [id], onDelete: SetNull)
   images               String[]            @default([])
   laborHours           Float?
   createdAt            DateTime            @default(now())
@@ -67,23 +69,49 @@ model WorkOrder {
   @@index([technicianId])
   @@index([checklistExecutionId])
   @@index([taskPlanId])
+  @@index([externalVendorId])
 }
 
 model Part {
-  id            String         @id @default(uuid())
-  name          String
-  code          String         @unique
-  stock         Int            @default(0)
-  minStock      Int            @default(5)
-  price         Float
-  unit          String         @default("unidad")
-  category      String?
-  workOrders    PartOnOrder[]
-  planMaterials PlanMaterial[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                  String         @id @default(uuid())
+  name                String
+  code                String         @unique
+  stock               Int            @default(0)
+  minStock            Int            @default(5)
+  price               Float
+  unit                String         @default("unidad")
+  category            String?
+  preferredSupplierId String?
+  preferredSupplier   Supplier?      @relation(fields: [preferredSupplierId], references: [id], onDelete: SetNull)
+  workOrders          PartOnOrder[]
+  planMaterials       PlanMaterial[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   @@index([code])
+  @@index([preferredSupplierId])
+}
+
+model Supplier {
+  id          String      @id @default(uuid())
+  name        String
+  taxId       String?
+  category    String
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  status      String      @default("ACTIVE")
+  rating      Int?
+  notes       String?
+  parts       Part[]
+  workOrders  WorkOrder[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([name])
 }
 
 model PartOnOrder {

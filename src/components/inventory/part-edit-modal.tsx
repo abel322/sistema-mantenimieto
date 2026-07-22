@@ -5,7 +5,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Select } from '@/components/ui/select'
 import { X, Save, Loader2 } from 'lucide-react'
+
+interface SupplierOption {
+  id: string
+  name: string
+  category: string
+}
 
 interface PartEditModalProps {
   isOpen: boolean
@@ -22,6 +29,7 @@ interface PartEditModalProps {
     price: number
     location?: string | null
     description?: string | null
+    preferredSupplierId?: string | null
   }
 }
 
@@ -40,6 +48,10 @@ export function PartEditModal({
   const [price, setPrice] = useState(part.price.toString())
   const [location, setLocation] = useState(part.location || '')
   const [description, setDescription] = useState(part.description || '')
+  const [preferredSupplierId, setPreferredSupplierId] = useState(
+    part.preferredSupplierId || ''
+  )
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -55,6 +67,12 @@ export function PartEditModal({
       setPrice(part.price.toString())
       setLocation(part.location || '')
       setDescription(part.description || '')
+      setPreferredSupplierId(part.preferredSupplierId || '')
+
+      fetch('/api/suppliers?status=ACTIVE')
+        .then((res) => res.json())
+        .then((data) => setSuppliers(Array.isArray(data) ? data : []))
+        .catch(console.error)
     }
   }, [isOpen, part])
 
@@ -85,6 +103,7 @@ export function PartEditModal({
           price: parseFloat(price) || 0,
           location,
           description,
+          preferredSupplierId: preferredSupplierId || null,
         }),
       })
 
@@ -105,7 +124,7 @@ export function PartEditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="bg-background border rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-background border rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/40">
           <h3 className="text-lg font-bold">Editar Repuesto / Insumo</h3>
@@ -218,16 +237,36 @@ export function PartEditModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location" className="font-semibold text-sm">
-              Ubicación en Almacén
-            </Label>
-            <Input
-              id="location"
-              placeholder="Estante A-2, Pasillo 3"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="location" className="font-semibold text-sm">
+                Ubicación en Almacén
+              </Label>
+              <Input
+                id="location"
+                placeholder="Estante A-2, Pasillo 3"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="preferredSupplierId" className="font-semibold text-sm">
+                Proveedor Sugerido / Principal
+              </Label>
+              <Select
+                id="preferredSupplierId"
+                value={preferredSupplierId}
+                onChange={(e) => setPreferredSupplierId(e.target.value)}
+              >
+                <option value="">-- Sin Proveedor --</option>
+                {suppliers.map((sup) => (
+                  <option key={sup.id} value={sup.id}>
+                    {sup.name} ({sup.category})
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

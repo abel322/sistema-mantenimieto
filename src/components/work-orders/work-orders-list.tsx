@@ -31,8 +31,10 @@ interface WorkOrder {
   status: string
   createdAt: string
   laborHours?: number | null
+  externalVendorId?: string | null
   asset: { id: string; name: string; code: string }
   technician: { id: string; name: string; role: string }
+  externalVendor?: { id: string; name: string; category: string } | null
 }
 
 const statusColors: Record<string, any> = {
@@ -237,6 +239,14 @@ export function WorkOrdersList() {
                 <span className="flex items-center gap-1">
                   <strong>Técnico:</strong> {order.technician?.name || 'N/A'}
                 </span>
+                {order.externalVendor && (
+                  <>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="flex items-center gap-1 text-primary font-medium">
+                      <strong>Contratista:</strong> {order.externalVendor.name}
+                    </span>
+                  </>
+                )}
                 <span className="hidden md:inline">•</span>
                 <span className="flex items-center gap-1 font-mono">
                   <strong>Creada:</strong> {formatDateTime(order.createdAt)}

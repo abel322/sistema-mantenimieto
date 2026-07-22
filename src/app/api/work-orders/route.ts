@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { title, description, type, priority, assetId, technicianId } = body
+    const { title, description, type, priority, assetId, technicianId, externalVendorId } = body
 
     const workOrder = await prisma.workOrder.create({
       data: {
@@ -14,6 +14,7 @@ export async function POST(request: Request) {
         priority,
         assetId,
         technicianId,
+        externalVendorId: externalVendorId || null,
       },
     })
 
@@ -33,6 +34,7 @@ export async function GET() {
       include: {
         asset: true,
         technician: true,
+        externalVendor: true,
       },
       orderBy: { createdAt: 'desc' },
     })

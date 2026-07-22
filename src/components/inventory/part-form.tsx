@@ -1,15 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+
+interface SupplierOption {
+  id: string
+  name: string
+  category: string
+}
 
 export function PartForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
+
+  useEffect(() => {
+    fetch('/api/suppliers?status=ACTIVE')
+      .then((res) => res.json())
+      .then((data) => setSuppliers(Array.isArray(data) ? data : []))
+      .catch(console.error)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -24,6 +39,7 @@ export function PartForm() {
       price: parseFloat(formData.get('price') as string),
       unit: formData.get('unit'),
       category: formData.get('category'),
+      preferredSupplierId: formData.get('preferredSupplierId') || null,
     }
 
     try {
@@ -119,7 +135,7 @@ export function PartForm() {
               />
             </div>
 
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="category">Categoría</Label>
               <Input
                 id="category"
@@ -127,9 +143,21 @@ export function PartForm() {
                 placeholder="Ej: Eléctrico, Mecánico, Consumible"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="preferredSupplierId">Proveedor Sugerido / Principal</Label>
+              <Select id="preferredSupplierId" name="preferredSupplierId">
+                <option value="">-- Ninguno / Sin Proveedor --</option>
+                {suppliers.map((sup) => (
+                  <option key={sup.id} value={sup.id}>
+                    {sup.name} ({sup.category})
+                  </option>
+                ))}
+              </Select>
+            </div>
           </div>
 
-          <div className="flex justify-end gap-4">
+          <div className="flex justify-end gap-4 pt-2">
             <Button
               type="button"
               variant="outline"

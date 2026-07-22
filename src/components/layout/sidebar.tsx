@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   BookOpen,
   FileText,
+  Truck,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
@@ -52,6 +53,12 @@ export function Sidebar() {
       label: 'Inventario',
       icon: Boxes,
       active: pathname?.startsWith('/dashboard/inventory'),
+    },
+    {
+      href: '/dashboard/suppliers',
+      label: 'Proveedores',
+      icon: Truck,
+      active: pathname?.startsWith('/dashboard/suppliers') || pathname?.startsWith('/dashboard/proveedores'),
     },
     {
       href: '/dashboard/schedule',

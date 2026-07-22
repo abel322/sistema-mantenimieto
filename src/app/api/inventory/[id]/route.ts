@@ -9,6 +9,7 @@ export async function GET(
     const part = await prisma.part.findUnique({
       where: { id: params.id },
       include: {
+        preferredSupplier: true,
         workOrders: {
           include: {
             workOrder: {
@@ -82,7 +83,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { name, code, category, stock, minStock, unit, price, location, description } = body
+    const { name, code, category, stock, minStock, unit, price, preferredSupplierId } = body
 
     const part = await prisma.part.update({
       where: { id: params.id },
@@ -94,8 +95,7 @@ export async function PUT(
         minStock: parseInt(minStock) || 0,
         unit,
         price: parseFloat(price) || 0,
-        location,
-        description,
+        preferredSupplierId: preferredSupplierId || null,
       },
     })
 
