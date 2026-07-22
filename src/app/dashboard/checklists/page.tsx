@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { ChecklistExecution } from '@/types/checklists'
 import { Button } from '@/components/ui/button'
@@ -76,24 +78,24 @@ export default function ChecklistsDashboardPage() {
     switch (status) {
       case 'PASSED':
         return (
-          <Badge variant="success" className="flex items-center gap-1">
+          <Badge variant="success" className="flex items-center gap-1 text-xs">
             <CheckCircle className="w-3.5 h-3.5" /> Conforme
           </Badge>
         )
       case 'FLAGGED':
         return (
-          <Badge variant="warning" className="flex items-center gap-1">
+          <Badge variant="warning" className="flex items-center gap-1 text-xs">
             <AlertTriangle className="w-3.5 h-3.5" /> Observado
           </Badge>
         )
       case 'FAILED':
         return (
-          <Badge variant="destructive" className="flex items-center gap-1">
+          <Badge variant="destructive" className="flex items-center gap-1 text-xs">
             <XCircle className="w-3.5 h-3.5" /> No Conforme
           </Badge>
         )
       default:
-        return <Badge variant="outline">{status}</Badge>
+        return <Badge variant="outline" className="text-xs">{status}</Badge>
     }
   }
 
@@ -103,23 +105,23 @@ export default function ChecklistsDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <ClipboardCheck className="h-8 w-8 text-primary" /> Inspecciones & Checklists
+            <ClipboardCheck className="h-7 w-7 md:h-8 md:w-8 text-primary" /> Inspecciones & Checklists
           </h2>
           <p className="text-muted-foreground text-sm">
             Control de calidad y mantenimientos rutinarios en activos de planta.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/dashboard/checklists/templates">
-            <Button variant="outline" className="w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <Link href="/dashboard/checklists/templates" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto min-h-[44px] h-11 font-medium">
               <Settings className="mr-2 h-4 w-4" />
               Gestionar Plantillas
             </Button>
           </Link>
 
-          <Link href="/dashboard/checklists/new">
-            <Button className="w-full sm:w-auto">
+          <Link href="/dashboard/checklists/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto min-h-[44px] h-11 font-medium shadow-md">
               <Plus className="mr-2 h-4 w-4" />
               Nueva Inspección
             </Button>
@@ -127,72 +129,72 @@ export default function ChecklistsDashboardPage() {
         </div>
       </div>
 
-      {/* Overview Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-primary">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Inspecciones</CardTitle>
+      {/* Overview Stat Cards - Responsive Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Card className="border-l-4 border-l-primary shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Inspecciones</CardTitle>
             <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalExecutions}</div>
-            <p className="text-xs text-muted-foreground">Ejecutadas en planta</p>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{totalExecutions}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Ejecutadas en planta</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conformes (PASSED)</CardTitle>
+        <Card className="border-l-4 border-l-green-500 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Conformes (PASSED)</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{passedCount}</div>
-            <p className="text-xs text-muted-foreground">Sin anomalías detectadas</p>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{passedCount}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Sin anomalías</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-destructive">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Con Fallas / Alertadas</CardTitle>
+        <Card className="border-l-4 border-l-destructive shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">Con Fallas</CardTitle>
             <XCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{failedCount}</div>
-            <p className="text-xs text-muted-foreground">Requieren atención técnica</p>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-destructive">{failedCount}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Atención técnica</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">OTs Generadas</CardTitle>
+        <Card className="border-l-4 border-l-amber-500 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium">OTs Generadas</CardTitle>
             <Wrench className="h-4 w-4 text-amber-500" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{autoWorkOrdersCount}</div>
-            <p className="text-xs text-muted-foreground">Correctivas automáticas</p>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold text-amber-600">{autoWorkOrdersCount}</div>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Correctivas auto</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and Search Bar */}
-      <Card>
-        <CardContent className="p-4 sm:p-6 space-y-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      <Card className="shadow-sm">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por activo, código, plantilla o técnico..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 w-full"
+                className="pl-9 w-full min-h-[44px] h-11"
               />
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full md:w-48"
+                className="w-full sm:w-48 min-h-[44px] h-11"
               >
                 <option value="ALL">Todos los Estados</option>
                 <option value="PASSED">Conformes (PASSED)</option>
@@ -200,14 +202,109 @@ export default function ChecklistsDashboardPage() {
                 <option value="FLAGGED">Observados (FLAGGED)</option>
               </Select>
 
-              <Button variant="outline" size="icon" onClick={fetchExecutions} title="Recargar">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={fetchExecutions}
+                className="min-h-[44px] min-w-[44px] h-11 w-11 shrink-0"
+                title="Recargar"
+              >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
           </div>
 
-          {/* Executions Table */}
-          <div className="border rounded-md overflow-x-auto">
+          {/* MOBILE CARD VIEW (block md:hidden) */}
+          <div className="block md:hidden space-y-3 pt-2">
+            {loading ? (
+              <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+                <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+                <span>Cargando inspecciones...</span>
+              </div>
+            ) : filteredExecutions.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground border rounded-lg bg-card">
+                No se encontraron inspecciones registradas.
+              </div>
+            ) : (
+              filteredExecutions.map((execution) => (
+                <Card key={execution.id} className="shadow-sm border hover:border-primary/40 transition-colors">
+                  <CardContent className="p-4 space-y-3">
+                    {/* Header: Fecha/Hora & Status Badge */}
+                    <div className="flex items-center justify-between gap-2 border-b pb-2.5">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        {new Date(execution.completedAt).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                      <div className="shrink-0">{getStatusBadge(execution.status)}</div>
+                    </div>
+
+                    {/* Body */}
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <p className="font-bold text-base text-foreground leading-tight">
+                          {execution.asset?.name || 'Activo'}
+                        </p>
+                        <p className="text-xs font-mono text-muted-foreground">
+                          {execution.asset?.code}
+                        </p>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Plantilla:</span>{' '}
+                        {execution.template?.title || 'Inspección'}
+                      </div>
+
+                      <div className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Técnico:</span>{' '}
+                        {execution.technician?.name || 'Técnico'}
+                      </div>
+
+                      {execution.workOrders && execution.workOrders.length > 0 && (
+                        <div className="pt-1">
+                          <Link href="/dashboard/work-orders">
+                            <Badge
+                              variant="destructive"
+                              className="cursor-pointer hover:underline inline-flex items-center gap-1 text-xs"
+                            >
+                              <Wrench className="w-3 h-3" /> OT Automática Generada
+                            </Badge>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="pt-3 border-t flex flex-col sm:flex-row gap-2">
+                      <Button
+                        variant="outline"
+                        className="w-full min-h-[44px] h-11 text-sm font-semibold flex items-center justify-center gap-2"
+                        onClick={() => setSelectedExecution(execution)}
+                      >
+                        <Eye className="w-4 h-4" /> Ver Detalle
+                      </Button>
+                      <Link href="/dashboard/checklists/new" className="w-full">
+                        <Button
+                          variant="default"
+                          className="w-full min-h-[44px] h-11 text-sm font-semibold flex items-center justify-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" /> Ejecutar Nueva
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* DESKTOP TABLE VIEW (hidden md:block) */}
+          <div className="hidden md:block border rounded-md overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
                 <tr>
@@ -281,6 +378,7 @@ export default function ChecklistsDashboardPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="min-h-[36px]"
                           onClick={() => setSelectedExecution(execution)}
                         >
                           <Eye className="w-4 h-4 mr-1" /> Ver Detalle
