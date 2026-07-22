@@ -16,7 +16,7 @@ import {
   RefreshCw, 
   SlidersHorizontal 
 } from 'lucide-react'
-import Link from 'next/link'
+import { getAreaLabel } from '@/lib/constants'
 
 export default function ChecklistTemplatesPage() {
   const [templates, setTemplates] = useState<ChecklistTemplate[]>([])
@@ -131,7 +131,7 @@ export default function ChecklistTemplatesPage() {
               <CardHeader className="space-y-2 pb-3">
                 <div className="flex items-center justify-between">
                   <Badge variant="outline" className="font-mono text-xs">
-                    {tpl.assetType || 'General'}
+                    {getAreaLabel(tpl.assetType)}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     {tpl.items?.length || 0} parámetros

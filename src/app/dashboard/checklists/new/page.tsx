@@ -23,6 +23,7 @@ import {
   X 
 } from 'lucide-react'
 import Link from 'next/link'
+import { getAreaLabel } from '@/lib/constants'
 
 interface Asset {
   id: string
@@ -382,7 +383,7 @@ function NewInspectionForm() {
                   >
                     {assets.map((a) => (
                       <option key={a.id} value={a.id}>
-                        {a.name} ({a.code}) - {a.area}
+                        {a.name} ({a.code}) - {getAreaLabel(a.area)}
                       </option>
                     ))}
                   </Select>

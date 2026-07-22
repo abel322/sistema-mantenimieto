@@ -10,6 +10,8 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertCircle, Loader2 } from 'lucide-react'
 
+import { PLANT_AREAS } from '@/lib/constants'
+
 export interface AssetData {
   id?: string
   name: string
@@ -116,13 +118,14 @@ export function AssetForm({ initialData, onSuccess, onCancel }: AssetFormProps) 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="area">Área *</Label>
+              <Label htmlFor="area">Área / Tipo de Maquinaria *</Label>
               <Select id="area" name="area" defaultValue={initialData?.area || ''} required>
                 <option value="">Seleccionar área</option>
-                <option value="EXTRUSION">Extrusión</option>
-                <option value="PRINTING">Impresión</option>
-                <option value="SEALING">Sellado/Corte</option>
-                <option value="AUXILIARY">Servicios Auxiliares</option>
+                {PLANT_AREAS.map((pa) => (
+                  <option key={pa.value} value={pa.value}>
+                    {pa.label}
+                  </option>
+                ))}
               </Select>
             </div>
 

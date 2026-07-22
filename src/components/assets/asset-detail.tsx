@@ -47,15 +47,10 @@ type AssetWithRelations = Asset & {
   checklistExecutions?: ChecklistExecutionWithRelations[]
 }
 
+import { getAreaLabel } from '@/lib/constants'
+
 interface AssetDetailProps {
   asset: AssetWithRelations
-}
-
-const areaLabels: Record<string, string> = {
-  EXTRUSION: 'Extrusión',
-  PRINTING: 'Impresión',
-  SEALING: 'Sellado/Corte',
-  AUXILIARY: 'Servicios Auxiliares',
 }
 
 const criticalityColors = {
@@ -148,7 +143,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
           </Link>
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{asset.name}</h2>
-            <p className="text-muted-foreground text-sm font-mono">{asset.code} • {areaLabels[asset.area] || asset.area}</p>
+            <p className="text-muted-foreground text-sm font-mono">{asset.code} • {getAreaLabel(asset.area)}</p>
           </div>
         </div>
 

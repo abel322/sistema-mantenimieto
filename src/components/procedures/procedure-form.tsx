@@ -26,6 +26,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { PLANT_AREAS } from '@/lib/constants'
+
 interface InventoryPart {
   id: string
   name: string
@@ -325,11 +327,11 @@ export function ProcedureForm({ initialData, isEdit = false }: ProcedureFormProp
                   value={assetType}
                   onChange={(e) => setAssetType(e.target.value)}
                 >
-                  <option value="SEALING">Bolseras / Selladoras (SEALING)</option>
-                  <option value="EXTRUSION">Extrusoras (EXTRUSION)</option>
-                  <option value="PRINTING">Impresoras Flexográficas (PRINTING)</option>
-                  <option value="AUXILIARY">Auxiliares / Compresores (AUXILIARY)</option>
-                  <option value="GENERAL">General Planta</option>
+                  {PLANT_AREAS.map((pa) => (
+                    <option key={pa.value} value={pa.value}>
+                      {pa.label} ({pa.value})
+                    </option>
+                  ))}
                 </Select>
               </div>
 

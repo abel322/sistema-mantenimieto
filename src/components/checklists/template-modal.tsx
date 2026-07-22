@@ -9,6 +9,8 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { X, Plus, Trash2, Save, Loader2 } from 'lucide-react'
 
+import { PLANT_AREAS } from '@/lib/constants'
+
 interface TemplateModalProps {
   template: ChecklistTemplate | null
   isOpen: boolean
@@ -186,11 +188,11 @@ export function TemplateModal({ template, isOpen, onClose, onSaved }: TemplateMo
                 value={assetType}
                 onChange={(e) => setAssetType(e.target.value)}
               >
-                <option value="SEALING">Bolseras / Selladoras (SEALING)</option>
-                <option value="EXTRUSION">Extrusoras (EXTRUSION)</option>
-                <option value="PRINTING">Impresoras (PRINTING)</option>
-                <option value="AUXILIARY">Auxiliares (AUXILIARY)</option>
-                <option value="GENERAL">General / Toda la planta</option>
+                {PLANT_AREAS.map((pa) => (
+                  <option key={pa.value} value={pa.value}>
+                    {pa.label} ({pa.value})
+                  </option>
+                ))}
               </Select>
             </div>
 

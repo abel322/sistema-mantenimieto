@@ -23,7 +23,7 @@ import {
   Box, 
   CheckSquare 
 } from 'lucide-react'
-import Link from 'next/link'
+import { PLANT_AREAS } from '@/lib/constants'
 
 export default function ProceduresListPage() {
   const [plans, setPlans] = useState<TaskPlan[]>([])
@@ -176,13 +176,14 @@ export default function ProceduresListPage() {
               <Select
                 value={assetTypeFilter}
                 onChange={(e) => setAssetTypeFilter(e.target.value)}
-                className="w-full md:w-44"
+                className="w-full md:w-56"
               >
                 <option value="ALL">Todas las Áreas</option>
-                <option value="SEALING">Bolseras (SEALING)</option>
-                <option value="EXTRUSION">Extrusoras (EXTRUSION)</option>
-                <option value="PRINTING">Impresoras (PRINTING)</option>
-                <option value="AUXILIARY">Auxiliares (AUXILIARY)</option>
+                {PLANT_AREAS.map((pa) => (
+                  <option key={pa.value} value={pa.value}>
+                    {pa.label}
+                  </option>
+                ))}
               </Select>
 
               <Select

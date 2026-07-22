@@ -7,12 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { generateAssetPDF } from '@/lib/pdf-generator'
 
-const areaLabels = {
-  EXTRUSION: 'Extrusión',
-  PRINTING: 'Impresión',
-  SEALING: 'Sellado/Corte',
-  AUXILIARY: 'Servicios Auxiliares',
-}
+import { getAreaLabel } from '@/lib/constants'
 
 const criticalityColors = {
   1: 'secondary',
@@ -63,7 +58,7 @@ export function AssetsReportList() {
               </div>
 
               <p className="text-sm text-muted-foreground">
-                {areaLabels[asset.area as keyof typeof areaLabels]}
+                {getAreaLabel(asset.area)}
               </p>
 
               <Button

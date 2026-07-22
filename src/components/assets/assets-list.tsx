@@ -17,13 +17,13 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { getAreaLabel } from '@/lib/constants'
 
 export interface AssetWithCounts {
   id: string
   name: string
   code: string
-  area: 'EXTRUSION' | 'PRINTING' | 'SEALING' | 'AUXILIARY'
+  area: string
   criticality: number
   description?: string | null
   imageUrl?: string | null
@@ -33,13 +33,6 @@ export interface AssetWithCounts {
     workOrders: number
     failureLogs: number
   }
-}
-
-const areaLabels: Record<string, string> = {
-  EXTRUSION: 'Extrusión',
-  PRINTING: 'Impresión',
-  SEALING: 'Sellado/Corte',
-  AUXILIARY: 'Servicios Auxiliares',
 }
 
 const criticalityColors = {
@@ -224,7 +217,7 @@ export function AssetsList({ initialAssets }: AssetsListProps) {
                       <p>
                         <span className="text-muted-foreground">Área:</span>{' '}
                         <strong className="font-medium">
-                          {areaLabels[asset.area] || asset.area}
+                          {getAreaLabel(asset.area)}
                         </strong>
                       </p>
                       {asset.description && (
