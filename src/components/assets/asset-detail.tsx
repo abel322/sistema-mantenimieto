@@ -20,9 +20,13 @@ import {
   CheckCircle, 
   XCircle, 
   Clock, 
-  Eye 
+  Eye,
+  Pencil,
+  Trash2
 } from 'lucide-react'
 import { generateAssetPDF } from '@/lib/pdf-generator'
+import { AssetEditModal } from '@/components/assets/asset-edit-modal'
+import { AssetDeleteModal } from '@/components/assets/asset-delete-modal'
 import Link from 'next/link'
 import type { Asset, WorkOrder, FailureLog, MaintenanceLog, Schedule, User, PartOnOrder, Part } from '@prisma/client'
 
@@ -84,6 +88,8 @@ export function AssetDetail({ asset }: AssetDetailProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<'info' | 'history' | 'failures' | 'inspections'>('info')
   const [failureModalOpen, setFailureModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
 
   const totalDowntime = asset.failureLogs.reduce(
     (acc, log) => acc + log.downtimeHours,
@@ -151,9 +157,14 @@ export function AssetDetail({ asset }: AssetDetailProps) {
             Criticidad {asset.criticality}
           </Badge>
 
+          <Button variant="outline" size="sm" onClick={() => setEditModalOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4 text-blue-500" />
+            Editar
+          </Button>
+
           <Button variant="outline" size="sm" onClick={handleGeneratePDF}>
             <FileText className="mr-2 h-4 w-4" />
-            Generar PDF
+            PDF
           </Button>
 
           <Button
@@ -162,7 +173,17 @@ export function AssetDetail({ asset }: AssetDetailProps) {
             onClick={() => setFailureModalOpen(true)}
           >
             <AlertTriangle className="mr-2 h-4 w-4" />
-            Registrar Falla / Evento
+            Registrar Falla
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setDeleteModalOpen(true)}
+            title="Eliminar Activo"
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -541,6 +562,27 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         onSuccess={() => {
           router.refresh()
           setActiveTab('failures')
+        }}
+      />
+
+      {/* Edit Modal */}
+      <AssetEditModal
+        isOpen={editModalOpen}
+        asset={asset}
+        onClose={() => setEditModalOpen(false)}
+        onSuccess={() => {
+          router.refresh()
+        }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <AssetDeleteModal
+        isOpen={deleteModalOpen}
+        asset={asset}
+        onClose={() => setDeleteModalOpen(false)}
+        onSuccess={() => {
+          router.push('/dashboard/assets')
+          router.refresh()
         }}
       />
     </div>

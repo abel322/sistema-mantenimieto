@@ -8,37 +8,69 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { AlertCircle, Loader2 } from 'lucide-react'
 
-export function AssetForm() {
+export interface AssetData {
+  id?: string
+  name: string
+  code: string
+  area: string
+  criticality: number
+  description?: string | null
+}
+
+interface AssetFormProps {
+  initialData?: AssetData
+  onSuccess?: () => void
+  onCancel?: () => void
+}
+
+export function AssetForm({ initialData, onSuccess, onCancel }: AssetFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const isEditing = Boolean(initialData?.id)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     const formData = new FormData(e.currentTarget)
     const data = {
-      name: formData.get('name'),
-      code: formData.get('code'),
-      area: formData.get('area'),
+      name: formData.get('name') as string,
+      code: formData.get('code') as string,
+      area: formData.get('area') as string,
       criticality: parseInt(formData.get('criticality') as string),
-      description: formData.get('description'),
+      description: formData.get('description') as string,
     }
 
     try {
-      const response = await fetch('/api/assets', {
-        method: 'POST',
+      const url = isEditing ? `/api/assets/${initialData?.id}` : '/api/assets'
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
 
-      if (response.ok) {
+      const resData = await response.json()
+
+      if (!response.ok) {
+        throw new Error(resData.error || 'Ocurrió un error al guardar el activo')
+      }
+
+      if (onSuccess) {
+        onSuccess()
+      } else {
         router.push('/dashboard/assets')
         router.refresh()
       }
-    } catch (error) {
-      console.error('Error creating asset:', error)
+    } catch (err: any) {
+      console.error('Error saving asset:', err)
+      setError(err.message || 'Error al guardar el activo')
     } finally {
       setLoading(false)
     }
@@ -47,26 +79,37 @@ export function AssetForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Información del Activo</CardTitle>
+        <CardTitle>
+          {isEditing ? `Editar Activo: ${initialData?.name}` : 'Información del Activo'}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="p-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded-md dark:bg-red-950/50 dark:border-red-800 dark:text-red-300 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre *</Label>
               <Input
                 id="name"
                 name="name"
+                defaultValue={initialData?.name || ''}
                 placeholder="Ej: Extrusora 1"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="code">Código *</Label>
+              <Label htmlFor="code">Código / TAG *</Label>
               <Input
                 id="code"
                 name="code"
+                defaultValue={initialData?.code || ''}
                 placeholder="Ej: EXT-01"
                 required
               />
@@ -74,7 +117,7 @@ export function AssetForm() {
 
             <div className="space-y-2">
               <Label htmlFor="area">Área *</Label>
-              <Select id="area" name="area" required>
+              <Select id="area" name="area" defaultValue={initialData?.area || ''} required>
                 <option value="">Seleccionar área</option>
                 <option value="EXTRUSION">Extrusión</option>
                 <option value="PRINTING">Impresión</option>
@@ -85,11 +128,16 @@ export function AssetForm() {
 
             <div className="space-y-2">
               <Label htmlFor="criticality">Criticidad *</Label>
-              <Select id="criticality" name="criticality" required>
+              <Select
+                id="criticality"
+                name="criticality"
+                defaultValue={initialData?.criticality ? String(initialData.criticality) : ''}
+                required
+              >
                 <option value="">Seleccionar criticidad</option>
-                <option value="1">1 - Baja</option>
-                <option value="2">2 - Media</option>
-                <option value="3">3 - Alta</option>
+                <option value="1">Criticidad 1 (Baja)</option>
+                <option value="2">Criticidad 2 (Media)</option>
+                <option value="3">Criticidad 3 (Alta)</option>
               </Select>
             </div>
           </div>
@@ -99,21 +147,32 @@ export function AssetForm() {
             <Textarea
               id="description"
               name="description"
+              defaultValue={initialData?.description || ''}
               placeholder="Describe el activo..."
               rows={4}
             />
           </div>
 
-          <div className="flex justify-end gap-4">
+          <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.back()}
+              onClick={() => (onCancel ? onCancel() : router.back())}
+              disabled={loading}
             >
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creando...' : 'Crear Activo'}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {isEditing ? 'Guardando...' : 'Creando...'}
+                </>
+              ) : isEditing ? (
+                'Guardar Cambios'
+              ) : (
+                'Crear Activo'
+              )}
             </Button>
           </div>
         </form>
