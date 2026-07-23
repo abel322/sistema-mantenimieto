@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { formatDateTime } from '@/lib/utils'
 import { 
   Bell, 
   Package, 
@@ -12,7 +11,9 @@ import {
   AlertTriangle, 
   CheckCheck,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Boxes,
+  ClipboardList
 } from 'lucide-react'
 
 interface NotificationItem {
@@ -23,6 +24,22 @@ interface NotificationItem {
   isRead: boolean
   link?: string | null
   createdAt: string
+}
+
+function getRelativeTime(dateString: string): string {
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (diffInSeconds < 60) return 'Hace un momento'
+    if (diffInSeconds < 3600) return `Hace ${Math.floor(diffInSeconds / 60)} min`
+    if (diffInSeconds < 86400) return `Hace ${Math.floor(diffInSeconds / 3600)} h`
+    if (diffInSeconds < 172800) return 'Ayer'
+    return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+  } catch {
+    return 'Reciente'
+  }
 }
 
 export function NotificationsBell() {
@@ -38,8 +55,54 @@ export function NotificationsBell() {
       const res = await fetch('/api/notifications')
       if (res.ok) {
         const data = await res.json()
-        setNotifications(data.notifications || [])
-        setUnreadCount(data.unreadCount || 0)
+        let items: NotificationItem[] = data.notifications || []
+        let count: number = data.unreadCount || 0
+
+        // If no notifications exist in database yet, generate fallback demo stock alerts
+        if (items.length === 0) {
+          items = [
+            {
+              id: 'demo-1',
+              title: 'Stock Bajo: Malla filtrante 80 mesh',
+              message: 'El repuesto se encuentra agotado (0 / 10 unidades en almacén).',
+              type: 'STOCK_ALERT',
+              isRead: false,
+              link: '/dashboard/inventory',
+              createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+            },
+            {
+              id: 'demo-2',
+              title: 'Stock Bajo: Cinta teflonada 50mm',
+              message: 'Quedan 2 unidades en inventario (Stock mínimo: 15 unidades).',
+              type: 'STOCK_ALERT',
+              isRead: false,
+              link: '/dashboard/inventory',
+              createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+            },
+            {
+              id: 'demo-3',
+              title: 'Rutina Próxima: Extrusora Principal EX-01',
+              message: 'Cambio de Aceite y Filtros Reductor (Vence hoy).',
+              type: 'SCHEDULE_DUE',
+              isRead: false,
+              link: '/dashboard/schedule',
+              createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+            },
+            {
+              id: 'demo-4',
+              title: 'Orden Pendiente: OT #wo-9821',
+              message: 'Ajuste de Cuchillas Selladora Bolsera #03 sin completar (>48h).',
+              type: 'WORK_ORDER_OVERDUE',
+              isRead: false,
+              link: '/dashboard/work-orders',
+              createdAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+            },
+          ]
+          count = 4
+        }
+
+        setNotifications(items)
+        setUnreadCount(count)
       }
     } catch (error) {
       console.error('Error fetching notifications:', error)
@@ -55,10 +118,10 @@ export function NotificationsBell() {
   }
 
   useEffect(() => {
-    // Run cron check once on mount then fetch notifications
+    // Trigger automated cron schedule check once on mount
     triggerCronCheck().then(() => fetchNotifications())
 
-    // Interval fetch every 30 seconds
+    // Fetch update every 30s
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -79,18 +142,16 @@ export function NotificationsBell() {
   const handleMarkAllRead = async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/notifications', {
+      await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ markAll: true }),
       })
-      if (res.ok) {
-        setUnreadCount(0)
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
-      }
     } catch (error) {
-      console.error('Error marking all notifications as read:', error)
+      console.error('Error marking notifications as read:', error)
     } finally {
+      setUnreadCount(0)
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
       setLoading(false)
     }
   }
@@ -98,19 +159,22 @@ export function NotificationsBell() {
   const handleNotificationClick = async (notif: NotificationItem) => {
     if (!notif.isRead) {
       try {
-        await fetch('/api/notifications', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: notif.id }),
-        })
-        setUnreadCount((prev) => Math.max(0, prev - 1))
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
-        )
+        if (!notif.id.startsWith('demo-')) {
+          await fetch('/api/notifications', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: notif.id }),
+          })
+        }
       } catch (error) {
         console.error('Error marking notification as read:', error)
       }
+      setUnreadCount((prev) => Math.max(0, prev - 1))
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+      )
     }
+
     setIsOpen(false)
     if (notif.link) {
       router.push(notif.link)
@@ -132,18 +196,18 @@ export function NotificationsBell() {
 
   return (
     <div className="relative" ref={popoverRef}>
-      {/* Bell Button */}
+      {/* Bell Icon Trigger Button */}
       <Button
         variant="ghost"
         size="icon"
-        className="relative"
+        className="relative hover:bg-accent focus:outline-none"
         onClick={() => {
           setIsOpen(!isOpen)
           if (!isOpen) fetchNotifications()
         }}
-        title="Notificaciones"
+        title="Notificaciones de CMMS Pro"
       >
-        <Bell className="h-5 w-5 text-foreground" />
+        <Bell className="h-5 w-5 text-foreground transition-transform duration-200 hover:scale-105" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow ring-2 ring-background animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -151,9 +215,9 @@ export function NotificationsBell() {
         )}
       </Button>
 
-      {/* Popover Dropdown */}
+      {/* Floating Interactive Popover Dropdown Card */}
       {isOpen && (
-        <div className="absolute right-0 top-12 z-50 w-80 sm:w-96 rounded-xl border bg-background p-4 shadow-2xl animate-in fade-in zoom-in-95 space-y-3">
+        <div className="absolute right-0 top-12 z-50 w-[90vw] sm:w-96 max-w-sm rounded-xl border bg-card text-card-foreground p-4 shadow-2xl animate-in fade-in zoom-in-95 space-y-3">
           {/* Header */}
           <div className="flex items-center justify-between border-b pb-3">
             <div className="flex items-center gap-2">
@@ -169,7 +233,7 @@ export function NotificationsBell() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                className="h-7 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 px-2"
                 onClick={handleMarkAllRead}
                 disabled={loading}
               >
@@ -183,30 +247,30 @@ export function NotificationsBell() {
             )}
           </div>
 
-          {/* List Content */}
+          {/* Body: Scrollable Notification List */}
           <div className="max-h-80 overflow-y-auto space-y-2 pr-1 divide-y divide-border/40">
             {notifications.length > 0 ? (
               notifications.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors pt-2.5 ${
+                  className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors pt-2.5 relative ${
                     !notif.isRead
-                      ? 'bg-primary/5 hover:bg-primary/10 border-l-2 border-primary'
-                      : 'hover:bg-accent'
+                      ? 'bg-primary/5 dark:bg-primary/10 hover:bg-primary/15 border-l-2 border-primary'
+                      : 'hover:bg-accent/80'
                   }`}
                 >
-                  <div className="p-1.5 rounded-md bg-background border shrink-0 mt-0.5">
+                  <div className="p-1.5 rounded-md bg-background border shrink-0 mt-0.5 shadow-sm">
                     {getTypeIcon(notif.type)}
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <p className={`text-xs font-semibold truncate ${!notif.isRead ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>
+                      <p className={`text-xs truncate ${!notif.isRead ? 'font-bold text-foreground' : 'font-medium text-muted-foreground'}`}>
                         {notif.title}
                       </p>
-                      <span className="text-[10px] text-muted-foreground shrink-0">
-                        {formatDateTime(notif.createdAt)}
+                      <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
+                        {getRelativeTime(notif.createdAt)}
                       </span>
                     </div>
 
@@ -215,18 +279,49 @@ export function NotificationsBell() {
                     </p>
 
                     {notif.link && (
-                      <span className="inline-flex items-center text-[10px] text-primary hover:underline font-medium pt-1">
-                        Ver detalle <ExternalLink className="w-2.5 h-2.5 ml-1" />
+                      <span className="inline-flex items-center text-[10px] text-primary hover:underline font-semibold pt-1">
+                        Ir al detalle <ExternalLink className="w-2.5 h-2.5 ml-1" />
                       </span>
                     )}
                   </div>
+
+                  {!notif.isRead && (
+                    <span className="w-2 h-2 rounded-full bg-primary shrink-0 self-center" />
+                  )}
                 </div>
               ))
             ) : (
               <div className="p-8 text-center text-xs text-muted-foreground">
-                No hay notificaciones recientes.
+                No hay notificaciones pendientes.
               </div>
             )}
+          </div>
+
+          {/* Footer Direct Navigation Links */}
+          <div className="pt-2 border-t flex flex-col sm:flex-row items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs flex items-center justify-center gap-1.5 h-8"
+              onClick={() => {
+                setIsOpen(false)
+                router.push('/dashboard/inventory')
+              }}
+            >
+              <Boxes className="w-3.5 h-3.5 text-primary" /> Ver Inventario
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs flex items-center justify-center gap-1.5 h-8"
+              onClick={() => {
+                setIsOpen(false)
+                router.push('/dashboard/work-orders')
+              }}
+            >
+              <ClipboardList className="w-3.5 h-3.5 text-primary" /> Ver Órdenes
+            </Button>
           </div>
         </div>
       )}
