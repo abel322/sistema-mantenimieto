@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { sendPushNotificationToAll } from '@/lib/web-push'
+import { sendPushToAllSubscribers } from '@/lib/push-notifications'
 
 export async function createNotification(data: {
   title: string
@@ -35,12 +35,12 @@ export async function createNotification(data: {
       },
     })
 
-    // Dispatch real-time Web Push notification to all active devices
-    sendPushNotificationToAll({
-      title: data.title,
-      body: data.message,
-      url: data.link || '/dashboard',
-    }).catch((err) => console.error('Error dispatching push alert:', err))
+    // Dispatch real-time Web Push notification to all active subscribers
+    sendPushToAllSubscribers(
+      data.title,
+      data.message,
+      data.link || '/dashboard/inventory'
+    ).catch((err) => console.error('Error dispatching push alert:', err))
 
     return notification
   } catch (error) {
