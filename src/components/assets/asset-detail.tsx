@@ -144,33 +144,33 @@ export function AssetDetail({ asset }: AssetDetailProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link href="/dashboard/assets">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{asset.name}</h2>
-            <p className="text-muted-foreground text-sm font-mono">{asset.code} • {getAreaLabel(asset.area)}</p>
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{asset.name}</h2>
+            <p className="text-muted-foreground text-xs sm:text-sm font-mono truncate">{asset.code} • {getAreaLabel(asset.area)}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Badge variant={criticalityColors[asset.criticality as 1 | 2 | 3]}>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Badge variant={criticalityColors[asset.criticality as 1 | 2 | 3]} className="text-xs">
             Criticidad {asset.criticality}
           </Badge>
 
-          <Button variant="outline" size="sm" onClick={() => setEditModalOpen(true)}>
-            <Pencil className="mr-2 h-4 w-4 text-blue-500" />
+          <Button variant="outline" size="sm" onClick={() => setEditModalOpen(true)} className="flex-1 sm:flex-none text-xs">
+            <Pencil className="mr-1.5 h-4 w-4 text-blue-500" />
             Editar
           </Button>
 
-          <Button variant="outline" size="sm" onClick={handleGeneratePDF}>
-            <FileText className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="flex-1 sm:flex-none text-xs">
+            <FileText className="mr-1.5 h-4 w-4" />
             PDF
           </Button>
 
@@ -178,8 +178,9 @@ export function AssetDetail({ asset }: AssetDetailProps) {
             variant="destructive"
             size="sm"
             onClick={() => setFailureModalOpen(true)}
+            className="w-full sm:w-auto text-xs"
           >
-            <AlertTriangle className="mr-2 h-4 w-4" />
+            <AlertTriangle className="mr-1.5 h-4 w-4" />
             Registrar Falla
           </Button>
 
@@ -196,49 +197,49 @@ export function AssetDetail({ asset }: AssetDetailProps) {
       </div>
 
       {/* Tab Navigation Header */}
-      <div className="border-b bg-background flex flex-wrap gap-2 pt-2">
+      <div className="border-b bg-background w-full max-w-full overflow-x-auto flex items-center gap-1 sm:gap-2 pb-1 no-scrollbar">
         <button
           onClick={() => setActiveTab('info')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
             activeTab === 'info'
               ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Info className="w-4 h-4" /> Información General
+          <Info className="w-4 h-4 shrink-0" /> Información General
         </button>
 
         <button
           onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
             activeTab === 'history'
               ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <History className="w-4 h-4" /> Historial de Mantenimiento ({asset.workOrders.length})
+          <History className="w-4 h-4 shrink-0" /> Historial de Mantenimiento ({asset.workOrders.length})
         </button>
 
         <button
           onClick={() => setActiveTab('failures')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
             activeTab === 'failures'
               ? 'border-destructive text-destructive bg-destructive/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <AlertTriangle className="w-4 h-4 text-destructive" /> Registro de Fallas ({asset.failureLogs.length})
+          <AlertTriangle className="w-4 h-4 text-destructive shrink-0" /> Registro de Fallas ({asset.failureLogs.length})
         </button>
 
         <button
           onClick={() => setActiveTab('inspections')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all ${
+          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
             activeTab === 'inspections'
               ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <ClipboardCheck className="w-4 h-4" /> Inspecciones ({asset.checklistExecutions?.length || 0})
+          <ClipboardCheck className="w-4 h-4 shrink-0" /> Inspecciones ({asset.checklistExecutions?.length || 0})
         </button>
       </div>
 
@@ -246,7 +247,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
       {/* TAB 1: INFORMACIÓN GENERAL */}
       {activeTab === 'info' && (
         <div className="space-y-6 animate-in fade-in-50 duration-200">
-          <div className="grid gap-6 md:grid-cols-4">
+          <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Área de Producción</CardTitle>
@@ -321,7 +322,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
                   {asset.schedules.map((schedule) => (
                     <div
                       key={schedule.id}
-                      className="flex items-center justify-between rounded-lg border p-3.5 bg-card"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between rounded-lg border p-3.5 bg-card gap-2"
                     >
                       <div className="space-y-1">
                         <p className="text-sm font-semibold">{schedule.taskTemplate}</p>
@@ -329,7 +330,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
                           Frecuencia: Cada {schedule.frequencyDays} días ({schedule.frequencyType})
                         </p>
                       </div>
-                      <Badge variant="outline" className="font-mono text-xs">
+                      <Badge variant="outline" className="font-mono text-xs w-fit">
                         Próximo: {new Date(schedule.nextDueDate).toLocaleDateString('es-ES')}
                       </Badge>
                     </div>
@@ -345,23 +346,23 @@ export function AssetDetail({ asset }: AssetDetailProps) {
       {activeTab === 'history' && (
         <div className="space-y-4 animate-in fade-in-50 duration-200">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
               <div>
-                <CardTitle className="text-lg">Historial de Órdenes de Trabajo</CardTitle>
-                <p className="text-xs text-muted-foreground">
+                <CardTitle className="text-base sm:text-lg font-bold">Historial de Órdenes de Trabajo</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Registro completo de intervenciones correctivas, preventivas y predictivas en este activo.
                 </p>
               </div>
-              <Link href="/dashboard/work-orders/new">
-                <Button size="sm">
+              <Link href="/dashboard/work-orders/new" className="w-full sm:w-auto">
+                <Button size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
                   <Plus className="w-4 h-4 mr-1" /> Nueva Orden
                 </Button>
               </Link>
             </CardHeader>
             <CardContent>
               {asset.workOrders && asset.workOrders.length > 0 ? (
-                <div className="border rounded-md overflow-x-auto">
-                  <table className="w-full text-sm text-left">
+                <div className="border rounded-md w-full max-w-full overflow-x-auto">
+                  <table className="w-full min-w-[650px] text-sm text-left">
                     <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
                       <tr>
                         <th className="p-3">Fecha</th>
@@ -428,12 +429,12 @@ export function AssetDetail({ asset }: AssetDetailProps) {
       {activeTab === 'failures' && (
         <div className="space-y-4 animate-in fade-in-50 duration-200">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
               <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive" /> Registro de Fallas y Paros no Programados
+                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0" /> Registro de Fallas y Paros no Programados
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
                   Histórico de averías, causas raíz y horas de indisponibilidad reportadas en planta.
                 </p>
               </div>
@@ -441,6 +442,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
                 variant="destructive"
                 size="sm"
                 onClick={() => setFailureModalOpen(true)}
+                className="w-full sm:w-auto text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white flex items-center justify-center"
               >
                 <AlertTriangle className="mr-2 h-4 w-4" />
                 Registrar Falla / Evento
@@ -449,8 +451,8 @@ export function AssetDetail({ asset }: AssetDetailProps) {
 
             <CardContent>
               {asset.failureLogs && asset.failureLogs.length > 0 ? (
-                <div className="border rounded-md overflow-x-auto">
-                  <table className="w-full text-sm text-left">
+                <div className="border rounded-md w-full max-w-full overflow-x-auto">
+                  <table className="w-full min-w-[600px] text-sm text-left">
                     <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
                       <tr>
                         <th className="p-3">Fecha Reportada</th>
@@ -495,25 +497,25 @@ export function AssetDetail({ asset }: AssetDetailProps) {
       {activeTab === 'inspections' && (
         <div className="space-y-4 animate-in fade-in-50 duration-200">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
               <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <ClipboardCheck className="h-5 w-5 text-primary" /> Historial de Inspecciones & Checklists
+                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-primary shrink-0" /> Historial de Inspecciones & Checklists
                 </CardTitle>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Registros de rutinas preventivas ejecutadas en este activo por el equipo técnico.
                 </p>
               </div>
-              <Link href={`/dashboard/checklists/new?assetId=${asset.id}`}>
-                <Button size="sm">
+              <Link href={`/dashboard/checklists/new?assetId=${asset.id}`} className="w-full sm:w-auto">
+                <Button size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
                   <Plus className="w-4 h-4 mr-1" /> Nueva Inspección
                 </Button>
               </Link>
             </CardHeader>
             <CardContent>
               {asset.checklistExecutions && asset.checklistExecutions.length > 0 ? (
-                <div className="border rounded-md overflow-x-auto">
-                  <table className="w-full text-sm text-left">
+                <div className="border rounded-md w-full max-w-full overflow-x-auto">
+                  <table className="w-full min-w-[600px] text-sm text-left">
                     <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
                       <tr>
                         <th className="p-3">Fecha Completo</th>
