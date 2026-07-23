@@ -561,6 +561,71 @@ async function main() {
 
   console.log('✅ Pautas técnicas y SOPs creados')
 
+  // Crear Herramientas de muestra
+  const tool1 = await prisma.tool.upsert({
+    where: { code: 'HER-001' },
+    update: {},
+    create: {
+      code: 'HER-001',
+      name: 'Llave Dinamométrica / Torquímetro 1/2"',
+      category: 'Mecánica',
+      type: 'PORTABLE',
+      status: 'AVAILABLE',
+      brand: 'Snap-on',
+      serialNumber: 'SN-TORQ-9921',
+      notes: 'Ubicación: Pañol Central. Calibración vigente.',
+    },
+  })
+
+  const tool2 = await prisma.tool.upsert({
+    where: { code: 'HER-002' },
+    update: {},
+    create: {
+      code: 'HER-002',
+      name: 'Juego de Llaves Allen Milimétricas Extra Largas',
+      category: 'Mecánica',
+      type: 'FIXED_MACHINE',
+      status: 'AVAILABLE',
+      brand: 'Bondhus',
+      assetId: extrusora1.id,
+      notes: 'Fija en Extrusora 1 para ajustes de dado de extrusión.',
+    },
+  })
+
+  const tool3 = await prisma.tool.upsert({
+    where: { code: 'HER-003' },
+    update: {},
+    create: {
+      code: 'HER-003',
+      name: 'Pirómetro Digital con Termocupla K',
+      category: 'Instrumentación',
+      type: 'FIXED_AREA',
+      status: 'AVAILABLE',
+      brand: 'Fluke',
+      area: 'Sellado/Corte',
+      notes: 'Asignado al área de Sellado/Corte para control térmico de mordazas.',
+    },
+  })
+
+  const tool4 = await prisma.tool.upsert({
+    where: { code: 'HER-004' },
+    update: {},
+    create: {
+      code: 'HER-004',
+      name: 'Pistola Neumática de Impacto 1/2"',
+      category: 'Neumática',
+      type: 'PORTABLE',
+      status: 'IN_USE',
+      brand: 'Chicago Pneumatic',
+      serialNumber: 'CP-7748-001',
+      assignedTo: 'Juan Pérez (Técnico Mecánico)',
+      assignedAt: new Date(),
+      notes: 'Prestada a Juan Pérez para mantenimiento de turno.',
+    },
+  })
+
+  console.log('✅ Herramientas de muestra creadas')
+
   console.log('🎉 Seed completado exitosamente!')
 }
 

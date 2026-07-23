@@ -32,6 +32,7 @@ model Asset {
   failureLogs         FailureLog[]
   schedules           Schedule[]
   checklistExecutions ChecklistExecution[]
+  tools               Tool[]
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 
@@ -375,5 +376,42 @@ model PushSubscription {
 
   @@index([endpoint])
   @@index([userId])
+}
+
+model Tool {
+  id           String     @id @default(uuid())
+  code         String     @unique
+  name         String
+  category     String
+  type         ToolType
+  status       ToolStatus @default(AVAILABLE)
+  brand        String?
+  serialNumber String?
+  assetId      String?
+  asset        Asset?     @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  area         String?
+  assignedTo   String?
+  assignedAt   DateTime?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([code])
+  @@index([status])
+  @@index([type])
+  @@index([assetId])
+}
+
+enum ToolType {
+  FIXED_MACHINE
+  FIXED_AREA
+  PORTABLE
+}
+
+enum ToolStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+  RETIRED
 }
 
