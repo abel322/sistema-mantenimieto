@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { sendPushNotificationToAll } from '@/lib/web-push'
 
 export async function createNotification(data: {
   title: string
@@ -25,7 +26,7 @@ export async function createNotification(data: {
       return existing
     }
 
-    return await prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         title: data.title,
         message: data.message,
@@ -33,6 +34,15 @@ export async function createNotification(data: {
         link: data.link,
       },
     })
+
+    // Dispatch real-time Web Push notification to all active devices
+    sendPushNotificationToAll({
+      title: data.title,
+      body: data.message,
+      url: data.link || '/dashboard',
+    }).catch((err) => console.error('Error dispatching push alert:', err))
+
+    return notification
   } catch (error) {
     console.error('Error creating notification:', error)
     return null

@@ -1,0 +1,22 @@
+{
+  "name": "CMMS Pro - Sistema de Mantenimiento",
+  "short_name": "CMMS Pro",
+  "description": "Gestión inteligente de mantenimiento industrial, activos y control de stock en planta.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
