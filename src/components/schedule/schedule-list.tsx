@@ -95,19 +95,24 @@ export function ScheduleList() {
   return (
     <div className="space-y-4">
       {schedules.map((schedule) => {
-        const isOverdue = new Date(schedule.nextDueDate) < new Date()
-        const isDueSoon =
-          new Date(schedule.nextDueDate) <
-          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        const dueDate = new Date(schedule.nextDueDate)
+        const now = new Date()
+        const in24Hours = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+        const isOverdue = dueDate < now
+        const isDue24h = dueDate <= in24Hours && !isOverdue
+        const isDueSoon = dueDate < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
         return (
           <Card
             key={schedule.id}
-            className={`hover:border-primary/40 transition-colors ${
+            className={`hover:border-primary/40 transition-all ${
               isOverdue
-                ? 'border-destructive'
+                ? 'border-destructive bg-destructive/5'
+                : isDue24h
+                ? 'border-amber-500 bg-amber-500/5 dark:bg-amber-500/10'
                 : isDueSoon
-                ? 'border-yellow-500'
+                ? 'border-yellow-500/60'
                 : ''
             }`}
           >
@@ -122,15 +127,20 @@ export function ScheduleList() {
                       variant={
                         isOverdue
                           ? 'destructive'
-                          : isDueSoon
+                          : isDue24h
                           ? 'warning'
+                          : isDueSoon
+                          ? 'secondary'
                           : 'default'
                       }
+                      className={isDue24h || isOverdue ? 'animate-pulse font-bold' : ''}
                     >
                       {isOverdue
                         ? 'Vencido'
+                        : isDue24h
+                        ? 'Próximo (24h)'
                         : isDueSoon
-                        ? 'Próximo'
+                        ? 'Próximo (7d)'
                         : 'Programado'}
                     </Badge>
                   </div>

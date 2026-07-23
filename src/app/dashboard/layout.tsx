@@ -3,6 +3,7 @@
 import { Sidebar } from '@/components/layout/sidebar'
 import { MobileSidebar } from '@/components/layout/mobile-sidebar'
 import { UserNav } from '@/components/layout/user-nav'
+import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { Button } from '@/components/ui/button'
 import { Menu } from 'lucide-react'
 import { useState } from 'react'
@@ -50,8 +51,9 @@ export default function DashboardLayout({
               <span className="text-sm font-bold">CMMS Pro</span>
             </div>
 
-            {/* User Nav */}
-            <div className="ml-auto">
+            {/* Notifications Bell & User Nav */}
+            <div className="ml-auto flex items-center space-x-3">
+              <NotificationsBell />
               <UserNav />
             </div>
           </div>

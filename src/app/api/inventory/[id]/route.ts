@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { triggerLowStockAlert } from '@/lib/notifications'
 
 export async function GET(
   request: Request,
@@ -67,6 +68,9 @@ export async function PATCH(
       },
     })
 
+    // Auto-trigger stock alert if at or below minStock
+    await triggerLowStockAlert(part)
+
     return NextResponse.json(part)
   } catch (error) {
     console.error('Error updating part stock:', error)
@@ -98,6 +102,9 @@ export async function PUT(
         preferredSupplierId: preferredSupplierId || null,
       },
     })
+
+    // Auto-trigger stock alert if at or below minStock
+    await triggerLowStockAlert(part)
 
     return NextResponse.json(part)
   } catch (error) {

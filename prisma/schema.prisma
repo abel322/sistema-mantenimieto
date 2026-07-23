@@ -351,4 +351,16 @@ enum MachineStatus {
   RUNNING
 }
 
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   // 'STOCK_ALERT' | 'SCHEDULE_DUE' | 'WORK_ORDER_OVERDUE'
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
 
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([type])
+}

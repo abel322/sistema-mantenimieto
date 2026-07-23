@@ -131,8 +131,12 @@ export function InventoryList() {
         return (
           <Card
             key={part.id}
-            className={`hover:border-primary/40 transition-colors h-full flex flex-col justify-between ${
-              isOutOfStock ? 'border-destructive' : isLowStock ? 'border-yellow-500' : ''
+            className={`hover:border-primary/40 transition-all h-full flex flex-col justify-between shadow-sm ${
+              isOutOfStock
+                ? 'border-destructive bg-destructive/5'
+                : isLowStock
+                ? 'border-amber-500 bg-amber-500/5 dark:bg-amber-500/10'
+                : ''
             }`}
           >
             <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
