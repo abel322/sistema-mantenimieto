@@ -31,7 +31,7 @@ export default function DashboardLayout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
         {/* Top Bar */}
-        <header className="border-b bg-background w-full max-w-full overflow-x-hidden">
+        <header className="border-b bg-background w-full max-w-full">
           <div className="flex h-16 items-center px-4 md:px-6">
             {/* Mobile Menu Button */}
             <Button

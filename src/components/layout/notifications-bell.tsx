@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { 
   Bell, 
   Package, 
@@ -48,7 +49,6 @@ export function NotificationsBell() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
-  const popoverRef = useRef<HTMLDivElement>(null)
 
   const fetchNotifications = async () => {
     try {
@@ -118,26 +118,10 @@ export function NotificationsBell() {
   }
 
   useEffect(() => {
-    // Trigger automated cron schedule check once on mount
     triggerCronCheck().then(() => fetchNotifications())
-
-    // Fetch update every 30s
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
   }, [])
-
-  // Close popover when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen])
 
   const handleMarkAllRead = async () => {
     try {
@@ -195,59 +179,61 @@ export function NotificationsBell() {
   }
 
   return (
-    <div className="relative" ref={popoverRef}>
-      {/* Bell Icon Trigger Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative hover:bg-accent focus:outline-none"
-        onClick={() => {
-          setIsOpen(!isOpen)
-          if (!isOpen) fetchNotifications()
-        }}
-        title="Notificaciones de CMMS Pro"
+    <Popover open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open)
+      if (open) fetchNotifications()
+    }}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative hover:bg-accent focus:outline-none"
+          title="Notificaciones de CMMS Pro"
+        >
+          <Bell className="h-5 w-5 text-foreground transition-transform duration-200 hover:scale-105" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow ring-2 ring-background animate-pulse">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        className="z-[9999] w-80 sm:w-96 p-4 shadow-2xl border border-slate-200 dark:border-slate-800 bg-card text-card-foreground rounded-xl space-y-3"
       >
-        <Bell className="h-5 w-5 text-foreground transition-transform duration-200 hover:scale-105" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow ring-2 ring-background animate-pulse">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </Button>
-
-      {/* Floating Interactive Popover Dropdown Card */}
-      {isOpen && (
-        <div className="absolute right-0 top-12 z-50 w-[90vw] sm:w-96 max-w-sm rounded-xl border bg-card text-card-foreground p-4 shadow-2xl animate-in fade-in zoom-in-95 space-y-3">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b pb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm text-foreground">Notificaciones</h3>
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                  {unreadCount} sin leer
-                </Badge>
-              )}
-            </div>
-
+        {/* Header */}
+        <div className="flex items-center justify-between border-b pb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-sm text-foreground">Notificaciones</h3>
             {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 px-2"
-                onClick={handleMarkAllRead}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <CheckCheck className="w-3.5 h-3.5" />
-                )}
-                Marcar leídas
-              </Button>
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                {unreadCount} sin leer
+              </Badge>
             )}
           </div>
 
-          {/* Body: Scrollable Notification List */}
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 px-2"
+              onClick={handleMarkAllRead}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CheckCheck className="w-3.5 h-3.5" />
+              )}
+            </Button>
+          )}
+        </div>
+
+        {/* Body: Scrollable Notification List */}
           <div className="max-h-80 overflow-y-auto space-y-2 pr-1 divide-y divide-border/40">
             {notifications.length > 0 ? (
               notifications.map((notif) => (
@@ -323,8 +309,7 @@ export function NotificationsBell() {
               <ClipboardList className="w-3.5 h-3.5 text-primary" /> Ver Órdenes
             </Button>
           </div>
-        </div>
-      )}
-    </div>
-  )
-}
+        </PopoverContent>
+      </Popover>
+    )
+  }
