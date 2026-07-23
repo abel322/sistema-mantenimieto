@@ -113,6 +113,8 @@
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 0.5rem !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
   .rbc-toolbar-label {
     text-align: center !important;
@@ -122,11 +124,13 @@
   }
   .rbc-btn-group {
     display: flex !important;
+    flex-wrap: wrap !important;
     justify-content: center !important;
     width: 100% !important;
+    max-width: 100% !important;
   }
   .rbc-btn-group button {
-    flex: 1 !important;
+    flex: 1 1 auto !important;
     text-align: center !important;
     font-size: 0.75rem !important;
     padding: 0.35rem 0.5rem !important;

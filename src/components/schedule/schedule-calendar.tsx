@@ -186,11 +186,11 @@ export function ScheduleCalendar() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-6">
       {/* Calendar Header Indicator Legend */}
       <Card className="p-4 bg-card border">
         <div className="flex flex-wrap items-center justify-between gap-4 text-xs">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <span className="font-semibold text-foreground">Leyenda de Estado:</span>
             <span className="flex items-center gap-1.5 font-medium">
               <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block"></span>
@@ -210,50 +210,52 @@ export function ScheduleCalendar() {
             </span>
           </div>
 
-          <Button size="sm" onClick={() => setIsCreateModalOpen(true)}>
+          <Button size="sm" onClick={() => setIsCreateModalOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-1" /> Programar Mantenimiento
           </Button>
         </div>
       </Card>
 
       {/* React Big Calendar Container */}
-      <Card className="p-4 md:p-6 bg-card border shadow-sm">
+      <Card className="p-2 sm:p-4 bg-card border shadow-sm max-w-full overflow-hidden">
         {loading ? (
           <div className="p-16 text-center text-muted-foreground flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <span>Cargando eventos del calendario...</span>
           </div>
         ) : (
-          <div className="h-[500px] sm:h-[700px] w-full text-foreground">
-            <Calendar
-              localizer={localizer}
-              events={events}
-              startAccessor="start"
-              endAccessor="end"
-              culture="es"
-              selectable={true}
-              onSelectSlot={handleSelectSlot}
-              onSelectEvent={handleSelectEvent}
-              eventPropGetter={eventStyleGetter}
-              views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
-              view={currentView}
-              date={currentDate}
-              onView={(view) => setCurrentView(view)}
-              onNavigate={(date) => setCurrentDate(date)}
-              messages={{
-                next: isMobile ? '>' : 'Siguiente',
-                previous: isMobile ? '<' : 'Anterior',
-                today: isMobile ? '•' : 'Hoy',
-                month: 'Mes',
-                week: 'Semana',
-                day: 'Día',
-                agenda: 'Agenda',
-                date: 'Fecha',
-                time: 'Hora',
-                event: 'Evento',
-                noEventsInRange: 'No hay mantenimientos programados en este rango.',
-              }}
-            />
+          <div className="w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 p-2 sm:p-4">
+            <div className="min-w-[600px] sm:min-w-full h-[600px]">
+              <Calendar
+                localizer={localizer}
+                events={events}
+                startAccessor="start"
+                endAccessor="end"
+                culture="es"
+                selectable={true}
+                onSelectSlot={handleSelectSlot}
+                onSelectEvent={handleSelectEvent}
+                eventPropGetter={eventStyleGetter}
+                views={[Views.MONTH, Views.WEEK, Views.DAY, Views.AGENDA]}
+                view={currentView}
+                date={currentDate}
+                onView={(view) => setCurrentView(view)}
+                onNavigate={(date) => setCurrentDate(date)}
+                messages={{
+                  next: isMobile ? '>' : 'Siguiente',
+                  previous: isMobile ? '<' : 'Anterior',
+                  today: isMobile ? '•' : 'Hoy',
+                  month: 'Mes',
+                  week: 'Semana',
+                  day: 'Día',
+                  agenda: 'Agenda',
+                  date: 'Fecha',
+                  time: 'Hora',
+                  event: 'Evento',
+                  noEventsInRange: 'No hay mantenimientos programados en este rango.',
+                }}
+              />
+            </div>
           </div>
         )}
       </Card>

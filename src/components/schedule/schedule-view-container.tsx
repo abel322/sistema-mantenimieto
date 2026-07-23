@@ -11,10 +11,10 @@ export function ScheduleViewContainer() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full overflow-x-hidden space-y-6">
       {/* Top Bar Header with View Toggles */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4 w-full">
+        <div className="min-w-0 flex-1">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
             Programación de Mantenimiento
           </h2>
@@ -23,9 +23,9 @@ export function ScheduleViewContainer() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           {/* View Mode Toggle Buttons */}
-          <div className="flex items-center border rounded-lg p-1 bg-muted/40">
+          <div className="flex items-center border rounded-lg p-1 bg-muted/40 max-w-full">
             <Button
               variant={viewMode === 'calendar' ? 'default' : 'ghost'}
               size="sm"
@@ -44,8 +44,8 @@ export function ScheduleViewContainer() {
             </Button>
           </div>
 
-          <Link href="/dashboard/schedule/new">
-            <Button size="sm">
+          <Link href="/dashboard/schedule/new" className="w-full sm:w-auto">
+            <Button size="sm" className="w-full sm:w-auto">
               <Plus className="mr-1.5 h-4 w-4" /> Nueva Programación
             </Button>
           </Link>
