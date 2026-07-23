@@ -52,8 +52,8 @@ export function ScheduleCalendar() {
   const [events, setEvents] = useState<BigCalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Responsive state detection
-  const [isMobile, setIsMobile] = useState(false)
+  // Responsive state detection (< 640px breakpoint)
+  const [isMobile, setIsMobile] = useState<boolean>(false)
 
   // Calendar view navigation states
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
@@ -67,14 +67,25 @@ export function ScheduleCalendar() {
   const [selectedEvent, setSelectedEvent] = useState<BigCalendarEvent | null>(null)
 
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768
+    const mediaQuery = window.matchMedia('(max-width: 639px)')
+    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      const mobile = e.matches
       setIsMobile(mobile)
-      setCurrentView(mobile ? Views.AGENDA : Views.MONTH)
+      if (mobile) {
+        setCurrentView(Views.AGENDA)
+      }
     }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+
+    // Initial evaluation
+    handleMediaChange(mediaQuery)
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleMediaChange)
+      return () => mediaQuery.removeEventListener('change', handleMediaChange)
+    } else {
+      mediaQuery.addListener(handleMediaChange)
+      return () => mediaQuery.removeListener(handleMediaChange)
+    }
   }, [])
 
   const fetchCalendarData = async () => {

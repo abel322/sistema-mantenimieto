@@ -15,7 +15,7 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden md:block">
         <Sidebar />
@@ -28,9 +28,9 @@ export default function DashboardLayout({
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
         {/* Top Bar */}
-        <header className="border-b bg-background">
+        <header className="border-b bg-background w-full max-w-full overflow-x-hidden">
           <div className="flex h-16 items-center px-4 md:px-6">
             {/* Mobile Menu Button */}
             <Button
@@ -58,7 +58,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-2 sm:p-4 md:p-6 min-w-0 w-full max-w-full overflow-x-hidden">{children}</main>
       </div>
     </div>
   )

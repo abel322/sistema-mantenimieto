@@ -58,9 +58,26 @@
   }
 }
 
-/* React Big Calendar Theme Adaptations */
+/* React Big Calendar Theme & Mobile Adaptations */
 .rbc-calendar {
   color: inherit !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.rbc-toolbar {
+  flex-direction: column !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+@media (min-width: 640px) {
+  .rbc-toolbar {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
 }
 
 .dark .rbc-header {
@@ -108,17 +125,10 @@
 }
 
 /* Responsive Toolbar Overrides */
-@media (max-width: 768px) {
-  .rbc-toolbar {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 0.5rem !important;
-    max-width: 100% !important;
-    overflow-x: hidden !important;
-  }
+@media (max-width: 639px) {
   .rbc-toolbar-label {
     text-align: center !important;
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
     font-weight: 700 !important;
     margin: 0.25rem 0 !important;
   }
