@@ -26,3 +26,14 @@ export function getAreaLabel(areaKey?: string | null): string {
   if (!areaKey) return 'General Planta'
   return AREA_LABELS[areaKey] || areaKey
 }
+
+export const getCriticalityBadge = (criticality: number | string) => {
+  const crit = String(criticality);
+  if (crit === '1' || crit === 'Alta') {
+    return { label: 'Criticidad 1 (Alta)', className: 'bg-red-500 text-white font-semibold hover:bg-red-600' };
+  }
+  if (crit === '2' || crit === 'Media') {
+    return { label: 'Criticidad 2 (Media)', className: 'bg-amber-500 text-white font-semibold hover:bg-amber-600' };
+  }
+  return { label: 'Criticidad 3 (Baja)', className: 'bg-emerald-500 text-white font-semibold hover:bg-emerald-600' };
+};

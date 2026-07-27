@@ -33,7 +33,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getAreaLabel, PLANT_AREAS } from '@/lib/constants'
+import { getAreaLabel, getCriticalityBadge, PLANT_AREAS } from '@/lib/constants'
 
 export interface AssetWithCounts {
   id: string
@@ -144,16 +144,9 @@ export function AssetsList({ initialAssets }: AssetsListProps) {
   })
 
   // Criticality Badge Renderer
-  const renderCriticalityBadge = (criticality: number) => {
-    switch (criticality) {
-      case 1:
-        return <Badge variant="destructive">Criticidad 1</Badge>
-      case 2:
-        return <Badge variant="warning">Criticidad 2</Badge>
-      case 3:
-      default:
-        return <Badge variant="success">Criticidad 3</Badge>
-    }
+  const renderCriticalityBadge = (criticality: number | string) => {
+    const badgeInfo = getCriticalityBadge(criticality)
+    return <Badge className={badgeInfo.className}>{badgeInfo.label}</Badge>
   }
 
   if (loading) {

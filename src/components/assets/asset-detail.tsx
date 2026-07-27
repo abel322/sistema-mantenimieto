@@ -47,7 +47,7 @@ type AssetWithRelations = Asset & {
   checklistExecutions?: ChecklistExecutionWithRelations[]
 }
 
-import { getAreaLabel } from '@/lib/constants'
+import { getAreaLabel, getCriticalityBadge } from '@/lib/constants'
 
 const areaLabels: Record<string, string> = {
   SEALING: 'Bolseras / Selladoras',
@@ -64,12 +64,6 @@ const areaLabels: Record<string, string> = {
 interface AssetDetailProps {
   asset: AssetWithRelations
 }
-
-const criticalityColors = {
-  1: 'secondary',
-  2: 'warning',
-  3: 'destructive',
-} as const
 
 const statusColors = {
   OPEN: 'default',
@@ -160,9 +154,10 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <Badge variant={criticalityColors[asset.criticality as 1 | 2 | 3]} className="text-xs">
-            Criticidad {asset.criticality}
-          </Badge>
+          {(() => {
+            const badgeInfo = getCriticalityBadge(asset.criticality)
+            return <Badge className={`${badgeInfo.className} text-xs`}>{badgeInfo.label}</Badge>
+          })()}
 
           <Button variant="outline" size="sm" onClick={() => setEditModalOpen(true)} className="flex-1 sm:flex-none text-xs">
             <Pencil className="mr-1.5 h-4 w-4 text-blue-500" />

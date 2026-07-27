@@ -7,13 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { generateAssetPDF } from '@/lib/pdf-generator'
 
-import { getAreaLabel } from '@/lib/constants'
-
-const criticalityColors = {
-  1: 'secondary',
-  2: 'warning',
-  3: 'destructive',
-} as const
+import { getAreaLabel, getCriticalityBadge } from '@/lib/constants'
 
 export function AssetsReportList() {
   const [assets, setAssets] = useState<any[]>([])
@@ -43,19 +37,21 @@ export function AssetsReportList() {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {assets.map((asset) => (
-        <Card key={asset.id} className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
-            <div className="space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold">{asset.name}</h3>
-                  <p className="text-sm text-muted-foreground">{asset.code}</p>
+      {assets.map((asset) => {
+        const badgeInfo = getCriticalityBadge(asset.criticality)
+        return (
+          <Card key={asset.id} className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold">{asset.name}</h3>
+                    <p className="text-sm text-muted-foreground">{asset.code}</p>
+                  </div>
+                  <Badge className={badgeInfo.className}>
+                    {badgeInfo.label}
+                  </Badge>
                 </div>
-                <Badge variant={criticalityColors[asset.criticality as 1 | 2 | 3]}>
-                  Crit. {asset.criticality}
-                </Badge>
-              </div>
 
               <p className="text-sm text-muted-foreground">
                 {getAreaLabel(asset.area)}
@@ -73,7 +69,7 @@ export function AssetsReportList() {
             </div>
           </CardContent>
         </Card>
-      ))}
+      )})}
 
       {assets.length === 0 && (
         <Card className="col-span-full">
