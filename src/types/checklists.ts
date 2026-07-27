@@ -20,6 +20,7 @@ export interface ChecklistTemplate {
   title: string
   description?: string | null
   assetType?: string | null
+  isActive?: boolean
   items: ChecklistItem[]
   createdAt?: string
   updatedAt?: string

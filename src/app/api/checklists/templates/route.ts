@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const activeOnly = searchParams.get('activeOnly') === 'true'
+
     const templates = await prisma.checklistTemplate.findMany({
+      where: activeOnly ? { isActive: true } : undefined,
       include: {
         items: {
           orderBy: { createdAt: 'asc' },

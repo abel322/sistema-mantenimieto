@@ -27,6 +27,8 @@ export default function ChecklistTemplatesPage() {
   const [editingTemplate, setEditingTemplate] = useState<ChecklistTemplate | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null)
+
   const fetchTemplates = async () => {
     setLoading(true)
     try {
@@ -56,25 +58,68 @@ export default function ChecklistTemplatesPage() {
     setModalOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Está seguro de eliminar esta plantilla de inspección? Esta acción no se puede deshacer.')) {
-      return
-    }
-
-    setDeletingId(id)
+  const handleToggleActiveStatus = async (tpl: ChecklistTemplate) => {
+    const newStatus = tpl.isActive === false
     try {
-      const res = await fetch(`/api/checklists/templates/${id}`, {
-        method: 'DELETE',
+      const res = await fetch(`/api/checklists/templates/${tpl.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: tpl.title,
+          description: tpl.description,
+          assetType: tpl.assetType,
+          isActive: newStatus,
+          items: tpl.items,
+        }),
       })
 
       if (res.ok) {
+        setStatusMessage({
+          type: 'success',
+          text: newStatus
+            ? `Plantilla "${tpl.title}" activada nuevamente.`
+            : `Plantilla "${tpl.title}" desactivada para conservar el historial.`,
+        })
+        fetchTemplates()
+      }
+    } catch (err) {
+      console.error('Error toggling template status:', err)
+    }
+  }
+
+  const handleDelete = async (tpl: ChecklistTemplate) => {
+    if (!confirm(`¿Está seguro de eliminar la plantilla "${tpl.title}"?`)) {
+      return
+    }
+
+    setDeletingId(tpl.id)
+    setStatusMessage(null)
+
+    try {
+      const res = await fetch(`/api/checklists/templates/${tpl.id}`, {
+        method: 'DELETE',
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setStatusMessage({
+          type: data.softDeleted ? 'warning' : 'success',
+          text: data.message || 'Plantilla eliminada exitosamente.',
+        })
         fetchTemplates()
       } else {
-        alert('Error al eliminar la plantilla.')
+        setStatusMessage({
+          type: 'error',
+          text: data.error || 'No se puede eliminar esta plantilla porque ya tiene inspecciones registradas en el historial. Puedes desactivarla para ocultarla.',
+        })
       }
     } catch (err) {
       console.error('Error deleting template:', err)
-      alert('Error de conexión al eliminar.')
+      setStatusMessage({
+        type: 'error',
+        text: 'No se puede eliminar esta plantilla porque ya tiene inspecciones registradas en el historial. Puedes desactivarla para ocultarla.',
+      })
     } finally {
       setDeletingId(null)
     }
@@ -106,6 +151,29 @@ export default function ChecklistTemplatesPage() {
         </Button>
       </div>
 
+      {/* User Toast Notification Banner */}
+      {statusMessage && (
+        <div
+          className={`p-4 rounded-xl border text-sm font-semibold flex items-center justify-between gap-3 animate-in fade-in duration-200 ${
+            statusMessage.type === 'error'
+              ? 'bg-destructive/15 text-destructive border-destructive/30'
+              : statusMessage.type === 'warning'
+              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+          }`}
+        >
+          <span>{statusMessage.text}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => setStatusMessage(null)}
+          >
+            Entendido
+          </Button>
+        </div>
+      )}
+
       {/* Templates Cards Grid */}
       {loading ? (
         <div className="flex flex-col items-center justify-center p-12 bg-card rounded-lg border">
@@ -128,15 +196,30 @@ export default function ChecklistTemplatesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((tpl) => (
-            <Card key={tpl.id} className="flex flex-col justify-between border-2 hover:border-primary/50 transition-all shadow-sm">
+            <Card
+              key={tpl.id}
+              className={`flex flex-col justify-between border-2 transition-all shadow-sm ${
+                tpl.isActive === false
+                  ? 'opacity-70 border-dashed border-amber-500/40 bg-amber-500/5'
+                  : 'hover:border-primary/50'
+              }`}
+            >
               <CardHeader className="space-y-2 pb-3">
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline" className="font-mono text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline" className="font-mono text-xs truncate">
                     {getAreaLabel(tpl.assetType)}
                   </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {tpl.items?.length || 0} parámetros
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge
+                      variant={tpl.isActive !== false ? 'success' : 'warning'}
+                      className="text-[10px]"
+                    >
+                      {tpl.isActive !== false ? 'Activa' : 'Desactivada'}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {tpl.items?.length || 0} páram.
+                    </span>
+                  </div>
                 </div>
 
                 <CardTitle className="text-lg leading-tight">{tpl.title}</CardTitle>
@@ -169,24 +252,37 @@ export default function ChecklistTemplatesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleOpenEdit(tpl)}
-                  >
-                    <Edit3 className="w-3.5 h-3.5 mr-1" /> Editar
-                  </Button>
-
+                <div className="flex items-center justify-between gap-2 pt-2 border-t">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => handleDelete(tpl.id)}
-                    disabled={deletingId === tpl.id}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => handleToggleActiveStatus(tpl)}
+                    title={tpl.isActive === false ? 'Reactivar Plantilla' : 'Desactivar Plantilla'}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    {tpl.isActive === false ? '🟢 Activar' : '⚪ Desactivar'}
                   </Button>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenEdit(tpl)}
+                    >
+                      <Edit3 className="w-3.5 h-3.5 mr-1" /> Editar
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => handleDelete(tpl)}
+                      disabled={deletingId === tpl.id}
+                      title="Eliminar Plantilla"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

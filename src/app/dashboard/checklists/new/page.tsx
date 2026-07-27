@@ -81,8 +81,13 @@ function NewInspectionForm() {
           const loadedAssets = await assetsRes.json()
           const loadedTemplates = await templatesRes.json()
 
+          // Filter out inactive templates from dropdown
+          const activeTemplates = Array.isArray(loadedTemplates)
+            ? loadedTemplates.filter((t: any) => t.isActive !== false)
+            : []
+
           setAssets(loadedAssets)
-          setTemplates(loadedTemplates)
+          setTemplates(activeTemplates)
 
           // Pre-select asset if query param is present, or first asset
           const preselectedAssetId = searchParams.get('assetId') || loadedAssets[0]?.id || ''

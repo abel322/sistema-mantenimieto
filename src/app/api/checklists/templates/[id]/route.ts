@@ -38,7 +38,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { title, description, assetType, items } = body
+    const { title, description, assetType, isActive, items } = body
 
     // Transaction to update template and replace items safely
     const updatedTemplate = await prisma.$transaction(async (tx) => {
@@ -49,6 +49,7 @@ export async function PUT(
           title,
           description,
           assetType,
+          ...(typeof isActive === 'boolean' ? { isActive } : {}),
         },
       })
 
@@ -110,15 +111,50 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await prisma.checklistTemplate.delete({
-      where: { id: params.id },
+    // Check if the template has associated ChecklistExecution records
+    const executionsCount = await prisma.checklistExecution.count({
+      where: { templateId: params.id },
     })
 
-    return NextResponse.json({ message: 'Plantilla eliminada exitosamente' })
+    if (executionsCount > 0) {
+      // Soft delete: deactivate template to preserve inspection history
+      await prisma.checklistTemplate.update({
+        where: { id: params.id },
+        data: { isActive: false },
+      })
+
+      return NextResponse.json({
+        softDeleted: true,
+        message: 'Esta plantilla tiene inspecciones registradas en el historial. Se ha desactivado para ocultarla y conservar los registros.',
+      })
+    }
+
+    try {
+      await prisma.checklistTemplate.delete({
+        where: { id: params.id },
+      })
+
+      return NextResponse.json({ message: 'Plantilla eliminada exitosamente' })
+    } catch (deleteError: any) {
+      // Catch Prisma foreign key constraint error (e.g. P2003)
+      if (deleteError?.code === 'P2003' || deleteError?.message?.includes('Foreign key')) {
+        await prisma.checklistTemplate.update({
+          where: { id: params.id },
+          data: { isActive: false },
+        })
+
+        return NextResponse.json({
+          softDeleted: true,
+          message: 'No se puede eliminar esta plantilla porque ya tiene inspecciones registradas en el historial. Puedes desactivarla para ocultarla.',
+        })
+      }
+
+      throw deleteError
+    }
   } catch (error) {
     console.error('Error deleting checklist template:', error)
     return NextResponse.json(
-      { error: 'Error al eliminar la plantilla de inspección' },
+      { error: 'No se puede eliminar esta plantilla porque ya tiene inspecciones registradas en el historial. Puedes desactivarla para ocultarla.' },
       { status: 500 }
     )
   }
