@@ -11,7 +11,7 @@ export function InventoryView() {
   const [activeTab, setActiveTab] = useState<'parts' | 'tools'>('parts')
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-6 lg:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-3 sm:p-4 md:p-6 lg:p-8 pt-6 w-full max-w-full overflow-hidden">
       {/* Page Title & Top Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -26,7 +26,7 @@ export function InventoryView() {
         </div>
 
         {activeTab === 'parts' && (
-          <Link href="/dashboard/inventory/new">
+          <Link href="/dashboard/inventory/new" className="w-full sm:w-auto">
             <Button className="w-full sm:w-auto shadow-sm">
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Repuesto
@@ -36,8 +36,8 @@ export function InventoryView() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-border">
-        <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+      <div className="border-b border-border overflow-x-auto max-w-full">
+        <nav className="-mb-px flex space-x-4 sm:space-x-6 min-w-max pb-0.5" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('parts')}
             className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${

@@ -123,7 +123,7 @@ export function InventoryList() {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full max-w-full">
       {parts.map((part) => {
         const isLowStock = part.stock <= part.minStock
         const isOutOfStock = part.stock === 0
@@ -131,7 +131,7 @@ export function InventoryList() {
         return (
           <Card
             key={part.id}
-            className={`hover:border-primary/40 transition-all h-full flex flex-col justify-between shadow-sm ${
+            className={`w-full max-w-full overflow-hidden hover:border-primary/40 transition-all h-full flex flex-col justify-between shadow-sm ${
               isOutOfStock
                 ? 'border-destructive bg-destructive/5'
                 : isLowStock
@@ -139,20 +139,20 @@ export function InventoryList() {
                 : ''
             }`}
           >
-            <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3 min-w-0">
+            <CardContent className="p-3 sm:p-4 flex flex-col justify-between h-full space-y-4">
+              <div className="space-y-3 min-w-0">
+                <div className="flex items-start justify-between gap-2 min-w-0">
+                  <div className="flex items-start gap-2.5 min-w-0 flex-1">
                     <div className="p-2 rounded-lg bg-primary/10 shrink-0">
                       <Package className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <Link href={`/dashboard/inventory/${part.id}`}>
-                        <h3 className="font-semibold text-base hover:text-primary transition-colors truncate">
+                        <h3 className="font-semibold text-base hover:text-primary transition-colors truncate" title={part.name}>
                           {part.name}
                         </h3>
                       </Link>
-                      <p className="text-xs font-mono text-muted-foreground">
+                      <p className="text-xs font-mono text-muted-foreground truncate">
                         {part.code} • {part.category}
                       </p>
                     </div>
@@ -163,7 +163,7 @@ export function InventoryList() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      className="h-8 w-8 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                       onClick={() => setEditingPart(part)}
                       title="Editar Repuesto"
                     >
@@ -174,7 +174,7 @@ export function InventoryList() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      className="h-8 w-8 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
                       onClick={() => setDeletingPart(part)}
                       title="Eliminar Repuesto"
                     >
@@ -186,7 +186,7 @@ export function InventoryList() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        className="h-8 w-8 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
                         title="Ver Detalle"
                       >
                         <Eye className="h-4 w-4" />
@@ -196,14 +196,14 @@ export function InventoryList() {
                 </div>
 
                 <div className="space-y-2 pt-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       Stock actual
                     </span>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       {isLowStock && (
                         <AlertTriangle
-                          className={`h-4 w-4 ${
+                          className={`h-4 w-4 shrink-0 ${
                             isOutOfStock ? 'text-destructive' : 'text-yellow-500'
                           }`}
                         />
@@ -229,7 +229,7 @@ export function InventoryList() {
                     <span className="font-mono">{part.minStock} {part.unit}</span>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs pt-2 border-t">
+                  <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
                     <span className="text-muted-foreground">Precio Unitario</span>
                     <span className="font-semibold text-sm">
                       {formatCurrency(part.price)}
@@ -238,8 +238,8 @@ export function InventoryList() {
 
                   {part.preferredSupplier && (
                     <div className="flex items-center justify-between text-xs pt-1.5 text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Truck className="w-3 h-3 text-primary shrink-0" />
+                      <span className="flex items-center gap-1 shrink-0">
+                        <Truck className="w-3.5 h-3.5 text-primary shrink-0" />
                         Proveedor:
                       </span>
                       <span className="font-medium text-foreground truncate max-w-[140px]" title={part.preferredSupplier.name}>
@@ -251,16 +251,16 @@ export function InventoryList() {
               </div>
 
               {/* Quick Stock Controls (+ Entradas / - Salidas) */}
-              <div className="pt-3 border-t flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-muted-foreground">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Ajuste Rápido:
                 </span>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs px-2 text-destructive hover:bg-destructive/10"
+                    className="flex-1 sm:flex-initial h-8 text-xs bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/40 dark:hover:bg-red-900/50 dark:text-red-400 border-red-200 dark:border-red-900/50"
                     disabled={part.stock <= 0 || updatingId === part.id}
                     onClick={() => handleStockAdjustment(part.id, -1)}
                     title="Registrar Salida de 1 Unidad"
@@ -271,7 +271,7 @@ export function InventoryList() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs px-2 text-green-600 dark:text-green-400 hover:bg-green-500/10"
+                    className="flex-1 sm:flex-initial h-8 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50"
                     disabled={updatingId === part.id}
                     onClick={() => handleStockAdjustment(part.id, 1)}
                     title="Registrar Entrada de 1 Unidad"

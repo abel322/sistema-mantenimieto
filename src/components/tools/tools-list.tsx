@@ -257,7 +257,7 @@ export function ToolsList() {
         </Card>
       ) : (
         /* Tools Cards Grid */
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full max-w-full">
           {tools.map((tool) => {
             const formattedAssignedAt = tool.assignedAt
               ? new Date(tool.assignedAt).toLocaleString('es-ES', {
@@ -269,24 +269,24 @@ export function ToolsList() {
             return (
               <Card
                 key={tool.id}
-                className="hover:border-primary/40 transition-all flex flex-col justify-between shadow-sm overflow-hidden"
+                className="w-full max-w-full overflow-hidden hover:border-primary/40 transition-all flex flex-col justify-between shadow-sm"
               >
-                <CardContent className="p-5 flex flex-col justify-between h-full space-y-4">
-                  <div className="space-y-3">
+                <CardContent className="p-3 sm:p-4 flex flex-col justify-between h-full space-y-4">
+                  <div className="space-y-3 min-w-0">
                     {/* Header */}
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className="p-2.5 rounded-lg bg-primary/10 text-primary shrink-0">
+                    <div className="flex items-start justify-between gap-2 min-w-0">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
                           <Wrench className="h-5 w-5" />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <h3 className="font-semibold text-base truncate" title={tool.name}>
                             {tool.name}
                           </h3>
-                          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground mt-0.5">
+                          <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mt-0.5 truncate">
                             <span className="font-bold text-foreground">{tool.code}</span>
                             <span>•</span>
-                            <span>{tool.category}</span>
+                            <span className="truncate">{tool.category}</span>
                           </div>
                         </div>
                       </div>
@@ -301,14 +301,14 @@ export function ToolsList() {
 
                       {/* Brand & Serial Number */}
                       {(tool.brand || tool.serialNumber) && (
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground gap-2">
                           {tool.brand && (
-                            <span>
+                            <span className="truncate">
                               Marca: <strong className="text-foreground">{tool.brand}</strong>
                             </span>
                           )}
                           {tool.serialNumber && (
-                            <span className="font-mono text-[11px]">
+                            <span className="font-mono text-[11px] shrink-0">
                               S/N: {tool.serialNumber}
                             </span>
                           )}
@@ -356,14 +356,14 @@ export function ToolsList() {
                   </div>
 
                   {/* Actions Footer */}
-                  <div className="pt-3 border-t flex items-center justify-between gap-2">
+                  <div className="pt-3 border-t flex flex-wrap items-center justify-between gap-2">
                     {/* Action buttons (Assign / Return / Maintenance) */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
                       {tool.status === 'AVAILABLE' && (
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                          className="h-8 text-xs flex-1 sm:flex-initial bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
                           onClick={() => setAssigningTool(tool)}
                         >
                           <UserCheck className="w-3.5 h-3.5 mr-1" /> Prestar / Asignar
@@ -374,10 +374,10 @@ export function ToolsList() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30"
+                          className="h-8 text-xs flex-1 sm:flex-initial bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30"
                           onClick={() => setReturningTool(tool)}
                         >
-                          <ArrowLeftRight className="w-3.5 h-3.5 mr-1" /> Devolver a Pañol
+                          <ArrowLeftRight className="w-3.5 h-3.5 mr-1" /> Devolver
                         </Button>
                       )}
 
@@ -385,7 +385,7 @@ export function ToolsList() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                          className="h-8 text-xs flex-1 sm:flex-initial bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
                           onClick={() => handleStatusToggle(tool.id, 'AVAILABLE')}
                         >
                           <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Habilitar
@@ -397,7 +397,7 @@ export function ToolsList() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-rose-500"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-rose-500"
                           title="Enviar a Mantenimiento/Calibración"
                           onClick={() => handleStatusToggle(tool.id, 'MAINTENANCE')}
                         >
@@ -407,11 +407,11 @@ export function ToolsList() {
                     </div>
 
                     {/* Edit & Delete */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        className="h-8 w-8 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                         onClick={() => setEditingTool(tool)}
                         title="Editar Herramienta"
                       >
@@ -421,7 +421,7 @@ export function ToolsList() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        className="h-8 w-8 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
                         onClick={() => setDeletingTool(tool)}
                         title="Eliminar Herramienta"
                       >
