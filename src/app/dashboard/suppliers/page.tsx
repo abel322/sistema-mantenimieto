@@ -100,15 +100,15 @@ export default function SuppliersPage() {
   ]
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-6 lg:p-8 pt-6">
+    <div className="flex-1 space-y-6 p-3 sm:p-4 md:p-6 lg:p-8 pt-6 w-full max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2.5">
-            <Truck className="h-7 w-7 text-primary" />
-            Proveedores & Contratistas Externos
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2.5 min-w-0">
+            <Truck className="h-7 w-7 text-primary shrink-0" />
+            <span className="truncate">Proveedores & Contratistas</span>
           </h2>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-sm mt-0.5">
             Gestión de proveedores de repuestos, insumos y contratistas de servicios mecánicos/eléctricos
           </p>
         </div>
@@ -118,7 +118,7 @@ export default function SuppliersPage() {
             setSelectedSupplier(null)
             setIsModalOpen(true)
           }}
-          className="w-full sm:w-auto shadow-md"
+          className="w-full sm:w-auto shadow-md shrink-0"
         >
           <Plus className="mr-2 h-4 w-4" />
           Agregar Proveedor
@@ -126,7 +126,7 @@ export default function SuppliersPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4 w-full">
         <Card className="shadow-sm">
           <CardContent className="p-4 flex items-center justify-between">
             <div className="space-y-1">
@@ -182,45 +182,49 @@ export default function SuppliersPage() {
       </div>
 
       {/* Filters and Search Bar */}
-      <Card className="shadow-sm">
-        <CardContent className="p-4 space-y-4 sm:space-y-0 sm:flex sm:items-center sm:gap-4">
-          {/* Search Input */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por proveedor, RIF, contacto o especialidad..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+      <Card className="shadow-sm w-full max-w-full">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            {/* Search Input */}
+            <div className="relative w-full sm:flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por proveedor, RIF, contacto o especialidad..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 w-full text-sm"
+              />
+            </div>
 
-          {/* Category Filter */}
-          <div className="w-full sm:w-56 flex items-center gap-2">
-            <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
-            <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="ALL">Todas las Categorías</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </Select>
-          </div>
+            {/* Category Filter */}
+            <div className="w-full sm:w-56 flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground shrink-0 hidden sm:inline-block" />
+              <Select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full text-xs sm:text-sm"
+              >
+                <option value="ALL">Todas las Categorías</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-          {/* Status Filter */}
-          <div className="w-full sm:w-44">
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="ALL">Todos los Estados</option>
-              <option value="ACTIVE">Activos</option>
-              <option value="INACTIVE">Inactivos</option>
-            </Select>
+            {/* Status Filter */}
+            <div className="w-full sm:w-44">
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full text-xs sm:text-sm"
+              >
+                <option value="ALL">Todos los Estados</option>
+                <option value="ACTIVE">Activos</option>
+                <option value="INACTIVE">Inactivos</option>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -232,7 +236,7 @@ export default function SuppliersPage() {
           <span>Cargando lista de proveedores...</span>
         </div>
       ) : suppliers.length === 0 ? (
-        <Card>
+        <Card className="col-span-full">
           <CardContent className="p-12 text-center space-y-3">
             <Building2 className="w-12 h-12 text-muted-foreground/40 mx-auto" />
             <p className="text-base font-semibold text-muted-foreground">
@@ -244,118 +248,118 @@ export default function SuppliersPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 w-full max-w-full">
           {suppliers.map((supplier) => (
             <Card
               key={supplier.id}
-              className={`hover:border-primary/50 transition-all shadow-sm flex flex-col justify-between ${
+              className={`w-full max-w-full overflow-hidden hover:border-primary/50 transition-all shadow-sm flex flex-col justify-between ${
                 supplier.status === 'INACTIVE' ? 'opacity-70 border-dashed' : ''
               }`}
             >
-              <CardContent className="p-5 space-y-4">
-                {/* Header info */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
+              <CardContent className="p-3 sm:p-4 space-y-4 flex flex-col justify-between h-full min-w-0">
+                <div className="space-y-3 min-w-0">
+                  {/* Header info */}
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="min-w-0 flex-1 space-y-1">
                       <h3 className="font-bold text-base leading-tight truncate" title={supplier.name}>
                         {supplier.name}
                       </h3>
+
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap min-w-0">
+                        {supplier.taxId && (
+                          <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[11px] shrink-0">
+                            {supplier.taxId}
+                          </span>
+                        )}
+                        <Badge variant="outline" className="text-[11px] truncate max-w-full">
+                          {supplier.category}
+                        </Badge>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                      {supplier.taxId && (
-                        <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[11px]">
-                          {supplier.taxId}
-                        </span>
-                      )}
-                      <Badge variant="outline" className="text-[11px]">
-                        {supplier.category}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge
+                        variant={supplier.status === 'ACTIVE' ? 'success' : 'secondary'}
+                        className="text-[11px] shrink-0"
+                      >
+                        {supplier.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Badge
-                      variant={supplier.status === 'ACTIVE' ? 'success' : 'secondary'}
-                      className="text-[11px]"
-                    >
-                      {supplier.status === 'ACTIVE' ? 'Activo' : 'Inactivo'}
-                    </Badge>
+                  {/* Rating stars */}
+                  <div className="flex items-center gap-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-4 h-4 shrink-0 ${
+                          star <= (supplier.rating || 0)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-muted-foreground/30'
+                        }`}
+                      />
+                    ))}
+                    <span className="text-xs font-semibold text-muted-foreground ml-1">
+                      ({supplier.rating || 0}/5)
+                    </span>
+                  </div>
+
+                  {/* Contact details */}
+                  <div className="space-y-1.5 text-xs text-muted-foreground min-w-0">
+                    {supplier.contactName && (
+                      <div className="flex items-center gap-2 min-w-0">
+                        <User className="w-3.5 h-3.5 shrink-0 text-primary" />
+                        <span className="truncate">{supplier.contactName}</span>
+                      </div>
+                    )}
+
+                    {supplier.phone && (
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Phone className="w-3.5 h-3.5 shrink-0 text-primary" />
+                        <span className="truncate">{supplier.phone}</span>
+                      </div>
+                    )}
+
+                    {supplier.email && (
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Mail className="w-3.5 h-3.5 shrink-0 text-primary" />
+                        <span className="truncate break-all">{supplier.email}</span>
+                      </div>
+                    )}
+
+                    {supplier.address && (
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" />
+                        <span className="truncate">{supplier.address}</span>
+                      </div>
+                    )}
+
+                    {supplier.notes && (
+                      <div className="pt-2 text-[11px] italic line-clamp-2 text-muted-foreground/90 break-words">
+                        "{supplier.notes}"
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Rating stars */}
-                <div className="flex items-center gap-1 pt-1 border-t">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`w-4 h-4 ${
-                        star <= (supplier.rating || 0)
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'text-muted-foreground/30'
-                      }`}
-                    />
-                  ))}
-                  <span className="text-xs font-semibold text-muted-foreground ml-1">
-                    ({supplier.rating || 0}/5)
-                  </span>
-                </div>
-
-                {/* Contact details */}
-                <div className="space-y-1.5 text-xs text-muted-foreground">
-                  {supplier.contactName && (
-                    <div className="flex items-center gap-2">
-                      <User className="w-3.5 h-3.5 shrink-0 text-primary" />
-                      <span className="truncate">{supplier.contactName}</span>
-                    </div>
-                  )}
-
-                  {supplier.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 shrink-0 text-primary" />
-                      <span>{supplier.phone}</span>
-                    </div>
-                  )}
-
-                  {supplier.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-3.5 h-3.5 shrink-0 text-primary" />
-                      <span className="truncate">{supplier.email}</span>
-                    </div>
-                  )}
-
-                  {supplier.address && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5 shrink-0 text-primary" />
-                      <span className="truncate">{supplier.address}</span>
-                    </div>
-                  )}
-
-                  {supplier.notes && (
-                    <div className="pt-2 text-[11px] italic line-clamp-2 text-muted-foreground/90">
-                      "{supplier.notes}"
-                    </div>
-                  )}
-                </div>
-
                 {/* Counters and Action buttons */}
-                <div className="pt-3 border-t flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
                     <span className="flex items-center gap-1" title="Repuestos vinculados">
-                      <Boxes className="w-3.5 h-3.5" />
+                      <Boxes className="w-3.5 h-3.5 shrink-0" />
                       <strong className="text-foreground">{supplier._count?.parts || 0}</strong>
                     </span>
                     <span className="flex items-center gap-1" title="Órdenes de trabajo de servicio externo">
-                      <ClipboardList className="w-3.5 h-3.5" />
+                      <ClipboardList className="w-3.5 h-3.5 shrink-0" />
                       <strong className="text-foreground">{supplier._count?.workOrders || 0}</strong>
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      className="h-8 w-8 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                       onClick={() => {
                         setSelectedSupplier(supplier)
                         setIsModalOpen(true)
@@ -368,7 +372,7 @@ export default function SuppliersPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      className="h-8 w-8 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
                       onClick={() => {
                         setSupplierToDelete(supplier)
                         setIsDeleteModalOpen(true)
