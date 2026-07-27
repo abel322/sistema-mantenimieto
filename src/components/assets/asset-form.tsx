@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertCircle, Loader2 } from 'lucide-react'
 
+import { updateAsset } from '@/app/actions/assets'
 import { PLANT_AREAS } from '@/lib/constants'
 
 export interface AssetData {
@@ -49,19 +50,32 @@ export function AssetForm({ initialData, onSuccess, onCancel }: AssetFormProps) 
     }
 
     try {
-      const url = isEditing ? `/api/assets/${initialData?.id}` : '/api/assets'
-      const method = isEditing ? 'PUT' : 'POST'
+      if (isEditing && initialData?.id) {
+        const actionRes = await updateAsset(initialData.id, data)
+        if (!actionRes.success) {
+          // Fallback to API route
+          const response = await fetch(`/api/assets/${initialData.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          })
+          const resData = await response.json()
+          if (!response.ok) {
+            throw new Error(resData.error || actionRes.error || 'Ocurrió un error al actualizar el activo')
+          }
+        }
+      } else {
+        const response = await fetch('/api/assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
+        const resData = await response.json()
 
-      const resData = await response.json()
-
-      if (!response.ok) {
-        throw new Error(resData.error || 'Ocurrió un error al guardar el activo')
+        if (!response.ok) {
+          throw new Error(resData.error || 'Ocurrió un error al crear el activo')
+        }
       }
 
       if (onSuccess) {
@@ -138,9 +152,9 @@ export function AssetForm({ initialData, onSuccess, onCancel }: AssetFormProps) 
                 required
               >
                 <option value="">Seleccionar criticidad</option>
-                <option value="1">Criticidad 1 (Baja)</option>
+                <option value="1">Criticidad 1 (Alta)</option>
                 <option value="2">Criticidad 2 (Media)</option>
-                <option value="3">Criticidad 3 (Alta)</option>
+                <option value="3">Criticidad 3 (Baja)</option>
               </Select>
             </div>
           </div>

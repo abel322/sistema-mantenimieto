@@ -316,7 +316,7 @@ export function generateInventoryPDF(parts: any[]) {
   
   summary.forEach(([label, value]) => {
     doc.setFont('helvetica', 'normal')
-    doc.text(label, 15, yPos)
+    doc.text(label.toString(), 15, yPos)
     doc.setFont('helvetica', 'bold')
     doc.text(value.toString(), 100, yPos)
     yPos += 6

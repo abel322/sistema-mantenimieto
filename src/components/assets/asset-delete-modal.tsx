@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, Loader2, Trash2 } from 'lucide-react'
+import { deleteAsset } from '@/app/actions/assets'
 
 interface AssetDeleteModalProps {
   isOpen: boolean
@@ -31,18 +32,23 @@ export function AssetDeleteModal({
     setError(null)
 
     try {
-      const response = await fetch(`/api/assets/${asset.id}`, {
-        method: 'DELETE',
-      })
+      const actionRes = await deleteAsset(asset.id)
+      if (actionRes.success) {
+        onSuccess(asset.name)
+        onClose()
+      } else {
+        const response = await fetch(`/api/assets/${asset.id}`, {
+          method: 'DELETE',
+        })
+        const data = await response.json()
 
-      const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || actionRes.error || 'Error al eliminar el activo')
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al eliminar el activo')
+        onSuccess(asset.name)
+        onClose()
       }
-
-      onSuccess(asset.name)
-      onClose()
     } catch (err: any) {
       console.error('Error deleting asset:', err)
       setError(err.message || 'Ocurrió un error al eliminar el activo')
