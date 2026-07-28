@@ -12,6 +12,17 @@ export async function GET(
         asset: true,
         technician: true,
         externalVendor: true,
+        guideline: true,
+        materials: {
+          include: {
+            inventoryItem: true,
+          },
+        },
+        tools: {
+          include: {
+            tool: true,
+          },
+        },
         partsUsed: {
           include: {
             part: true,
@@ -46,12 +57,59 @@ export async function PATCH(
     const body = await request.json()
     const { status, closedAt } = body
 
-    const workOrder = await prisma.workOrder.update({
+    const existingWO = await prisma.workOrder.findUnique({
       where: { id: params.id },
-      data: {
-        ...(status && { status }),
-        ...(closedAt !== undefined && { closedAt: closedAt ? new Date(closedAt) : null }),
+      include: {
+        materials: true,
+        partsUsed: true,
       },
+    })
+
+    if (!existingWO) {
+      return NextResponse.json({ error: 'Orden de trabajo no encontrada' }, { status: 404 })
+    }
+
+    const isClosing = status === 'CLOSED' && existingWO.status !== 'CLOSED'
+
+    const workOrder = await prisma.$transaction(async (tx) => {
+      const updated = await tx.workOrder.update({
+        where: { id: params.id },
+        data: {
+          ...(status && { status }),
+          ...(closedAt !== undefined && { closedAt: closedAt ? new Date(closedAt) : null }),
+        },
+      })
+
+      if (isClosing) {
+        // Discount stock for WorkOrderMaterial
+        for (const mat of existingWO.materials) {
+          if (mat.inventoryItemId && mat.quantityUsed > 0) {
+            await tx.part.update({
+              where: { id: mat.inventoryItemId },
+              data: {
+                stock: {
+                  decrement: Math.max(1, Math.round(mat.quantityUsed)),
+                },
+              },
+            })
+          }
+        }
+        // Discount stock for PartsUsed if any
+        for (const partOnOrder of existingWO.partsUsed) {
+          if (partOnOrder.partId && partOnOrder.quantity > 0) {
+            await tx.part.update({
+              where: { id: partOnOrder.partId },
+              data: {
+                stock: {
+                  decrement: partOnOrder.quantity,
+                },
+              },
+            })
+          }
+        }
+      }
+
+      return updated
     })
 
     return NextResponse.json(workOrder)
@@ -70,22 +128,70 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { title, description, assetId, priority, type, technicianId, status, laborHours, externalVendorId } = body
+    const { title, description, assetId, priority, type, technicianId, status, laborHours, externalVendorId, guidelineId } = body
 
-    const workOrder = await prisma.workOrder.update({
+    const existingWO = await prisma.workOrder.findUnique({
       where: { id: params.id },
-      data: {
-        title,
-        description,
-        assetId,
-        priority,
-        type,
-        technicianId,
-        status,
-        laborHours: laborHours !== undefined ? parseFloat(laborHours) : undefined,
-        externalVendorId: externalVendorId || null,
-        closedAt: status === 'CLOSED' ? new Date() : null,
+      include: {
+        materials: true,
+        partsUsed: true,
       },
+    })
+
+    if (!existingWO) {
+      return NextResponse.json({ error: 'Orden de trabajo no encontrada' }, { status: 404 })
+    }
+
+    const isClosing = status === 'CLOSED' && existingWO.status !== 'CLOSED'
+
+    const workOrder = await prisma.$transaction(async (tx) => {
+      const updated = await tx.workOrder.update({
+        where: { id: params.id },
+        data: {
+          title,
+          description,
+          assetId,
+          priority,
+          type,
+          technicianId,
+          status,
+          guidelineId: guidelineId !== undefined ? (guidelineId || null) : undefined,
+          laborHours: laborHours !== undefined ? parseFloat(laborHours) : undefined,
+          externalVendorId: externalVendorId || null,
+          closedAt: status === 'CLOSED' ? new Date() : null,
+        },
+      })
+
+      if (isClosing) {
+        // Discount stock for WorkOrderMaterial
+        for (const mat of existingWO.materials) {
+          if (mat.inventoryItemId && mat.quantityUsed > 0) {
+            await tx.part.update({
+              where: { id: mat.inventoryItemId },
+              data: {
+                stock: {
+                  decrement: Math.max(1, Math.round(mat.quantityUsed)),
+                },
+              },
+            })
+          }
+        }
+        // Discount stock for PartsUsed if any
+        for (const partOnOrder of existingWO.partsUsed) {
+          if (partOnOrder.partId && partOnOrder.quantity > 0) {
+            await tx.part.update({
+              where: { id: partOnOrder.partId },
+              data: {
+                stock: {
+                  decrement: partOnOrder.quantity,
+                },
+              },
+            })
+          }
+        }
+      }
+
+      return updated
     })
 
     return NextResponse.json(workOrder)

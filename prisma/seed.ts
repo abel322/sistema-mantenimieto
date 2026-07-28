@@ -626,6 +626,45 @@ async function main() {
 
   console.log('✅ Herramientas de muestra creadas')
 
+  // Crear Pautas Técnicas (Technical Guidelines)
+  await prisma.technicalGuideline.upsert({
+    where: { code: 'SOP-01' },
+    update: {},
+    create: {
+      code: 'SOP-01',
+      title: 'Instalación de Válvulas Neumáticas',
+      description: 'Procedimiento estándar para cambio e instalación de electroválvulas y racores neumáticas.',
+      category: 'Neumática',
+      isActive: true,
+    },
+  })
+
+  await prisma.technicalGuideline.upsert({
+    where: { code: 'SOP-02' },
+    update: {},
+    create: {
+      code: 'SOP-02',
+      title: 'Cambio de Resistencias de Extrusora',
+      description: 'Instrucciones para sustitución de resistencias tipo banda en cilindro de extrusión LOTO.',
+      category: 'Electricidad',
+      isActive: true,
+    },
+  })
+
+  await prisma.technicalGuideline.upsert({
+    where: { code: 'SOP-03' },
+    update: {},
+    create: {
+      code: 'SOP-03',
+      title: 'Mantenimiento Preventivo de Compresor',
+      description: 'Inspección de filtros de aire, nivel de aceite y purga de condensados.',
+      category: 'Mecánica',
+      isActive: true,
+    },
+  })
+
+  console.log('✅ Pautas Técnicas creadas')
+
   console.log('🎉 Seed completado exitosamente!')
 }
 

@@ -16,6 +16,29 @@ import { ShieldAlert, Wrench, Box, CheckSquare, Zap, AlertTriangle, BookOpen } f
 type WorkOrderWithRelations = WorkOrder & {
   asset: Asset
   technician: User
+  guideline?: {
+    id: string
+    code: string
+    title: string
+    description?: string | null
+    category?: string | null
+  } | null
+  materials?: {
+    id: string
+    quantityUsed: number
+    inventoryItem: Part
+  }[]
+  tools?: {
+    id: string
+    tool: {
+      id: string
+      code: string
+      name: string
+      category: string
+      type: string
+      status: string
+    }
+  }[]
   externalVendor?: {
     id: string
     name: string
@@ -260,6 +283,26 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
                 </div>
               )}
             </div>
+
+            {/* Pauta Técnica Vinculada */}
+            {workOrder.guideline && (
+              <div className="pt-4 border-t">
+                <div className="flex items-center gap-2 mb-1 text-primary font-semibold text-sm">
+                  <BookOpen className="h-4 w-4" />
+                  <span>Pauta Técnica Vinculada</span>
+                </div>
+                <div className="bg-primary/5 p-3 rounded-md border border-primary/20">
+                  <p className="font-medium text-sm">
+                    {workOrder.guideline.code}: {workOrder.guideline.title}
+                  </p>
+                  {workOrder.guideline.description && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {workOrder.guideline.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -506,10 +549,76 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
         </Card>
       )}
 
+      {/* Materiales y Repuestos Requeridos (WorkOrderMaterial) */}
+      {workOrder.materials && workOrder.materials.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Box className="h-5 w-5 text-primary" />
+              <CardTitle>Materiales y Repuestos Vinculados</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="p-3 text-left text-sm font-medium">Material</th>
+                    <th className="p-3 text-left text-sm font-medium">Código</th>
+                    <th className="p-3 text-right text-sm font-medium">Cantidad Usada</th>
+                    <th className="p-3 text-right text-sm font-medium">Stock en Inventario</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {workOrder.materials.map((m) => (
+                    <tr key={m.id}>
+                      <td className="p-3 text-sm font-medium">{m.inventoryItem.name}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{m.inventoryItem.code}</td>
+                      <td className="p-3 text-sm text-right font-semibold">
+                        {m.quantityUsed} {m.inventoryItem.unit || 'unidad'}
+                      </td>
+                      <td className="p-3 text-sm text-right">
+                        <Badge variant={m.inventoryItem.stock < m.quantityUsed ? 'destructive' : 'outline'}>
+                          {m.inventoryItem.stock} {m.inventoryItem.unit || 'unidad'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Herramientas Asignadas (WorkOrderTool) */}
+      {workOrder.tools && workOrder.tools.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-primary" />
+              <CardTitle>Herramientas y Equipos Requeridos</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {workOrder.tools.map((wt) => (
+                <div key={wt.id} className="p-3 border rounded-lg bg-muted/20 flex flex-col gap-1">
+                  <span className="font-semibold text-sm">{wt.tool.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Código: {wt.tool.code} • Categoría: {wt.tool.category}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Repuestos Utilizados */}
       <Card>
         <CardHeader>
-          <CardTitle>Repuestos Utilizados</CardTitle>
+          <CardTitle>Repuestos Utilizados (PartOnOrder)</CardTitle>
         </CardHeader>
         <CardContent>
           {workOrder.partsUsed.length > 0 ? (
@@ -559,7 +668,7 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No se han registrado repuestos utilizados
+              No se han registrado repuestos utilizados adicionales
             </p>
           )}
         </CardContent>
