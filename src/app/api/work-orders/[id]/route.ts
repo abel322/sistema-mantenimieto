@@ -128,7 +128,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { title, description, assetId, priority, type, technicianId, status, laborHours, externalVendorId, guidelineId } = body
+    const { title, description, assetId, priority, type, technicianId, status, laborHours, externalVendorId, guidelineId, materials, tools } = body
 
     const existingWO = await prisma.workOrder.findUnique({
       where: { id: params.id },
@@ -161,6 +161,35 @@ export async function PUT(
           closedAt: status === 'CLOSED' ? new Date() : null,
         },
       })
+
+      if (materials !== undefined) {
+        await tx.workOrderMaterial.deleteMany({
+          where: { workOrderId: params.id },
+        })
+        if (Array.isArray(materials) && materials.length > 0) {
+          await tx.workOrderMaterial.createMany({
+            data: materials.map((m: any) => ({
+              workOrderId: params.id,
+              inventoryItemId: m.inventoryItemId,
+              quantityUsed: parseFloat(m.quantityUsed) || 0,
+            })),
+          })
+        }
+      }
+
+      if (tools !== undefined) {
+        await tx.workOrderTool.deleteMany({
+          where: { workOrderId: params.id },
+        })
+        if (Array.isArray(tools) && tools.length > 0) {
+          await tx.workOrderTool.createMany({
+            data: tools.map((toolId: string) => ({
+              workOrderId: params.id,
+              toolId,
+            })),
+          })
+        }
+      }
 
       if (isClosing) {
         // Discount stock for WorkOrderMaterial

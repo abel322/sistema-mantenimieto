@@ -32,9 +32,31 @@ interface WorkOrder {
   createdAt: string
   laborHours?: number | null
   externalVendorId?: string | null
+  guidelineId?: string | null
   asset: { id: string; name: string; code: string }
   technician: { id: string; name: string; role: string }
   externalVendor?: { id: string; name: string; category: string } | null
+  materials?: {
+    id?: string
+    inventoryItemId: string
+    quantityUsed: number
+    inventoryItem?: {
+      id?: string
+      name: string
+      unit: string
+      stock: number
+    }
+  }[]
+  tools?: {
+    id?: string
+    toolId: string
+    tool?: {
+      id: string
+      code?: string
+      name: string
+      category?: string
+    }
+  }[]
 }
 
 const statusColors: Record<string, any> = {
