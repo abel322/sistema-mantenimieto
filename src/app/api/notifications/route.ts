@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { autoResolveStockAlerts } from '@/lib/notifications'
 
 export async function GET() {
   try {
+    // Auto-resolve any STOCK_ALERT for parts whose stock is back above minStock
+    await autoResolveStockAlerts()
+
     const notifications = await prisma.notification.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 30,
+      take: 50,
     })
 
     const unreadCount = await prisma.notification.count({

@@ -5,16 +5,18 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { 
-  Bell, 
-  Package, 
-  Calendar, 
-  AlertTriangle, 
+import {
+  Bell,
+  Package,
+  Calendar,
+  AlertTriangle,
   CheckCheck,
-  Loader2,
+  CheckCircle2,
+  History,
   ExternalLink,
   Boxes,
-  ClipboardList
+  ClipboardList,
+  Inbox,
 } from 'lucide-react'
 
 interface NotificationItem {
@@ -43,11 +45,50 @@ function getRelativeTime(dateString: string): string {
   }
 }
 
+const DEMO_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 'demo-1',
+    title: 'Stock Bajo: Malla filtrante 80 mesh',
+    message: 'El repuesto se encuentra agotado (0 / 10 unidades en almacén).',
+    type: 'STOCK_ALERT',
+    isRead: false,
+    link: '/dashboard/inventory',
+    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-2',
+    title: 'Stock Bajo: Cinta teflonada 50mm',
+    message: 'Quedan 2 unidades en inventario (Stock mínimo: 15 unidades).',
+    type: 'STOCK_ALERT',
+    isRead: false,
+    link: '/dashboard/inventory',
+    createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-3',
+    title: 'Rutina Próxima: Extrusora Principal EX-01',
+    message: 'Cambio de Aceite y Filtros Reductor (Vence hoy).',
+    type: 'SCHEDULE_DUE',
+    isRead: false,
+    link: '/dashboard/schedule',
+    createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+  },
+  {
+    id: 'demo-4',
+    title: 'Orden Pendiente: OT #wo-9821',
+    message: 'Ajuste de Cuchillas Selladora Bolsera #03 sin completar (>48h).',
+    type: 'WORK_ORDER_OVERDUE',
+    isRead: false,
+    link: '/dashboard/work-orders',
+    createdAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+  },
+]
+
 export function NotificationsBell() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'unread' | 'history'>('unread')
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
 
   const fetchNotifications = async () => {
@@ -56,53 +97,12 @@ export function NotificationsBell() {
       if (res.ok) {
         const data = await res.json()
         let items: NotificationItem[] = data.notifications || []
-        let count: number = data.unreadCount || 0
 
-        // If no notifications exist in database yet, generate fallback demo stock alerts
         if (items.length === 0) {
-          items = [
-            {
-              id: 'demo-1',
-              title: 'Stock Bajo: Malla filtrante 80 mesh',
-              message: 'El repuesto se encuentra agotado (0 / 10 unidades en almacén).',
-              type: 'STOCK_ALERT',
-              isRead: false,
-              link: '/dashboard/inventory',
-              createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-            },
-            {
-              id: 'demo-2',
-              title: 'Stock Bajo: Cinta teflonada 50mm',
-              message: 'Quedan 2 unidades en inventario (Stock mínimo: 15 unidades).',
-              type: 'STOCK_ALERT',
-              isRead: false,
-              link: '/dashboard/inventory',
-              createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-            },
-            {
-              id: 'demo-3',
-              title: 'Rutina Próxima: Extrusora Principal EX-01',
-              message: 'Cambio de Aceite y Filtros Reductor (Vence hoy).',
-              type: 'SCHEDULE_DUE',
-              isRead: false,
-              link: '/dashboard/schedule',
-              createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-            },
-            {
-              id: 'demo-4',
-              title: 'Orden Pendiente: OT #wo-9821',
-              message: 'Ajuste de Cuchillas Selladora Bolsera #03 sin completar (>48h).',
-              type: 'WORK_ORDER_OVERDUE',
-              isRead: false,
-              link: '/dashboard/work-orders',
-              createdAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
-            },
-          ]
-          count = 4
+          items = DEMO_NOTIFICATIONS
         }
 
         setNotifications(items)
-        setUnreadCount(count)
       }
     } catch (error) {
       console.error('Error fetching notifications:', error)
@@ -123,9 +123,17 @@ export function NotificationsBell() {
     return () => clearInterval(interval)
   }, [])
 
+  // Unread items & History items
+  const unreadNotifications = notifications.filter((n) => !n.isRead)
+  const historyNotifications = notifications.filter((n) => n.isRead).slice(0, 15)
+  const unreadCount = unreadNotifications.length
+
   const handleMarkAllRead = async () => {
+    setLoading(true)
+    // Instant UI feedback: mark all local notifications as read
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
+
     try {
-      setLoading(true)
       await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -134,29 +142,26 @@ export function NotificationsBell() {
     } catch (error) {
       console.error('Error marking notifications as read:', error)
     } finally {
-      setUnreadCount(0)
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
       setLoading(false)
     }
   }
 
   const handleNotificationClick = async (notif: NotificationItem) => {
-    if (!notif.isRead) {
+    // Instant UI feedback: update item as read immediately so it vanishes from unread tab
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+    )
+
+    if (!notif.isRead && !notif.id.startsWith('demo-')) {
       try {
-        if (!notif.id.startsWith('demo-')) {
-          await fetch('/api/notifications', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: notif.id }),
-          })
-        }
+        await fetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: notif.id }),
+        })
       } catch (error) {
         console.error('Error marking notification as read:', error)
       }
-      setUnreadCount((prev) => Math.max(0, prev - 1))
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
-      )
     }
 
     setIsOpen(false)
@@ -179,10 +184,13 @@ export function NotificationsBell() {
   }
 
   return (
-    <Popover open={isOpen} onOpenChange={(open) => {
-      setIsOpen(open)
-      if (open) fetchNotifications()
-    }}>
+    <Popover
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open)
+        if (open) fetchNotifications()
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -205,54 +213,85 @@ export function NotificationsBell() {
         sideOffset={8}
         className="z-[9999] w-80 sm:w-96 p-4 shadow-2xl border border-slate-200 dark:border-slate-800 bg-card text-card-foreground rounded-xl space-y-3"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b pb-3">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm text-foreground">Notificaciones</h3>
+        {/* Header & Tabs */}
+        <div className="space-y-3 border-b pb-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+              <Inbox className="w-4 h-4 text-primary" />
+              Notificaciones
+            </h3>
+
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                {unreadCount} sin leer
-              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground hover:text-primary flex items-center gap-1.5 px-2"
+                onClick={handleMarkAllRead}
+                disabled={loading}
+                title="Marcar todas como leídas"
+              >
+                <CheckCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="hidden sm:inline">Marcar leídas</span>
+              </Button>
             )}
           </div>
 
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 px-2"
-              onClick={handleMarkAllRead}
-              disabled={loading}
+          {/* Filter Tabs */}
+          <div className="grid grid-cols-2 gap-1 p-1 bg-muted/50 rounded-lg text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setActiveTab('unread')}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md transition-all ${
+                activeTab === 'unread'
+                  ? 'bg-background text-foreground shadow-sm font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              {loading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <CheckCheck className="w-3.5 h-3.5" />
+              <span>Sin leer</span>
+              {unreadCount > 0 && (
+                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 min-w-4">
+                  {unreadCount}
+                </Badge>
               )}
-            </Button>
-          )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('history')}
+              className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md transition-all ${
+                activeTab === 'history'
+                  ? 'bg-background text-foreground shadow-sm font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Historial</span>
+              {historyNotifications.length > 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  ({historyNotifications.length})
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Body: Scrollable Notification List */}
-          <div className="max-h-80 overflow-y-auto space-y-2 pr-1 divide-y divide-border/40">
-            {notifications.length > 0 ? (
-              notifications.map((notif) => (
+        {/* Notification Item List */}
+        <div className="max-h-80 overflow-y-auto space-y-2 pr-1 divide-y divide-border/40">
+          {activeTab === 'unread' ? (
+            unreadNotifications.length > 0 ? (
+              unreadNotifications.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors pt-2.5 relative ${
-                    !notif.isRead
-                      ? 'bg-primary/5 dark:bg-primary/10 hover:bg-primary/15 border-l-2 border-primary'
-                      : 'hover:bg-accent/80'
-                  }`}
+                  className="flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-all pt-2.5 relative bg-primary/5 dark:bg-primary/10 hover:bg-primary/15 border-l-2 border-primary group animate-in fade-in duration-200"
                 >
-                  <div className="p-1.5 rounded-md bg-background border shrink-0 mt-0.5 shadow-sm">
+                  <div className="p-1.5 rounded-md bg-background border shrink-0 mt-0.5 shadow-sm group-hover:scale-105 transition-transform">
                     {getTypeIcon(notif.type)}
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-0.5">
                     <div className="flex items-center justify-between gap-1">
-                      <p className={`text-xs truncate ${!notif.isRead ? 'font-bold text-foreground' : 'font-medium text-muted-foreground'}`}>
+                      <p className="text-xs font-bold text-foreground truncate">
                         {notif.title}
                       </p>
                       <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
@@ -271,45 +310,86 @@ export function NotificationsBell() {
                     )}
                   </div>
 
-                  {!notif.isRead && (
-                    <span className="w-2 h-2 rounded-full bg-primary shrink-0 self-center" />
-                  )}
+                  <span className="w-2 h-2 rounded-full bg-primary shrink-0 self-center" />
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center text-xs text-muted-foreground">
-                No hay notificaciones pendientes.
+              /* Empty State for Unread */
+              <div className="py-10 px-4 text-center space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto opacity-90 animate-bounce" />
+                <p className="font-semibold text-sm text-foreground">¡Todo al día!</p>
+                <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
+                  No tienes notificaciones pendientes.
+                </p>
               </div>
-            )}
-          </div>
+            )
+          ) : (
+            /* History / Read Notifications Tab */
+            historyNotifications.length > 0 ? (
+              historyNotifications.map((notif) => (
+                <div
+                  key={notif.id}
+                  onClick={() => handleNotificationClick(notif)}
+                  className="flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors pt-2.5 opacity-80 hover:opacity-100 hover:bg-accent/80"
+                >
+                  <div className="p-1.5 rounded-md bg-background border shrink-0 mt-0.5 shadow-sm">
+                    {getTypeIcon(notif.type)}
+                  </div>
 
-          {/* Footer Direct Navigation Links */}
-          <div className="pt-2 border-t flex flex-col sm:flex-row items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs flex items-center justify-center gap-1.5 h-8"
-              onClick={() => {
-                setIsOpen(false)
-                router.push('/dashboard/inventory')
-              }}
-            >
-              <Boxes className="w-3.5 h-3.5 text-primary" /> Ver Inventario
-            </Button>
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-medium text-muted-foreground truncate">
+                        {notif.title}
+                      </p>
+                      <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
+                        {getRelativeTime(notif.createdAt)}
+                      </span>
+                    </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs flex items-center justify-center gap-1.5 h-8"
-              onClick={() => {
-                setIsOpen(false)
-                router.push('/dashboard/work-orders')
-              }}
-            >
-              <ClipboardList className="w-3.5 h-3.5 text-primary" /> Ver Órdenes
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
-    )
-  }
+                    <p className="text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                      {notif.message}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-10 px-4 text-center space-y-2">
+                <History className="w-8 h-8 text-muted-foreground/40 mx-auto" />
+                <p className="text-xs text-muted-foreground">
+                  No hay notificaciones en el historial.
+                </p>
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Footer Navigation Shortcuts */}
+        <div className="pt-2 border-t flex flex-col sm:flex-row items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs flex items-center justify-center gap-1.5 h-8"
+            onClick={() => {
+              setIsOpen(false)
+              router.push('/dashboard/inventory')
+            }}
+          >
+            <Boxes className="w-3.5 h-3.5 text-primary" /> Ver Inventario
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs flex items-center justify-center gap-1.5 h-8"
+            onClick={() => {
+              setIsOpen(false)
+              router.push('/dashboard/work-orders')
+            }}
+          >
+            <ClipboardList className="w-3.5 h-3.5 text-primary" /> Ver Órdenes
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}

@@ -49,6 +49,37 @@ export async function createNotification(data: {
   }
 }
 
+/**
+ * Auto-resolves STOCK_ALERT notifications for parts whose stock rises back above minStock.
+ */
+export async function autoResolveStockAlerts() {
+  try {
+    const partsAboveMin = await prisma.part.findMany({
+      select: { name: true, code: true, stock: true, minStock: true },
+    })
+
+    for (const part of partsAboveMin) {
+      if (part.stock > part.minStock) {
+        await prisma.notification.updateMany({
+          where: {
+            type: 'STOCK_ALERT',
+            isRead: false,
+            OR: [
+              { title: { contains: part.name } },
+              { title: { contains: part.code } },
+              { message: { contains: part.name } },
+              { message: { contains: part.code } },
+            ],
+          },
+          data: { isRead: true },
+        })
+      }
+    }
+  } catch (error) {
+    console.error('Error auto-resolving stock alerts:', error)
+  }
+}
+
 export async function triggerLowStockAlert(part: {
   id: string
   name: string
@@ -70,6 +101,21 @@ export async function triggerLowStockAlert(part: {
       message,
       type: 'STOCK_ALERT',
       link: '/dashboard/inventory',
+    })
+  } else {
+    // If stock rose back above minStock, auto-resolve any unread stock alerts for this item
+    await prisma.notification.updateMany({
+      where: {
+        type: 'STOCK_ALERT',
+        isRead: false,
+        OR: [
+          { title: { contains: part.name } },
+          { title: { contains: part.code } },
+          { message: { contains: part.name } },
+          { message: { contains: part.code } },
+        ],
+      },
+      data: { isRead: true },
     })
   }
 }
