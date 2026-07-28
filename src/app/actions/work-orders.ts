@@ -14,10 +14,19 @@ export interface CreateWorkOrderInput {
   guidelineId?: string | null
   externalVendorId?: string | null
   materials?: {
-    inventoryItemId: string
+    inventoryItemId?: string | null
+    customName?: string | null
+    isCustom?: boolean
     quantityUsed: number
   }[]
-  tools?: string[] // Array of Tool IDs
+  tools?: (
+    | string
+    | {
+        toolId?: string | null
+        customName?: string | null
+        isCustom?: boolean
+      }
+  )[]
 }
 
 export async function createWorkOrder(data: CreateWorkOrderInput) {
@@ -52,16 +61,25 @@ export async function createWorkOrder(data: CreateWorkOrderInput) {
         materials: materials.length > 0
           ? {
               create: materials.map((m) => ({
-                inventoryItemId: m.inventoryItemId,
-                quantityUsed: typeof m.quantityUsed === 'number' ? m.quantityUsed : parseFloat(m.quantityUsed as any),
+                inventoryItemId: m.isCustom ? null : (m.inventoryItemId || null),
+                customName: m.isCustom ? m.customName : null,
+                isCustom: !!m.isCustom,
+                quantityUsed: typeof m.quantityUsed === 'number' ? m.quantityUsed : parseFloat(m.quantityUsed as any) || 1,
               })),
             }
           : undefined,
         tools: tools.length > 0
           ? {
-              create: tools.map((toolId) => ({
-                toolId,
-              })),
+              create: tools.map((t) => {
+                if (typeof t === 'string') {
+                  return { toolId: t, isCustom: false }
+                }
+                return {
+                  toolId: t.isCustom ? null : (t.toolId || null),
+                  customName: t.isCustom ? t.customName : null,
+                  isCustom: !!t.isCustom,
+                }
+              }),
             }
           : undefined,
       },

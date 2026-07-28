@@ -30,16 +30,25 @@ export async function POST(request: Request) {
         materials: Array.isArray(materials) && materials.length > 0
           ? {
               create: materials.map((m: any) => ({
-                inventoryItemId: m.inventoryItemId,
-                quantityUsed: parseFloat(m.quantityUsed) || 0,
+                inventoryItemId: m.isCustom ? null : (m.inventoryItemId || null),
+                customName: m.isCustom ? m.customName : null,
+                isCustom: !!m.isCustom,
+                quantityUsed: parseFloat(m.quantityUsed) || 1,
               })),
             }
           : undefined,
         tools: Array.isArray(tools) && tools.length > 0
           ? {
-              create: tools.map((t: string) => ({
-                toolId: t,
-              })),
+              create: tools.map((t: any) => {
+                if (typeof t === 'string') {
+                  return { toolId: t, isCustom: false }
+                }
+                return {
+                  toolId: t.isCustom ? null : (t.toolId || null),
+                  customName: t.isCustom ? t.customName : null,
+                  isCustom: !!t.isCustom,
+                }
+              }),
             }
           : undefined,
       },

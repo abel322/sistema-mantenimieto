@@ -427,9 +427,11 @@ model WorkOrderMaterial {
   id              String    @id @default(uuid())
   workOrderId     String
   workOrder       WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  inventoryItemId String
-  inventoryItem   Part      @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
-  quantityUsed    Float
+  inventoryItemId String?
+  inventoryItem   Part?     @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  customName      String?
+  isCustom        Boolean   @default(false)
+  quantityUsed    Float     @default(1)
   createdAt       DateTime  @default(now())
 
   @@index([workOrderId])
@@ -440,8 +442,10 @@ model WorkOrderTool {
   id          String    @id @default(uuid())
   workOrderId String
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
-  toolId      String
-  tool        Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  toolId      String?
+  tool        Tool?     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  customName  String?
+  isCustom    Boolean   @default(false)
   createdAt   DateTime  @default(now())
 
   @@index([workOrderId])

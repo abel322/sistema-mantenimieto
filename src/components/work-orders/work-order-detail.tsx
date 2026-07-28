@@ -25,19 +25,25 @@ type WorkOrderWithRelations = WorkOrder & {
   } | null
   materials?: {
     id: string
+    inventoryItemId?: string | null
+    customName?: string | null
+    isCustom?: boolean
     quantityUsed: number
-    inventoryItem: Part
+    inventoryItem?: Part | null
   }[]
   tools?: {
     id: string
-    tool: {
+    toolId?: string | null
+    customName?: string | null
+    isCustom?: boolean
+    tool?: {
       id: string
       code: string
       name: string
       category: string
       type: string
       status: string
-    }
+    } | null
   }[]
   externalVendor?: {
     id: string
@@ -572,15 +578,34 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
                 <tbody className="divide-y">
                   {workOrder.materials.map((m) => (
                     <tr key={m.id}>
-                      <td className="p-3 text-sm font-medium">{m.inventoryItem.name}</td>
-                      <td className="p-3 text-sm text-muted-foreground">{m.inventoryItem.code}</td>
+                      <td className="p-3 text-sm font-medium">
+                        {m.isCustom ? (
+                          <div className="flex items-center gap-2">
+                            <span>{m.customName || 'Material Manual'}</span>
+                            <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">
+                              No Inventariado
+                            </Badge>
+                          </div>
+                        ) : (
+                          m.inventoryItem?.name || 'Material'
+                        )}
+                      </td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {m.isCustom ? '-' : m.inventoryItem?.code || '-'}
+                      </td>
                       <td className="p-3 text-sm text-right font-semibold">
-                        {m.quantityUsed} {m.inventoryItem.unit || 'unidad'}
+                        {m.quantityUsed} {m.isCustom ? 'unidad' : (m.inventoryItem?.unit || 'unidad')}
                       </td>
                       <td className="p-3 text-sm text-right">
-                        <Badge variant={m.inventoryItem.stock < m.quantityUsed ? 'destructive' : 'outline'}>
-                          {m.inventoryItem.stock} {m.inventoryItem.unit || 'unidad'}
-                        </Badge>
+                        {m.isCustom ? (
+                          <Badge variant="outline" className="text-xs">N/A</Badge>
+                        ) : m.inventoryItem ? (
+                          <Badge variant={m.inventoryItem.stock < m.quantityUsed ? 'destructive' : 'outline'}>
+                            {m.inventoryItem.stock} {m.inventoryItem.unit || 'unidad'}
+                          </Badge>
+                        ) : (
+                          '-'
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -604,9 +629,20 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {workOrder.tools.map((wt) => (
                 <div key={wt.id} className="p-3 border rounded-lg bg-muted/20 flex flex-col gap-1">
-                  <span className="font-semibold text-sm">{wt.tool.name}</span>
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="font-semibold text-sm">
+                      {wt.isCustom ? wt.customName || 'Herramienta Manual' : wt.tool?.name || 'Herramienta'}
+                    </span>
+                    {wt.isCustom && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-amber-500/40 text-amber-700 dark:text-amber-300">
+                        Manual
+                      </Badge>
+                    )}
+                  </div>
                   <span className="text-xs text-muted-foreground">
-                    Código: {wt.tool.code} • Categoría: {wt.tool.category}
+                    {wt.isCustom
+                      ? 'Herramienta Manual No Registrada'
+                      : `Código: ${wt.tool?.code || '-'} • Categoría: ${wt.tool?.category || '-'}`}
                   </span>
                 </div>
               ))}

@@ -81,9 +81,9 @@ export async function PATCH(
       })
 
       if (isClosing) {
-        // Discount stock for WorkOrderMaterial
+        // Discount stock for WorkOrderMaterial (only non-custom items with inventoryItemId)
         for (const mat of existingWO.materials) {
-          if (mat.inventoryItemId && mat.quantityUsed > 0) {
+          if (!mat.isCustom && mat.inventoryItemId && mat.quantityUsed > 0) {
             await tx.part.update({
               where: { id: mat.inventoryItemId },
               data: {
@@ -170,8 +170,10 @@ export async function PUT(
           await tx.workOrderMaterial.createMany({
             data: materials.map((m: any) => ({
               workOrderId: params.id,
-              inventoryItemId: m.inventoryItemId,
-              quantityUsed: parseFloat(m.quantityUsed) || 0,
+              inventoryItemId: m.isCustom ? null : (m.inventoryItemId || null),
+              customName: m.isCustom ? m.customName : null,
+              isCustom: !!m.isCustom,
+              quantityUsed: parseFloat(m.quantityUsed) || 1,
             })),
           })
         }
@@ -183,18 +185,29 @@ export async function PUT(
         })
         if (Array.isArray(tools) && tools.length > 0) {
           await tx.workOrderTool.createMany({
-            data: tools.map((toolId: string) => ({
-              workOrderId: params.id,
-              toolId,
-            })),
+            data: tools.map((t: any) => {
+              if (typeof t === 'string') {
+                return {
+                  workOrderId: params.id,
+                  toolId: t,
+                  isCustom: false,
+                }
+              }
+              return {
+                workOrderId: params.id,
+                toolId: t.isCustom ? null : (t.toolId || null),
+                customName: t.isCustom ? t.customName : null,
+                isCustom: !!t.isCustom,
+              }
+            }),
           })
         }
       }
 
       if (isClosing) {
-        // Discount stock for WorkOrderMaterial
+        // Discount stock for WorkOrderMaterial (only non-custom items with inventoryItemId)
         for (const mat of existingWO.materials) {
-          if (mat.inventoryItemId && mat.quantityUsed > 0) {
+          if (!mat.isCustom && mat.inventoryItemId && mat.quantityUsed > 0) {
             await tx.part.update({
               where: { id: mat.inventoryItemId },
               data: {

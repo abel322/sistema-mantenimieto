@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Trash2, BookOpen, Package, Wrench, AlertCircle, Loader2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Trash2, BookOpen, Package, Wrench, AlertCircle, Loader2, X } from 'lucide-react'
 import { createWorkOrder } from '@/app/actions/work-orders'
 import type { Asset, User, TechnicalGuideline, Part, Tool } from '@prisma/client'
 
@@ -19,11 +20,18 @@ interface SupplierOption {
 }
 
 interface MaterialSelection {
-  inventoryItemId: string
+  id?: string
+  inventoryItemId?: string | null
+  customName?: string | null
+  isCustom: boolean
   quantityUsed: number
   name: string
   unit: string
-  stock: number
+  stock?: number
+}
+
+interface CustomToolItem {
+  customName: string
 }
 
 interface WorkOrderFormProps {
@@ -50,10 +58,19 @@ export function WorkOrderForm({
   const [guidelineId, setGuidelineId] = useState<string>('')
   const [selectedMaterials, setSelectedMaterials] = useState<MaterialSelection[]>([])
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([])
+  const [customTools, setCustomTools] = useState<CustomToolItem[]>([])
 
   // Material picker state
+  const [materialMode, setMaterialMode] = useState<'INVENTORY' | 'CUSTOM'>('INVENTORY')
   const [currentPartId, setCurrentPartId] = useState<string>('')
   const [currentQuantity, setCurrentQuantity] = useState<string>('1')
+
+  // Custom material state
+  const [customMaterialName, setCustomMaterialName] = useState<string>('')
+  const [customMaterialQuantity, setCustomMaterialQuantity] = useState<string>('1')
+
+  // Custom tool input state
+  const [customToolInput, setCustomToolInput] = useState<string>('')
 
   useEffect(() => {
     fetch('/api/suppliers?status=ACTIVE')
@@ -62,7 +79,7 @@ export function WorkOrderForm({
       .catch(console.error)
   }, [])
 
-  function handleAddMaterial() {
+  function handleAddInventoryMaterial() {
     if (!currentPartId) return
     const part = inventoryItems.find((p) => p.id === currentPartId)
     if (!part) return
@@ -70,8 +87,9 @@ export function WorkOrderForm({
     const qty = parseFloat(currentQuantity)
     if (isNaN(qty) || qty <= 0) return
 
-    // Check if already added
-    const existingIndex = selectedMaterials.findIndex((m) => m.inventoryItemId === currentPartId)
+    const existingIndex = selectedMaterials.findIndex(
+      (m) => !m.isCustom && m.inventoryItemId === currentPartId
+    )
     if (existingIndex >= 0) {
       const updated = [...selectedMaterials]
       updated[existingIndex].quantityUsed += qty
@@ -81,6 +99,7 @@ export function WorkOrderForm({
         ...prev,
         {
           inventoryItemId: part.id,
+          isCustom: false,
           quantityUsed: qty,
           name: part.name,
           unit: part.unit || 'unidad',
@@ -93,14 +112,50 @@ export function WorkOrderForm({
     setCurrentQuantity('1')
   }
 
-  function handleRemoveMaterial(inventoryItemId: string) {
-    setSelectedMaterials((prev) => prev.filter((m) => m.inventoryItemId !== inventoryItemId))
+  function handleAddCustomMaterial() {
+    if (!customMaterialName.trim()) return
+
+    const qty = parseFloat(customMaterialQuantity)
+    if (isNaN(qty) || qty <= 0) return
+
+    setSelectedMaterials((prev) => [
+      ...prev,
+      {
+        customName: customMaterialName.trim(),
+        isCustom: true,
+        quantityUsed: qty,
+        name: customMaterialName.trim(),
+        unit: 'unidad',
+      },
+    ])
+
+    setCustomMaterialName('')
+    setCustomMaterialQuantity('1')
+  }
+
+  function handleRemoveMaterial(index: number) {
+    setSelectedMaterials((prev) => prev.filter((_, i) => i !== index))
   }
 
   function handleToggleTool(toolId: string) {
     setSelectedToolIds((prev) =>
       prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId]
     )
+  }
+
+  function handleAddCustomTool() {
+    if (!customToolInput.trim()) return
+    const name = customToolInput.trim()
+    if (customTools.some((ct) => ct.customName.toLowerCase() === name.toLowerCase())) {
+      setCustomToolInput('')
+      return
+    }
+    setCustomTools((prev) => [...prev, { customName: name }])
+    setCustomToolInput('')
+  }
+
+  function handleRemoveCustomTool(index: number) {
+    setCustomTools((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -117,6 +172,18 @@ export function WorkOrderForm({
     const technicianId = formData.get('technicianId') as string
     const externalVendorId = (formData.get('externalVendorId') as string) || null
 
+    const formattedMaterials = selectedMaterials.map((m) => ({
+      inventoryItemId: m.isCustom ? null : m.inventoryItemId,
+      customName: m.isCustom ? m.customName : null,
+      isCustom: m.isCustom,
+      quantityUsed: m.quantityUsed,
+    }))
+
+    const formattedTools = [
+      ...selectedToolIds.map((id) => ({ toolId: id, isCustom: false })),
+      ...customTools.map((ct) => ({ customName: ct.customName, isCustom: true })),
+    ]
+
     const result = await createWorkOrder({
       title,
       description,
@@ -126,11 +193,8 @@ export function WorkOrderForm({
       technicianId,
       guidelineId: guidelineId || null,
       externalVendorId,
-      materials: selectedMaterials.map((m) => ({
-        inventoryItemId: m.inventoryItemId,
-        quantityUsed: m.quantityUsed,
-      })),
-      tools: selectedToolIds,
+      materials: formattedMaterials,
+      tools: formattedTools,
     })
 
     if (result.success) {
@@ -301,55 +365,121 @@ export function WorkOrderForm({
             <CardTitle className="text-lg">b) Materiales y Repuestos Requeridos</CardTitle>
           </div>
           <CardDescription>
-            Agrega items del inventario. El stock se descontará automáticamente al finalizar la orden (`FINALIZADA`).
+            Agrega ítems del inventario o ingresa materiales no inventariados manualmente. El stock sólo se descontará para ítems de inventario al finalizar la orden (`Cerrada`).
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-end">
-            <div className="space-y-2 flex-1 w-full">
-              <Label htmlFor="partSelect" className="font-semibold">
-                Item de Inventario
-              </Label>
-              <Select
-                id="partSelect"
-                value={currentPartId}
-                onChange={(e) => setCurrentPartId(e.target.value)}
-              >
-                <option value="">-- Seleccionar repuesto / material --</option>
-                {inventoryItems.map((part) => (
-                  <option key={part.id} value={part.id}>
-                    {part.name} ({part.code}) - Stock: {part.stock} {part.unit}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <div className="space-y-2 w-full sm:w-32">
-              <Label htmlFor="partQuantity" className="font-semibold">
-                Cantidad
-              </Label>
-              <Input
-                id="partQuantity"
-                type="number"
-                step="any"
-                min="0.1"
-                value={currentQuantity}
-                onChange={(e) => setCurrentQuantity(e.target.value)}
-                placeholder="1"
-              />
-            </div>
-
+          {/* Toggle Switch / Mode Selector */}
+          <div className="inline-flex p-1 bg-muted rounded-lg gap-1">
             <Button
               type="button"
-              variant="secondary"
-              onClick={handleAddMaterial}
-              disabled={!currentPartId}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0"
+              size="sm"
+              variant={materialMode === 'INVENTORY' ? 'default' : 'ghost'}
+              onClick={() => setMaterialMode('INVENTORY')}
+              className="text-xs"
             >
-              <Plus className="h-4 w-4" />
-              <span>Agregar Material</span>
+              📦 Desde Inventario
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={materialMode === 'CUSTOM' ? 'default' : 'ghost'}
+              onClick={() => setMaterialMode('CUSTOM')}
+              className="text-xs"
+            >
+              ✍️ Texto Libre / Manual
             </Button>
           </div>
+
+          {/* Mode A: Inventory Item Selector */}
+          {materialMode === 'INVENTORY' ? (
+            <div className="flex flex-col sm:flex-row gap-3 items-end">
+              <div className="space-y-2 flex-1 w-full">
+                <Label htmlFor="partSelect" className="font-semibold text-sm">
+                  Item de Inventario
+                </Label>
+                <Select
+                  id="partSelect"
+                  value={currentPartId}
+                  onChange={(e) => setCurrentPartId(e.target.value)}
+                >
+                  <option value="">-- Seleccionar repuesto / material --</option>
+                  {inventoryItems.map((part) => (
+                    <option key={part.id} value={part.id}>
+                      {part.name} ({part.code}) - Stock: {part.stock} {part.unit}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="space-y-2 w-full sm:w-32">
+                <Label htmlFor="partQuantity" className="font-semibold text-sm">
+                  Cantidad
+                </Label>
+                <Input
+                  id="partQuantity"
+                  type="number"
+                  step="any"
+                  min="0.1"
+                  value={currentQuantity}
+                  onChange={(e) => setCurrentQuantity(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAddInventoryMaterial}
+                disabled={!currentPartId}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Agregar Material</span>
+              </Button>
+            </div>
+          ) : (
+            /* Mode B: Manual / Custom Item Input */
+            <div className="flex flex-col sm:flex-row gap-3 items-end">
+              <div className="space-y-2 flex-1 w-full">
+                <Label htmlFor="customMatName" className="font-semibold text-sm">
+                  Nombre del material / repuesto no inventariado *
+                </Label>
+                <Input
+                  id="customMatName"
+                  value={customMaterialName}
+                  onChange={(e) => setCustomMaterialName(e.target.value)}
+                  placeholder="Ej: Abrazadera de acero 2 pulgadas"
+                />
+              </div>
+
+              <div className="space-y-2 w-full sm:w-32">
+                <Label htmlFor="customMatQty" className="font-semibold text-sm">
+                  Cantidad
+                </Label>
+                <Input
+                  id="customMatQty"
+                  type="number"
+                  step="any"
+                  min="0.1"
+                  value={customMaterialQuantity}
+                  onChange={(e) => setCustomMaterialQuantity(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAddCustomMaterial}
+                disabled={!customMaterialName.trim()}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Agregar Material Manual</span>
+              </Button>
+            </div>
+          )}
 
           {/* List of Added Materials */}
           {selectedMaterials.length > 0 ? (
@@ -359,16 +489,22 @@ export function WorkOrderForm({
                 <span className="col-span-3 text-right">Cantidad</span>
                 <span className="col-span-3 text-right">Acciones</span>
               </div>
-              {selectedMaterials.map((mat) => (
+              {selectedMaterials.map((mat, idx) => (
                 <div
-                  key={mat.inventoryItemId}
+                  key={idx}
                   className="px-4 py-3 text-sm flex items-center justify-between grid grid-cols-12 gap-2"
                 >
-                  <div className="col-span-6 font-medium">
-                    {mat.name}
-                    <span className="block text-xs text-muted-foreground">
-                      Stock actual: {mat.stock} {mat.unit}
-                    </span>
+                  <div className="col-span-6 font-medium flex items-center gap-2 flex-wrap">
+                    <span>{mat.name}</span>
+                    {mat.isCustom ? (
+                      <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">
+                        No Inventariado
+                      </Badge>
+                    ) : (
+                      <span className="block text-xs text-muted-foreground w-full">
+                        Stock actual: {mat.stock} {mat.unit}
+                      </span>
+                    )}
                   </div>
                   <div className="col-span-3 text-right font-semibold">
                     {mat.quantityUsed} {mat.unit}
@@ -378,7 +514,7 @@ export function WorkOrderForm({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleRemoveMaterial(mat.inventoryItemId)}
+                      onClick={() => handleRemoveMaterial(idx)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -403,10 +539,11 @@ export function WorkOrderForm({
             <CardTitle className="text-lg">c) Herramientas y Equipos Necesarios</CardTitle>
           </div>
           <CardDescription>
-            Selecciona las herramientas asignadas o requeridas del módulo de herramientas.
+            Selecciona las herramientas registradas o agrega herramientas manuales no registradas.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Registered Tools Checkboxes */}
           {tools.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {tools.map((t) => {
@@ -437,10 +574,64 @@ export function WorkOrderForm({
               })}
             </div>
           ) : (
-            <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-md bg-muted/20">
+            <div className="text-center py-4 text-sm text-muted-foreground border border-dashed rounded-md bg-muted/20">
               No hay herramientas registradas en el módulo.
             </div>
           )}
+
+          {/* Add Custom/Manual Tool Section */}
+          <div className="pt-3 border-t space-y-2">
+            <Label htmlFor="customToolInput" className="font-semibold text-sm">
+              Agregar Herramienta No Registrada (Manual)
+            </Label>
+            <div className="flex flex-col sm:flex-row gap-2 max-w-md">
+              <Input
+                id="customToolInput"
+                value={customToolInput}
+                onChange={(e) => setCustomToolInput(e.target.value)}
+                placeholder="Ej: Prensa hidráulica portátil 10 ton"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleAddCustomTool()
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleAddCustomTool}
+                disabled={!customToolInput.trim()}
+                className="shrink-0"
+              >
+                + Agregar herramienta manual
+              </Button>
+            </div>
+
+            {/* List of Custom Tool Tag Chips */}
+            {customTools.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {customTools.map((ct, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-500/30 rounded-full text-xs font-semibold"
+                  >
+                    <span>🔧 {ct.customName}</span>
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/40">
+                      Manual
+                    </Badge>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCustomTool(idx)}
+                      className="hover:text-destructive transition-colors ml-1"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
