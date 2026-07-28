@@ -180,98 +180,99 @@ export function WorkOrdersList() {
     <div className="space-y-4">
       {workOrders.map((order) => (
         <Card key={order.id} className="hover:border-primary/40 transition-colors relative group">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex flex-col space-y-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-2 flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link href={`/dashboard/work-orders/${order.id}`}>
-                      <h3 className="text-base md:text-lg font-semibold hover:text-primary transition-colors">
-                        {order.title}
-                      </h3>
-                    </Link>
-                    <Badge variant={statusColors[order.status]}>
-                      {statusLabels[order.status] || order.status}
-                    </Badge>
-                    <Badge variant={priorityColors[order.priority]}>
-                      {priorityLabels[order.priority] || order.priority}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {order.description || 'Sin descripción'}
-                  </p>
-                </div>
+          <CardContent className="p-4 md:p-6 space-y-3">
+            {/* Full-width Title Header */}
+            <div className="w-full">
+              <Link href={`/dashboard/work-orders/${order.id}`}>
+                <h3 className="text-lg sm:text-xl font-extrabold text-foreground leading-snug break-words hover:text-primary transition-colors">
+                  {order.title}
+                </h3>
+              </Link>
+            </div>
 
-                {/* Quick Action Buttons */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {/* Quick Status Dropdown */}
-                  <select
-                    value={order.status}
-                    disabled={updatingId === order.id}
-                    onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                    className="text-xs font-semibold px-2 py-1 bg-background border rounded-md focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                    title="Cambiar Estado Rápido"
-                  >
-                    <option value="OPEN">Abierta</option>
-                    <option value="IN_PROGRESS">En Progreso</option>
-                    <option value="ON_HOLD">En Pausa</option>
-                    <option value="CLOSED">Cerrada</option>
-                  </select>
-
-                  {/* Edit Button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
-                    onClick={() => setEditingOrder(order)}
-                    title="Editar Orden"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-
-                  {/* Delete Button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => setDeletingOrder(order)}
-                    title="Eliminar Orden"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-
-                  {/* View Details Button */}
-                  <Link href={`/dashboard/work-orders/${order.id}`}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
+            {/* Badges & Status Sub-header + Action Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/60">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant={statusColors[order.status]}>
+                  {statusLabels[order.status] || order.status}
+                </Badge>
+                <Badge variant={priorityColors[order.priority]} className="text-xs font-semibold">
+                  Prioridad: {priorityLabels[order.priority] || order.priority}
+                </Badge>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground pt-2 border-t">
-                <span className="flex items-center gap-1">
-                  <strong>Activo:</strong> {order.asset?.name || 'N/A'}
+              {/* Action Controls */}
+              <div className="flex items-center gap-1 shrink-0 ml-auto">
+                <select
+                  value={order.status}
+                  disabled={updatingId === order.id}
+                  onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                  className="h-8 text-xs font-semibold px-2 bg-muted/60 border rounded-md focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  title="Cambiar Estado Rápido"
+                >
+                  <option value="OPEN">Abierta</option>
+                  <option value="IN_PROGRESS">En Progreso</option>
+                  <option value="ON_HOLD">En Pausa</option>
+                  <option value="CLOSED">Cerrada</option>
+                </select>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-primary"
+                  onClick={() => setEditingOrder(order)}
+                  title="Editar Orden"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  onClick={() => setDeletingOrder(order)}
+                  title="Eliminar Orden"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+
+                <Link href={`/dashboard/work-orders/${order.id}`}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Ver Detalles">
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Description, Asset info, Technician details */}
+            <div className="text-xs text-muted-foreground space-y-2 pt-1">
+              <p className="line-clamp-2 text-sm text-muted-foreground">
+                {order.description || 'Sin descripción'}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-medium text-xs text-muted-foreground pt-2 border-t border-border/40">
+                <span>
+                  <strong className="text-foreground">Activo:</strong> {order.asset?.name || 'N/A'} {order.asset?.code ? `(${order.asset.code})` : ''}
                 </span>
                 <span className="hidden sm:inline">•</span>
-                <span className="flex items-center gap-1">
-                  <strong>Tipo:</strong> {typeLabels[order.type] || order.type}
+                <span>
+                  <strong className="text-foreground">Tipo:</strong> {typeLabels[order.type] || order.type}
                 </span>
                 <span className="hidden sm:inline">•</span>
-                <span className="flex items-center gap-1">
-                  <strong>Técnico:</strong> {order.technician?.name || 'N/A'}
+                <span>
+                  <strong className="text-foreground">Técnico:</strong> {order.technician?.name || 'N/A'}
                 </span>
                 {order.externalVendor && (
                   <>
                     <span className="hidden sm:inline">•</span>
-                    <span className="flex items-center gap-1 text-primary font-medium">
-                      <strong>Contratista:</strong> {order.externalVendor.name}
+                    <span className="text-primary font-medium">
+                      <strong className="text-foreground">Contratista:</strong> {order.externalVendor.name}
                     </span>
                   </>
                 )}
                 <span className="hidden md:inline">•</span>
-                <span className="flex items-center gap-1 font-mono">
-                  <strong>Creada:</strong> {formatDateTime(order.createdAt)}
+                <span className="font-mono sm:ml-auto">
+                  <strong className="text-foreground">Creada:</strong> {formatDateTime(order.createdAt)}
                 </span>
               </div>
             </div>
