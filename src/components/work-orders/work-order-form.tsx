@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,6 +50,8 @@ export function WorkOrderForm({
   tools = [],
 }: WorkOrderFormProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const defaultAssetId = searchParams?.get('assetId') || ''
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
@@ -241,7 +243,7 @@ export function WorkOrderForm({
               <Label htmlFor="assetId" className="font-semibold">
                 Activo / Equipo *
               </Label>
-              <Select id="assetId" name="assetId" required>
+              <Select id="assetId" name="assetId" defaultValue={defaultAssetId} required>
                 <option value="">-- Seleccionar activo --</option>
                 {assets.map((asset) => (
                   <option key={asset.id} value={asset.id}>

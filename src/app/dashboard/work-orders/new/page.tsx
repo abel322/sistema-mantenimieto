@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { WorkOrderForm } from '@/components/work-orders/work-order-form'
 import { prisma } from '@/lib/prisma'
 
@@ -32,13 +33,15 @@ export default async function NewWorkOrderPage() {
         </p>
       </div>
 
-      <WorkOrderForm
-        assets={assets}
-        technicians={technicians}
-        guidelines={guidelines}
-        inventoryItems={inventoryItems}
-        tools={tools}
-      />
+      <Suspense fallback={<div>Cargando formulario...</div>}>
+        <WorkOrderForm
+          assets={assets}
+          technicians={technicians}
+          guidelines={guidelines}
+          inventoryItems={inventoryItems}
+          tools={tools}
+        />
+      </Suspense>
     </div>
   )
 }

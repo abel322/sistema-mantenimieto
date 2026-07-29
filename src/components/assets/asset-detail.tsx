@@ -1,82 +1,93 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { FailureLogModal } from '@/components/assets/failure-log-modal'
-import { 
-  ArrowLeft, 
-  AlertTriangle, 
-  Wrench, 
-  Calendar, 
-  FileText, 
-  Info, 
-  History, 
-  ClipboardCheck, 
-  Plus, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import {
+  ArrowLeft,
+  AlertTriangle,
+  Wrench,
+  Calendar,
+  FileText,
+  Info,
+  History,
+  ClipboardCheck,
+  Plus,
+  CheckCircle,
+  XCircle,
+  Clock,
   Eye,
   Pencil,
-  Trash2
+  Trash2,
+  Box,
+  Package,
+  Timer,
+  CheckCircle2,
+  DollarSign
 } from 'lucide-react'
 import { generateAssetPDF } from '@/lib/pdf-generator'
 import { AssetEditModal } from '@/components/assets/asset-edit-modal'
 import { AssetDeleteModal } from '@/components/assets/asset-delete-modal'
 import Link from 'next/link'
-import type { Asset, WorkOrder, FailureLog, MaintenanceLog, Schedule, User, PartOnOrder, Part } from '@prisma/client'
+import type { Asset, WorkOrder, FailureLog, MaintenanceLog, Schedule, User, PartOnOrder, Part, Supplier } from '@prisma/client'
+import { getAreaLabel, getCriticalityBadge } from '@/lib/constants'
 
-type ChecklistExecutionWithRelations = {
-  id: string
-  template?: { title: string } | null
-  technician?: { name: string } | null
-  status: string
-  completedAt: Date | string
-  workOrders?: { id: string; title: string }[]
+type WorkOrderMaterialWithRelation = {
+  id?: string
+  inventoryItemId?: string | null
+  customName?: string | null
+  isCustom?: boolean
+  quantityUsed: number
+  inventoryItem?: Part | null
+}
+
+type WorkOrderWithFullRelations = WorkOrder & {
+  technician: User
+  externalVendor?: Supplier | null
+  materials?: WorkOrderMaterialWithRelation[]
+  partsUsed?: (PartOnOrder & { part: Part })[]
 }
 
 type AssetWithRelations = Asset & {
-  workOrders: (WorkOrder & { technician: User; partsUsed?: (PartOnOrder & { part: Part })[] })[]
+  workOrders: WorkOrderWithFullRelations[]
   failureLogs: FailureLog[]
   maintenanceLogs: MaintenanceLog[]
   schedules: Schedule[]
-  checklistExecutions?: ChecklistExecutionWithRelations[]
-}
-
-import { getAreaLabel, getCriticalityBadge } from '@/lib/constants'
-
-const areaLabels: Record<string, string> = {
-  SEALING: 'Bolseras / Selladoras',
-  EXTRUSION: 'Extrusoras',
-  PRINTING: 'Impresoras Flexográficas',
-  SLITTING: 'Refilado / Rebobinado',
-  RECYCLING: 'Peletizado / Reciclado',
-  MIXING: 'Mezclado / Mezcladoras',
-  POWER_PLANT: 'Planta Eléctrica / Subestación',
-  AUXILIARY: 'Auxiliares / Compresores',
-  GENERAL: 'General Planta',
+  checklistExecutions?: any[]
 }
 
 interface AssetDetailProps {
   asset: AssetWithRelations
 }
 
-const statusColors = {
+const statusColors: Record<string, any> = {
   OPEN: 'default',
+  ABIERTA: 'default',
   IN_PROGRESS: 'warning',
+  EN_PROCESO: 'warning',
   ON_HOLD: 'secondary',
+  PAUSADA: 'secondary',
+  PENDIENTE_REPUESTO: 'outline',
   CLOSED: 'success',
-} as const
+  FINALIZADA: 'success',
+  CANCELADA: 'destructive',
+}
 
 const statusLabels: Record<string, string> = {
   OPEN: 'Abierta',
+  ABIERTA: 'Abierta',
   IN_PROGRESS: 'En Progreso',
+  EN_PROCESO: 'En Progreso',
   ON_HOLD: 'En Pausa',
-  CLOSED: 'Cerrada',
+  PAUSADA: 'Pausada',
+  PENDIENTE_REPUESTO: 'Pendiente Repuesto',
+  CLOSED: 'Finalizada',
+  FINALIZADA: 'Finalizada',
+  CANCELADA: 'Cancelada',
 }
 
 const typeLabels: Record<string, string> = {
@@ -85,61 +96,176 @@ const typeLabels: Record<string, string> = {
   PREDICTIVE: 'Predictivo',
 }
 
+const priorityColors: Record<string, any> = {
+  LOW: 'secondary',
+  MEDIUM: 'default',
+  HIGH: 'warning',
+  CRITICAL: 'destructive',
+}
+
+const priorityLabels: Record<string, string> = {
+  LOW: 'Baja',
+  MEDIUM: 'Media',
+  HIGH: 'Alta',
+  CRITICAL: 'Crítica',
+}
+
+interface ConsumedPartSummary {
+  id: string
+  code: string
+  name: string
+  unit: string
+  totalQuantity: number
+  unitPrice: number
+  totalCost: number
+  isCustom: boolean
+  lastUsedDate: string | Date
+}
+
 export function AssetDetail({ asset }: AssetDetailProps) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'failures' | 'inspections'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'failures' | 'parts'>('info')
   const [failureModalOpen, setFailureModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [woFilter, setWoFilter] = useState<'ALL' | 'ACTIVE' | 'CLOSED' | 'CORRECTIVE' | 'PREVENTIVE'>('ALL')
 
-  const totalDowntime = asset.failureLogs.reduce(
-    (acc, log) => acc + log.downtimeHours,
-    0
-  )
+  // Total downtime hours
+  const totalDowntime = useMemo(() => {
+    return asset.failureLogs.reduce((acc, log) => acc + log.downtimeHours, 0)
+  }, [asset.failureLogs])
 
-  const totalMaintenanceCost = asset.maintenanceLogs.reduce(
-    (acc, log) => acc + log.totalCost,
-    0
-  )
+  // Total labor hours across all work orders
+  const totalLaborHours = useMemo(() => {
+    return asset.workOrders.reduce((acc, wo) => acc + (wo.laborHours || 0), 0)
+  }, [asset.workOrders])
+
+  // Total cost across all work orders (parts + labor)
+  const totalWOCost = useMemo(() => {
+    return asset.workOrders.reduce((acc, wo) => {
+      const partsCost = wo.partsUsed?.reduce((a, b) => a + (b.part.price * b.quantity), 0) || 0
+      const matCost = wo.materials?.reduce((a, b) => a + ((b.inventoryItem?.price || 0) * b.quantityUsed), 0) || 0
+      const laborCost = (wo.laborHours || 0) * 150
+      return acc + partsCost + matCost + laborCost
+    }, 0)
+  }, [asset.workOrders])
+
+  // Aggregate spare parts & materials consumed by this asset
+  const consumedPartsList = useMemo(() => {
+    const map = new Map<string, ConsumedPartSummary>()
+
+    asset.workOrders.forEach((wo) => {
+      const date = wo.closedAt || wo.completedAt || wo.createdAt
+
+      // Process materials
+      wo.materials?.forEach((mat) => {
+        const key = mat.isCustom
+          ? `custom-${mat.customName}`
+          : (mat.inventoryItemId || `custom-${mat.customName}`)
+        const name = mat.isCustom
+          ? (mat.customName || 'Material Personalizado')
+          : (mat.inventoryItem?.name || mat.customName || 'Material')
+        const code = mat.isCustom ? 'PERSONALIZADO' : (mat.inventoryItem?.code || 'INV')
+        const unit = mat.inventoryItem?.unit || 'unidad'
+        const price = mat.inventoryItem?.price || 0
+        const qty = mat.quantityUsed || 1
+        const cost = qty * price
+
+        if (map.has(key)) {
+          const existing = map.get(key)!
+          existing.totalQuantity += qty
+          existing.totalCost += cost
+          if (new Date(date) > new Date(existing.lastUsedDate)) {
+            existing.lastUsedDate = date
+          }
+        } else {
+          map.set(key, {
+            id: key,
+            code,
+            name,
+            unit,
+            totalQuantity: qty,
+            unitPrice: price,
+            totalCost: cost,
+            isCustom: !!mat.isCustom,
+            lastUsedDate: date,
+          })
+        }
+      })
+
+      // Process partsUsed
+      wo.partsUsed?.forEach((pu) => {
+        const key = pu.partId || pu.part?.id || `part-${pu.id}`
+        const name = pu.part?.name || 'Repuesto'
+        const code = pu.part?.code || 'PARTE'
+        const unit = pu.part?.unit || 'unidad'
+        const price = pu.part?.price || 0
+        const qty = pu.quantity || 1
+        const cost = qty * price
+
+        if (map.has(key)) {
+          const existing = map.get(key)!
+          existing.totalQuantity += qty
+          existing.totalCost += cost
+          if (new Date(date) > new Date(existing.lastUsedDate)) {
+            existing.lastUsedDate = date
+          }
+        } else {
+          map.set(key, {
+            id: key,
+            code,
+            name,
+            unit,
+            totalQuantity: qty,
+            unitPrice: price,
+            totalCost: cost,
+            isCustom: false,
+            lastUsedDate: date,
+          })
+        }
+      })
+    })
+
+    return Array.from(map.values()).sort((a, b) => b.totalCost - a.totalCost)
+  }, [asset.workOrders])
+
+  // Total spare parts cost
+  const totalPartsCostAcc = useMemo(() => {
+    return consumedPartsList.reduce((acc, p) => acc + p.totalCost, 0)
+  }, [consumedPartsList])
+
+  // Filtered work orders for Tab 2
+  const filteredWorkOrders = useMemo(() => {
+    return asset.workOrders.filter((wo) => {
+      if (woFilter === 'ACTIVE') {
+        return !['CLOSED', 'FINALIZADA', 'CANCELADA'].includes(wo.status)
+      }
+      if (woFilter === 'CLOSED') {
+        return ['CLOSED', 'FINALIZADA'].includes(wo.status)
+      }
+      if (woFilter === 'CORRECTIVE') {
+        return wo.type === 'CORRECTIVE'
+      }
+      if (woFilter === 'PREVENTIVE') {
+        return wo.type === 'PREVENTIVE'
+      }
+      return true
+    })
+  }, [asset.workOrders, woFilter])
 
   async function handleGeneratePDF() {
     try {
       const doc = generateAssetPDF(asset)
-      doc.save(`activo-${asset.code}.pdf`)
+      doc.save(`hoja-de-vida-${asset.code}.pdf`)
     } catch (error) {
       console.error('Error generating PDF:', error)
-      alert('Error al generar el reporte')
-    }
-  }
-
-  const getChecklistBadge = (status: string) => {
-    switch (status) {
-      case 'PASSED':
-        return (
-          <Badge variant="success" className="flex items-center gap-1 w-fit">
-            <CheckCircle className="w-3 h-3" /> Conforme
-          </Badge>
-        )
-      case 'FLAGGED':
-        return (
-          <Badge variant="warning" className="flex items-center gap-1 w-fit">
-            <AlertTriangle className="w-3 h-3" /> Observado
-          </Badge>
-        )
-      case 'FAILED':
-        return (
-          <Badge variant="destructive" className="flex items-center gap-1 w-fit">
-            <XCircle className="w-3 h-3" /> No Conforme
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{status}</Badge>
+      alert('Error al generar la Hoja de Vida PDF')
     }
   }
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
-      {/* Top Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link href="/dashboard/assets">
@@ -148,17 +274,20 @@ export function AssetDetail({ asset }: AssetDetailProps) {
             </Button>
           </Link>
           <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{asset.name}</h2>
-            <p className="text-muted-foreground text-xs sm:text-sm font-mono truncate">{asset.code} • {getAreaLabel(asset.area)}</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{asset.name}</h2>
+              {(() => {
+                const badgeInfo = getCriticalityBadge(asset.criticality)
+                return <Badge className={`${badgeInfo.className} text-xs shrink-0`}>{badgeInfo.label}</Badge>
+              })()}
+            </div>
+            <p className="text-muted-foreground text-xs sm:text-sm font-mono truncate">
+              Código: <strong className="text-foreground">{asset.code}</strong> • Área: {getAreaLabel(asset.area)}
+            </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {(() => {
-            const badgeInfo = getCriticalityBadge(asset.criticality)
-            return <Badge className={`${badgeInfo.className} text-xs`}>{badgeInfo.label}</Badge>
-          })()}
-
           <Button variant="outline" size="sm" onClick={() => setEditModalOpen(true)} className="flex-1 sm:flex-none text-xs">
             <Pencil className="mr-1.5 h-4 w-4 text-blue-500" />
             Editar
@@ -166,7 +295,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
 
           <Button variant="outline" size="sm" onClick={handleGeneratePDF} className="flex-1 sm:flex-none text-xs">
             <FileText className="mr-1.5 h-4 w-4" />
-            PDF
+            Hoja de Vida PDF
           </Button>
 
           <Button
@@ -191,119 +320,124 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </div>
       </div>
 
-      {/* Tab Navigation Header */}
-      <div className="border-b bg-background w-full max-w-full overflow-x-auto flex items-center gap-1 sm:gap-2 pb-1 no-scrollbar">
+      {/* Tab Bar Navigation (Scrollable on Mobile) */}
+      <div className="border-b bg-card w-full max-w-full overflow-x-auto flex items-center gap-1 sm:gap-2 pb-1 no-scrollbar border-border">
         <button
           onClick={() => setActiveTab('info')}
-          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all shrink-0 ${
             activeTab === 'info'
               ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Info className="w-4 h-4 shrink-0" /> Información General
+          <Info className="w-4 h-4 shrink-0" />
+          <span>📊 Información General</span>
         </button>
 
         <button
           onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all shrink-0 ${
             activeTab === 'history'
               ? 'border-primary text-primary bg-primary/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <History className="w-4 h-4 shrink-0" /> Historial de Mantenimiento ({asset.workOrders.length})
+          <History className="w-4 h-4 shrink-0" />
+          <span>📜 Historial de Órdenes ({asset.workOrders.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('failures')}
-          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all shrink-0 ${
             activeTab === 'failures'
               ? 'border-destructive text-destructive bg-destructive/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <AlertTriangle className="w-4 h-4 text-destructive shrink-0" /> Registro de Fallas ({asset.failureLogs.length})
+          <AlertTriangle className="w-4 h-4 text-destructive shrink-0" />
+          <span>⚠️ Registros de Falla ({asset.failureLogs.length})</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('inspections')}
-          className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
-            activeTab === 'inspections'
-              ? 'border-primary text-primary bg-primary/5'
+          onClick={() => setActiveTab('parts')}
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all shrink-0 ${
+            activeTab === 'parts'
+              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <ClipboardCheck className="w-4 h-4 shrink-0" /> Inspecciones ({asset.checklistExecutions?.length || 0})
+          <Box className="w-4 h-4 text-emerald-500 shrink-0" />
+          <span>📦 Repuestos Consumidos ({consumedPartsList.length})</span>
         </button>
       </div>
 
-      {/* Tab Content Body */}
       {/* TAB 1: INFORMACIÓN GENERAL */}
       {activeTab === 'info' && (
         <div className="space-y-6 animate-in fade-in-50 duration-200">
           <div className="grid gap-3 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
-            <Card>
+            <Card className="bg-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Área de Producción</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{areaLabels[asset.area] || asset.area}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Fallas</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-destructive">{asset.failureLogs.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  {totalDowntime.toFixed(1)}h tiempo de paro
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Órdenes de Trabajo</CardTitle>
                 <Wrench className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{asset.workOrders.length}</div>
+                <div className="text-xl sm:text-2xl font-bold">{getAreaLabel(asset.area)}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Fallas Registradas</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-destructive">{asset.failureLogs.length}</div>
                 <p className="text-xs text-muted-foreground">
-                  {asset.workOrders.filter((wo) => wo.status !== 'CLOSED').length} abiertas
+                  {totalDowntime.toFixed(1)}h acumuladas de paro
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Costo Total Mant.</CardTitle>
+                <CardTitle className="text-sm font-medium">Órdenes de Trabajo</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(totalMaintenanceCost)}
+                <div className="text-xl sm:text-2xl font-bold">{asset.workOrders.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {asset.workOrders.filter((wo) => !['CLOSED', 'FINALIZADA', 'CANCELADA'].includes(wo.status)).length} activas
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Costo Total Mant.</CardTitle>
+                <DollarSign className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(totalWOCost)}
                 </div>
-                <p className="text-xs text-muted-foreground">Histórico acumulado</p>
+                <p className="text-xs text-muted-foreground">Repuestos + Mano de obra</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Description */}
+          {/* Description & Technical Specs */}
           {asset.description && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base font-bold">Descripción del Activo</CardTitle>
+                <CardTitle className="text-base font-bold">Especificaciones / Descripción</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-foreground">{asset.description}</p>
+                <p className="text-sm text-foreground leading-relaxed">{asset.description}</p>
               </CardContent>
             </Card>
           )}
 
-          {/* Active Maintenance Schedules */}
+          {/* Maintenance Schedules */}
           {asset.schedules && asset.schedules.length > 0 && (
             <Card>
               <CardHeader>
@@ -337,82 +471,183 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </div>
       )}
 
-      {/* TAB 2: HISTORIAL DE MANTENIMIENTO */}
+      {/* TAB 2: HISTORIAL DE ÓRDENES DE TRABAJO */}
       {activeTab === 'history' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-200">
+        <div className="space-y-6 animate-in fade-in-50 duration-200">
+          {/* Key Metrics Bar */}
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total OTs Ejecutadas</p>
+                  <p className="text-2xl font-bold mt-1">{asset.workOrders.length}</p>
+                </div>
+                <div className="p-2.5 bg-primary/10 text-primary rounded-lg">
+                  <Wrench className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horas Mano de Obra</p>
+                  <p className="text-2xl font-bold mt-1">{totalLaborHours.toFixed(1)} h</p>
+                </div>
+                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-lg">
+                  <Timer className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inversión Total Mant.</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(totalWOCost)}</p>
+                </div>
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                  <DollarSign className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Action Header & Filters */}
           <Card>
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+            <CardHeader className="p-4 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b">
               <div>
-                <CardTitle className="text-base sm:text-lg font-bold">Historial de Órdenes de Trabajo</CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Registro completo de intervenciones correctivas, preventivas y predictivas en este activo.
+                <CardTitle className="text-base font-bold">Historial Completo de Mantenimiento</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Todas las órdenes correctivas, preventivas y predictivas asignadas a esta máquina.
                 </p>
               </div>
-              <Link href="/dashboard/work-orders/new" className="w-full sm:w-auto">
-                <Button size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
-                  <Plus className="w-4 h-4 mr-1" /> Nueva Orden
+
+              <Link href={`/dashboard/work-orders/new?assetId=${asset.id}`}>
+                <Button size="sm" className="w-full sm:w-auto text-xs font-semibold gap-1.5 shadow-sm">
+                  <Plus className="w-4 h-4" />
+                  + Nueva OT para este Activo
                 </Button>
               </Link>
             </CardHeader>
-            <CardContent>
-              {asset.workOrders && asset.workOrders.length > 0 ? (
-                <div className="border rounded-md w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[650px] text-sm text-left">
-                    <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
-                      <tr>
-                        <th className="p-3">Fecha</th>
-                        <th className="p-3">Título de la Orden</th>
-                        <th className="p-3">Tipo</th>
-                        <th className="p-3">Técnico Asignado</th>
-                        <th className="p-3">Estado</th>
-                        <th className="p-3 text-right">Costo Estimado</th>
-                        <th className="p-3 text-right">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {asset.workOrders.map((order) => {
-                        const partsCost = order.partsUsed?.reduce((a, b) => a + (b.part.price * b.quantity), 0) || 0
-                        const laborCost = (order.laborHours || 0) * 150
-                        const totalOrderCost = partsCost + laborCost
 
-                        return (
-                          <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                            <td className="p-3 font-mono text-xs whitespace-nowrap">
-                              {formatDateTime(order.createdAt)}
-                            </td>
-                            <td className="p-3 font-semibold">
+            <CardContent className="p-4 space-y-4">
+              {/* Filter Tabs */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Button
+                  variant={woFilter === 'ALL' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setWoFilter('ALL')}
+                  className="text-xs h-7 px-2.5"
+                >
+                  Todas ({asset.workOrders.length})
+                </Button>
+                <Button
+                  variant={woFilter === 'ACTIVE' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setWoFilter('ACTIVE')}
+                  className="text-xs h-7 px-2.5"
+                >
+                  Activas ({asset.workOrders.filter(w => !['CLOSED', 'FINALIZADA', 'CANCELADA'].includes(w.status)).length})
+                </Button>
+                <Button
+                  variant={woFilter === 'CLOSED' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setWoFilter('CLOSED')}
+                  className="text-xs h-7 px-2.5"
+                >
+                  Finalizadas ({asset.workOrders.filter(w => ['CLOSED', 'FINALIZADA'].includes(w.status)).length})
+                </Button>
+                <Button
+                  variant={woFilter === 'CORRECTIVE' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setWoFilter('CORRECTIVE')}
+                  className="text-xs h-7 px-2.5"
+                >
+                  Correctivas ({asset.workOrders.filter(w => w.type === 'CORRECTIVE').length})
+                </Button>
+                <Button
+                  variant={woFilter === 'PREVENTIVE' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setWoFilter('PREVENTIVE')}
+                  className="text-xs h-7 px-2.5"
+                >
+                  Preventivas ({asset.workOrders.filter(w => w.type === 'PREVENTIVE').length})
+                </Button>
+              </div>
+
+              {/* High-density Work Orders List */}
+              {filteredWorkOrders.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredWorkOrders.map((order) => {
+                    const partsCost = order.partsUsed?.reduce((a, b) => a + (b.part.price * b.quantity), 0) || 0
+                    const matCost = order.materials?.reduce((a, b) => a + ((b.inventoryItem?.price || 0) * b.quantityUsed), 0) || 0
+                    const laborCost = (order.laborHours || 0) * 150
+                    const totalOrderCost = partsCost + matCost + laborCost
+
+                    return (
+                      <div
+                        key={order.id}
+                        className="p-4 border rounded-lg hover:border-primary/50 transition-colors bg-card space-y-2 shadow-sm"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <Link href={`/dashboard/work-orders/${order.id}`}>
+                            <h4 className="font-bold text-sm sm:text-base text-foreground hover:text-primary transition-colors">
                               {order.title}
-                            </td>
-                            <td className="p-3">
-                              <Badge variant="outline" className="text-xs">
-                                {typeLabels[order.type] || order.type}
-                              </Badge>
-                            </td>
-                            <td className="p-3">{order.technician?.name || 'No asignado'}</td>
-                            <td className="p-3">
-                              <Badge variant={statusColors[order.status]}>
-                                {statusLabels[order.status] || order.status}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-right font-medium">
+                            </h4>
+                          </Link>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Badge variant={statusColors[order.status] || 'default'} className="text-xs">
+                              {statusLabels[order.status] || order.status}
+                            </Badge>
+                            <Badge variant={priorityColors[order.priority]} className="text-xs">
+                              {priorityLabels[order.priority]}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {order.description || 'Sin descripción'}
+                        </p>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t text-xs text-muted-foreground font-medium">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span><strong>Tipo:</strong> {typeLabels[order.type] || order.type}</span>
+                            <span>•</span>
+                            <span><strong>Técnico:</strong> {order.technician?.name || 'N/A'}</span>
+                            {order.externalVendor && (
+                              <>
+                                <span>•</span>
+                                <span><strong>Proveedor:</strong> {order.externalVendor.name}</span>
+                              </>
+                            )}
+                            {order.laborHours ? (
+                              <>
+                                <span>•</span>
+                                <span><strong>Mano Obra:</strong> {order.laborHours}h</span>
+                              </>
+                            ) : null}
+                          </div>
+
+                          <div className="flex items-center gap-3 shrink-0 ml-auto">
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">
                               {formatCurrency(totalOrderCost)}
-                            </td>
-                            <td className="p-3 text-right">
-                              <Link href={`/dashboard/work-orders/${order.id}`}>
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="w-4 h-4 mr-1" /> Ver Orden
-                                </Button>
-                              </Link>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                            </span>
+                            <Link href={`/dashboard/work-orders/${order.id}`}>
+                              <Button variant="outline" size="sm" className="h-7 text-xs px-2.5 font-semibold">
+                                <Eye className="w-3.5 h-3.5 mr-1 text-primary" /> Ver Detalle / PDF
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
-                <div className="p-8 text-center text-muted-foreground border rounded-md">
-                  No hay órdenes de trabajo registradas para este activo.
+                <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                  No hay órdenes de trabajo que coincidan con los filtros seleccionados.
                 </div>
               )}
             </CardContent>
@@ -420,66 +655,109 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </div>
       )}
 
-      {/* TAB 3: REGISTRO DE FALLAS */}
+      {/* TAB 3: HISTORIAL DE FALLAS REGISTRADAS */}
       {activeTab === 'failures' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-200">
+        <div className="space-y-6 animate-in fade-in-50 duration-200">
+          {/* Key Failure Metrics */}
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Eventos de Falla</p>
+                  <p className="text-2xl font-bold text-destructive mt-1">{asset.failureLogs.length}</p>
+                </div>
+                <div className="p-2.5 bg-destructive/10 text-destructive rounded-lg">
+                  <AlertTriangle className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horas Totales de Paro</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{totalDowntime.toFixed(1)} h</p>
+                </div>
+                <div className="p-2.5 bg-red-500/10 text-red-500 rounded-lg">
+                  <Timer className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Paro Promedio / Falla</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {asset.failureLogs.length > 0
+                      ? `${(totalDowntime / asset.failureLogs.length).toFixed(1)} h`
+                      : '0 h'}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-muted text-muted-foreground rounded-lg">
+                  <Clock className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Failure Logs List */}
           <Card>
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+            <CardHeader className="p-4 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b">
               <div>
-                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0" /> Registro de Fallas y Paros no Programados
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5 shrink-0" /> Log de Averías & Eventos de Paro
                 </CardTitle>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                  Histórico de averías, causas raíz y horas de indisponibilidad reportadas en planta.
+                <p className="text-xs text-muted-foreground">
+                  Bitácora de fallas mecánicas, eléctricas o operativas registradas en esta máquina.
                 </p>
               </div>
+
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setFailureModalOpen(true)}
-                className="w-full sm:w-auto text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white flex items-center justify-center"
+                className="w-full sm:w-auto text-xs font-semibold shadow-sm"
               >
-                <AlertTriangle className="mr-2 h-4 w-4" />
+                <AlertTriangle className="mr-1.5 h-4 w-4" />
                 Registrar Falla / Evento
               </Button>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="p-4">
               {asset.failureLogs && asset.failureLogs.length > 0 ? (
-                <div className="border rounded-md w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[600px] text-sm text-left">
-                    <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
-                      <tr>
-                        <th className="p-3">Fecha Reportada</th>
-                        <th className="p-3">Síntoma / Falla</th>
-                        <th className="p-3">Causa Raíz / Acción</th>
-                        <th className="p-3 text-right">Horas de Paro (Downtime)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {asset.failureLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="p-3 font-mono text-xs whitespace-nowrap">
-                            {formatDateTime(log.reportedAt)}
-                          </td>
-                          <td className="p-3 font-semibold text-destructive">
+                <div className="space-y-3">
+                  {asset.failureLogs.map((log) => (
+                    <div key={log.id} className="p-4 border rounded-lg bg-card space-y-2 border-red-500/20 shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="destructive" className="font-mono text-xs">
+                            {log.downtimeHours}h Paro
+                          </Badge>
+                          <h4 className="font-bold text-sm text-foreground">
                             {log.symptom}
-                          </td>
-                          <td className="p-3 text-muted-foreground">
-                            {log.rootCause || 'En análisis / No especificada'}
-                          </td>
-                          <td className="p-3 text-right font-bold">
-                            <Badge variant="destructive" className="font-mono text-xs">
-                              {log.downtimeHours} h
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </h4>
+                        </div>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {formatDateTime(log.reportedAt)}
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        <strong className="text-foreground">Causa Raíz / Acción:</strong>{' '}
+                        {log.rootCause || 'En análisis o no especificada.'}
+                      </p>
+
+                      {log.resolvedAt && (
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                          ✓ Resuelto el {formatDateTime(log.resolvedAt)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="p-8 text-center text-muted-foreground border rounded-md">
+                <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg">
                   No hay eventos de falla registrados en este activo.
                 </div>
               )}
@@ -488,59 +766,102 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </div>
       )}
 
-      {/* TAB 4: INSPECCIONES & CHECKLISTS */}
-      {activeTab === 'inspections' && (
-        <div className="space-y-4 animate-in fade-in-50 duration-200">
+      {/* TAB 4: REPUESTOS Y MATERIALES CONSUMIDOS */}
+      {activeTab === 'parts' && (
+        <div className="space-y-6 animate-in fade-in-50 duration-200">
+          {/* Key Spare Parts Metrics */}
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ítems Diferentes Usados</p>
+                  <p className="text-2xl font-bold mt-1">{consumedPartsList.length}</p>
+                </div>
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                  <Box className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unidades Totales Consumidas</p>
+                  <p className="text-2xl font-bold mt-1">
+                    {consumedPartsList.reduce((acc, p) => acc + p.totalQuantity, 0)}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-lg">
+                  <Package className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Gasto Total en Repuestos</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                    {formatCurrency(totalPartsCostAcc)}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                  <DollarSign className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Consumed Spare Parts Summary Table */}
           <Card>
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-              <div>
-                <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-                  <ClipboardCheck className="h-5 w-5 text-primary shrink-0" /> Historial de Inspecciones & Checklists
-                </CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Registros de rutinas preventivas ejecutadas en este activo por el equipo técnico.
-                </p>
-              </div>
-              <Link href={`/dashboard/checklists/new?assetId=${asset.id}`} className="w-full sm:w-auto">
-                <Button size="sm" className="w-full sm:w-auto text-xs sm:text-sm">
-                  <Plus className="w-4 h-4 mr-1" /> Nueva Inspección
-                </Button>
-              </Link>
+            <CardHeader className="p-4 pb-3 border-b">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Box className="h-5 w-5 text-emerald-500 shrink-0" /> Consumo Acumulado de Repuestos & Insumos
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Consolidado de materiales y refacciones utilizadas durante los mantenimientos de este activo.
+              </p>
             </CardHeader>
-            <CardContent>
-              {asset.checklistExecutions && asset.checklistExecutions.length > 0 ? (
+
+            <CardContent className="p-4">
+              {consumedPartsList.length > 0 ? (
                 <div className="border rounded-md w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[600px] text-sm text-left">
+                  <table className="w-full min-w-[650px] text-sm text-left">
                     <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
                       <tr>
-                        <th className="p-3">Fecha Completo</th>
-                        <th className="p-3">Plantilla de Inspección</th>
-                        <th className="p-3">Técnico</th>
-                        <th className="p-3">Resultado</th>
-                        <th className="p-3">OT Generada</th>
+                        <th className="p-3">Código</th>
+                        <th className="p-3">Descripción del Repuesto / Insumo</th>
+                        <th className="p-3 text-center">Cantidad Consumida</th>
+                        <th className="p-3 text-right">Precio Unitario</th>
+                        <th className="p-3 text-right">Costo Acumulado</th>
+                        <th className="p-3 text-right">Último Consumo</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {asset.checklistExecutions.map((execution) => (
-                        <tr key={execution.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="p-3 font-mono text-xs whitespace-nowrap">
-                            {formatDateTime(execution.completedAt)}
+                      {consumedPartsList.map((part) => (
+                        <tr key={part.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="p-3 font-mono text-xs font-bold text-primary">
+                            {part.code}
                           </td>
                           <td className="p-3 font-semibold">
-                            {execution.template?.title || 'Inspección'}
-                          </td>
-                          <td className="p-3">{execution.technician?.name || 'Técnico'}</td>
-                          <td className="p-3">{getChecklistBadge(execution.status)}</td>
-                          <td className="p-3">
-                            {execution.workOrders && execution.workOrders.length > 0 ? (
-                              <Link href="/dashboard/work-orders">
-                                <Badge variant="destructive" className="cursor-pointer hover:underline">
-                                  ⚡ OT Generada
-                                </Badge>
-                              </Link>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">N/A</span>
+                            {part.name}
+                            {part.isCustom && (
+                              <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1">
+                                Especial
+                              </Badge>
                             )}
+                          </td>
+                          <td className="p-3 text-center font-bold">
+                            {part.totalQuantity} {part.unit}
+                          </td>
+                          <td className="p-3 text-right text-muted-foreground">
+                            {part.unitPrice > 0 ? formatCurrency(part.unitPrice) : 'N/A'}
+                          </td>
+                          <td className="p-3 text-right font-extrabold text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(part.totalCost)}
+                          </td>
+                          <td className="p-3 text-right font-mono text-xs text-muted-foreground">
+                            {formatDateTime(part.lastUsedDate)}
                           </td>
                         </tr>
                       ))}
@@ -548,8 +869,8 @@ export function AssetDetail({ asset }: AssetDetailProps) {
                   </table>
                 </div>
               ) : (
-                <div className="p-8 text-center text-muted-foreground border rounded-md">
-                  No hay inspecciones registradas para este activo.
+                <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+                  No se han registrado repuestos o materiales consumidos en este activo.
                 </div>
               )}
             </CardContent>

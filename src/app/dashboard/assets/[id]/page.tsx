@@ -9,6 +9,12 @@ async function getAsset(id: string) {
       workOrders: {
         include: {
           technician: true,
+          externalVendor: true,
+          materials: {
+            include: {
+              inventoryItem: true,
+            },
+          },
           partsUsed: {
             include: { part: true },
           },
