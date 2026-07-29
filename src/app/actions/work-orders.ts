@@ -110,3 +110,81 @@ export async function createWorkOrder(data: CreateWorkOrderInput) {
     return { success: false, error: error.message || 'Error al crear la orden de trabajo.' }
   }
 }
+
+export async function updateWorkOrderStatus(orderId: string, newStatus: string) {
+  try {
+    const existingWO = await prisma.workOrder.findUnique({
+      where: { id: orderId },
+      include: {
+        materials: true,
+        partsUsed: true,
+      },
+    })
+
+    if (!existingWO) {
+      return { success: false, error: 'Orden de trabajo no encontrada.' }
+    }
+
+    const isFinalizing =
+      (newStatus === 'FINALIZADA' || newStatus === 'CLOSED') &&
+      existingWO.status !== 'FINALIZADA' &&
+      existingWO.status !== 'CLOSED'
+
+    const now = new Date()
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const wo = await tx.workOrder.update({
+        where: { id: orderId },
+        data: {
+          status: newStatus as any,
+          ...(isFinalizing ? { closedAt: now, completedAt: now } : {}),
+        },
+      })
+
+      if (isFinalizing) {
+        // Discount stock for WorkOrderMaterial
+        for (const mat of existingWO.materials) {
+          if (!mat.isCustom && mat.inventoryItemId && mat.quantityUsed > 0) {
+            await tx.part.update({
+              where: { id: mat.inventoryItemId },
+              data: {
+                stock: {
+                  decrement: Math.max(1, Math.round(mat.quantityUsed)),
+                },
+              },
+            })
+          }
+        }
+        // Discount stock for PartsUsed
+        for (const partOnOrder of existingWO.partsUsed) {
+          if (partOnOrder.partId && partOnOrder.quantity > 0) {
+            await tx.part.update({
+              where: { id: partOnOrder.partId },
+              data: {
+                stock: {
+                  decrement: partOnOrder.quantity,
+                },
+              },
+            })
+          }
+        }
+      }
+
+      return wo
+    })
+
+    revalidatePath('/dashboard/work-orders')
+    revalidatePath(`/dashboard/work-orders/${orderId}`)
+    revalidatePath('/dashboard')
+
+    const message = isFinalizing
+      ? 'Orden finalizada y trasladada al historial.'
+      : 'Estado de la orden actualizado exitosamente.'
+
+    return { success: true, workOrder: updated, message }
+  } catch (error: any) {
+    console.error('Error in updateWorkOrderStatus action:', error)
+    return { success: false, error: error.message || 'Error al actualizar el estado de la orden.' }
+  }
+}
+

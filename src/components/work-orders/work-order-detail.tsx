@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { ArrowLeft, Edit, CheckCircle, XCircle, Clock, Pause, FileText } from 'lucide-react'
 import { generateWorkOrderPDF } from '@/lib/pdf-generator'
+import { Toast, ToastMessage } from '@/components/ui/toast'
+import { updateWorkOrderStatus } from '@/app/actions/work-orders'
 import Link from 'next/link'
 import type { WorkOrder, Asset, User, PartOnOrder, Part } from '@prisma/client'
 
@@ -86,18 +88,30 @@ interface WorkOrderDetailProps {
   workOrder: WorkOrderWithRelations
 }
 
-const statusColors = {
+const statusColors: Record<string, any> = {
   OPEN: 'default',
+  ABIERTA: 'default',
   IN_PROGRESS: 'warning',
+  EN_PROCESO: 'warning',
   ON_HOLD: 'secondary',
+  PAUSADA: 'secondary',
+  PENDIENTE_REPUESTO: 'outline',
   CLOSED: 'success',
-} as const
+  FINALIZADA: 'success',
+  CANCELADA: 'destructive',
+}
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   OPEN: 'Abierta',
+  ABIERTA: 'Abierta',
   IN_PROGRESS: 'En Progreso',
+  EN_PROCESO: 'En Progreso',
   ON_HOLD: 'En Pausa',
-  CLOSED: 'Cerrada',
+  PAUSADA: 'Pausada',
+  PENDIENTE_REPUESTO: 'Pendiente Repuesto',
+  CLOSED: 'Finalizada',
+  FINALIZADA: 'Finalizada',
+  CANCELADA: 'Cancelada',
 }
 
 const typeLabels = {
@@ -157,19 +171,21 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
     }
   }
 
+  const [toast, setToast] = useState<ToastMessage | null>(null)
+
   async function updateStatus(newStatus: string) {
     setLoading(true)
     try {
-      const response = await fetch(`/api/work-orders/${workOrder.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: newStatus,
-          closedAt: newStatus === 'CLOSED' ? new Date() : null,
-        }),
-      })
-
-      if (response.ok) {
+      const res = await updateWorkOrderStatus(workOrder.id, newStatus)
+      if (res.success) {
+        if (['FINALIZADA', 'CLOSED'].includes(newStatus)) {
+          setToast({
+            id: Date.now().toString(),
+            title: 'Orden Finalizada',
+            description: 'Orden finalizada y trasladada al historial.',
+            type: 'success',
+          })
+        }
         router.refresh()
       }
     } catch (error) {
@@ -318,56 +334,57 @@ export function WorkOrderDetail({ workOrder }: WorkOrderDetailProps) {
             <CardTitle>Acciones</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {workOrder.status === 'OPEN' && (
+            <Toast toast={toast} onClose={() => setToast(null)} />
+            {(workOrder.status === 'OPEN' || workOrder.status === 'ABIERTA') && (
               <Button
                 className="w-full"
-                onClick={() => updateStatus('IN_PROGRESS')}
+                onClick={() => updateStatus('EN_PROCESO')}
                 disabled={loading}
               >
                 <Clock className="mr-2 h-4 w-4" />
                 Iniciar Trabajo
               </Button>
             )}
-            {workOrder.status === 'IN_PROGRESS' && (
+            {(workOrder.status === 'IN_PROGRESS' || workOrder.status === 'EN_PROCESO') && (
               <>
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => updateStatus('ON_HOLD')}
+                  onClick={() => updateStatus('PAUSADA')}
                   disabled={loading}
                 >
                   <Pause className="mr-2 h-4 w-4" />
                   Pausar
                 </Button>
                 <Button
-                  className="w-full"
-                  onClick={() => updateStatus('CLOSED')}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => updateStatus('FINALIZADA')}
                   disabled={loading}
                 >
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Completar
+                  Finalizar Orden
                 </Button>
               </>
             )}
-            {workOrder.status === 'ON_HOLD' && (
+            {(workOrder.status === 'ON_HOLD' || workOrder.status === 'PAUSADA' || workOrder.status === 'PENDIENTE_REPUESTO') && (
               <Button
                 className="w-full"
-                onClick={() => updateStatus('IN_PROGRESS')}
+                onClick={() => updateStatus('EN_PROCESO')}
                 disabled={loading}
               >
                 <Clock className="mr-2 h-4 w-4" />
-                Reanudar
+                Reanudar Trabajo
               </Button>
             )}
-            {workOrder.status === 'CLOSED' && (
+            {(workOrder.status === 'CLOSED' || workOrder.status === 'FINALIZADA' || workOrder.status === 'CANCELADA') && (
               <Button
                 className="w-full"
                 variant="outline"
-                onClick={() => updateStatus('OPEN')}
+                onClick={() => updateStatus('ABIERTA')}
                 disabled={loading}
               >
                 <XCircle className="mr-2 h-4 w-4" />
-                Reabrir
+                Reabrir Orden
               </Button>
             )}
             <Button variant="outline" className="w-full">

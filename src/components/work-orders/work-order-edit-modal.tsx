@@ -493,10 +493,16 @@ export function WorkOrderEditModal({
                     onChange={(e) => setStatus(e.target.value)}
                     required
                   >
-                    <option value="OPEN">Abierta</option>
-                    <option value="IN_PROGRESS">En Progreso</option>
-                    <option value="ON_HOLD">En Pausa</option>
-                    <option value="CLOSED">Cerrada</option>
+                    <option value="ABIERTA">Abierta</option>
+                    <option value="EN_PROCESO">En Progreso</option>
+                    <option value="PAUSADA">En Pausa</option>
+                    <option value="PENDIENTE_REPUESTO">Pendiente Repuesto</option>
+                    <option value="FINALIZADA">Finalizada (Archivar)</option>
+                    <option value="CANCELADA">Cancelada</option>
+                    <option value="OPEN">Abierta (Legacy)</option>
+                    <option value="IN_PROGRESS">En Progreso (Legacy)</option>
+                    <option value="ON_HOLD">En Pausa (Legacy)</option>
+                    <option value="CLOSED">Cerrada (Legacy)</option>
                   </Select>
                 </div>
 

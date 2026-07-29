@@ -69,14 +69,23 @@ export async function PATCH(
       return NextResponse.json({ error: 'Orden de trabajo no encontrada' }, { status: 404 })
     }
 
-    const isClosing = status === 'CLOSED' && existingWO.status !== 'CLOSED'
+    const isClosing =
+      (status === 'FINALIZADA' || status === 'CLOSED') &&
+      existingWO.status !== 'FINALIZADA' &&
+      existingWO.status !== 'CLOSED'
+
+    const now = new Date()
 
     const workOrder = await prisma.$transaction(async (tx) => {
       const updated = await tx.workOrder.update({
         where: { id: params.id },
         data: {
           ...(status && { status }),
-          ...(closedAt !== undefined && { closedAt: closedAt ? new Date(closedAt) : null }),
+          ...(closedAt !== undefined
+            ? { closedAt: closedAt ? new Date(closedAt) : null }
+            : isClosing
+            ? { closedAt: now, completedAt: now }
+            : {}),
         },
       })
 
@@ -142,7 +151,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Orden de trabajo no encontrada' }, { status: 404 })
     }
 
-    const isClosing = status === 'CLOSED' && existingWO.status !== 'CLOSED'
+    const isClosing =
+      (status === 'FINALIZADA' || status === 'CLOSED') &&
+      existingWO.status !== 'FINALIZADA' &&
+      existingWO.status !== 'CLOSED'
+
+    const now = new Date()
 
     const workOrder = await prisma.$transaction(async (tx) => {
       const updated = await tx.workOrder.update({
@@ -158,7 +172,7 @@ export async function PUT(
           guidelineId: guidelineId !== undefined ? (guidelineId || null) : undefined,
           laborHours: laborHours !== undefined ? parseFloat(laborHours) : undefined,
           externalVendorId: externalVendorId || null,
-          closedAt: status === 'CLOSED' ? new Date() : null,
+          ...(isClosing ? { closedAt: now, completedAt: now } : {}),
         },
       })
 
