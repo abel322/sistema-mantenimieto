@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,15 +16,23 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-interface Schedule {
+export interface ScheduleItem {
   id: string
   assetId: string
   frequencyDays?: number | null
   frequencyType: string
-  nextDueDate: string
+  nextDueDate: string | Date
   taskTemplate: string
   isActive: boolean
   asset: { id: string; name: string; code: string }
+}
+
+interface ScheduleListProps {
+  schedules: ScheduleItem[]
+  loading?: boolean
+  onDeleteSchedule: (id: string) => Promise<void>
+  onUpdateSchedule: (updatedSchedule: any) => void
+  onRefresh: () => void
 }
 
 const frequencyTypeLabels: Record<string, string> = {
@@ -33,49 +41,28 @@ const frequencyTypeLabels: Record<string, string> = {
   USAGE_METERS: 'Por Metros Producidos',
 }
 
-export function ScheduleList() {
+export function ScheduleList({
+  schedules,
+  loading = false,
+  onDeleteSchedule,
+  onUpdateSchedule,
+  onRefresh,
+}: ScheduleListProps) {
   const router = useRouter()
-  const [schedules, setSchedules] = useState<Schedule[]>([])
-  const [loading, setLoading] = useState(true)
 
   // Edit modal state
-  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null)
+  const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null)
 
   // Delete modal state
-  const [deletingSchedule, setDeletingSchedule] = useState<Schedule | null>(null)
+  const [deletingSchedule, setDeletingSchedule] = useState<ScheduleItem | null>(null)
   const [deleting, setDeleting] = useState(false)
-
-  const fetchSchedules = async () => {
-    try {
-      const res = await fetch('/api/schedule')
-      if (res.ok) {
-        const data = await res.json()
-        setSchedules(Array.isArray(data) ? data : [])
-      }
-    } catch (error) {
-      console.error('Error fetching schedules:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchSchedules()
-  }, [])
 
   const handleDelete = async () => {
     if (!deletingSchedule) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/schedule/${deletingSchedule.id}`, {
-        method: 'DELETE',
-      })
-
-      if (res.ok) {
-        setSchedules((prev) => prev.filter((s) => s.id !== deletingSchedule.id))
-        setDeletingSchedule(null)
-        router.refresh()
-      }
+      await onDeleteSchedule(deletingSchedule.id)
+      setDeletingSchedule(null)
     } catch (error) {
       console.error('Error deleting schedule:', error)
     } finally {
@@ -116,7 +103,7 @@ export function ScheduleList() {
                 : ''
             }`}
           >
-            <CardContent className="p-5 md:p-6">
+            <CardContent className="p-4 sm:p-5 md:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-2 flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -164,12 +151,12 @@ export function ScheduleList() {
                   </div>
                 </div>
 
-                {/* Quick Action Buttons */}
+                {/* Quick Action Buttons with min h-8 w-8 touch target spacing */}
                 <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    className="h-8 w-8 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
                     onClick={() => setEditingSchedule(schedule)}
                     title="Editar Programación"
                   >
@@ -179,7 +166,7 @@ export function ScheduleList() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    className="h-8 w-8 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
                     onClick={() => setDeletingSchedule(schedule)}
                     title="Eliminar Programación"
                   >
@@ -208,9 +195,9 @@ export function ScheduleList() {
           isOpen={!!editingSchedule}
           schedule={editingSchedule}
           onClose={() => setEditingSchedule(null)}
-          onSuccess={() => {
-            fetchSchedules()
-            router.refresh()
+          onSuccess={(updated) => {
+            if (updated) onUpdateSchedule(updated)
+            onRefresh()
           }}
         />
       )}
@@ -224,7 +211,7 @@ export function ScheduleList() {
               <h3 className="text-lg font-bold">¿Eliminar Programación?</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              ¿Estás seguro de eliminar la programación <strong>"{deletingSchedule.taskTemplate}"</strong> para el activo <strong>{deletingSchedule.asset?.name}</strong>? Esta acción no se puede deshacer.
+              ¿Estás seguro de eliminar la programación <strong>"{deletingSchedule.taskTemplate}"</strong> para el activo <strong>{deletingSchedule.asset?.name}</strong>? Esta acción corregirá el calendario y el historial.
             </p>
             <div className="flex justify-end gap-3 pt-2">
               <Button

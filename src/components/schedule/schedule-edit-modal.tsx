@@ -5,7 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
-import { X, Save, Loader2 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { X, Save, Loader2, Calendar } from 'lucide-react'
+import { updateScheduleAction } from '@/app/actions/schedules'
 
 interface AssetOption {
   id: string
@@ -16,7 +24,7 @@ interface AssetOption {
 interface ScheduleEditModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (updatedSchedule?: any) => void
   schedule: {
     id: string
     assetId: string
@@ -37,7 +45,7 @@ export function ScheduleEditModal({
   const [assetId, setAssetId] = useState(schedule.assetId)
   const [taskTemplate, setTaskTemplate] = useState(schedule.taskTemplate)
   const [frequencyDays, setFrequencyDays] = useState(schedule.frequencyDays?.toString() || '30')
-  const [frequencyType, setFrequencyType] = useState(schedule.frequencyType)
+  const [frequencyType, setFrequencyType] = useState<any>(schedule.frequencyType || 'CALENDAR')
   const [nextDueDate, setNextDueDate] = useState(
     new Date(schedule.nextDueDate).toISOString().slice(0, 10)
   )
@@ -47,11 +55,11 @@ export function ScheduleEditModal({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && schedule) {
       setAssetId(schedule.assetId)
       setTaskTemplate(schedule.taskTemplate)
       setFrequencyDays(schedule.frequencyDays?.toString() || '30')
-      setFrequencyType(schedule.frequencyType)
+      setFrequencyType(schedule.frequencyType || 'CALENDAR')
       setNextDueDate(new Date(schedule.nextDueDate).toISOString().slice(0, 10))
 
       fetch('/api/assets', { cache: 'no-store' })
@@ -61,7 +69,7 @@ export function ScheduleEditModal({
     }
   }, [isOpen, schedule])
 
-  if (!isOpen) return null
+  if (!isOpen || !schedule) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,24 +83,19 @@ export function ScheduleEditModal({
     setError(null)
 
     try {
-      const res = await fetch(`/api/schedule/${schedule.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assetId,
-          taskTemplate,
-          frequencyDays: parseInt(frequencyDays) || 30,
-          frequencyType,
-          nextDueDate,
-        }),
+      const res = await updateScheduleAction(schedule.id, {
+        assetId,
+        taskTemplate,
+        frequencyDays: parseInt(frequencyDays) || 30,
+        frequencyType,
+        nextDueDate,
       })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Error al actualizar la programación')
+      if (!res.success) {
+        throw new Error(res.error || 'Error al actualizar la programación')
       }
 
-      onSuccess()
+      onSuccess(res.schedule)
       onClose()
     } catch (err: any) {
       console.error(err)
@@ -103,30 +106,32 @@ export function ScheduleEditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="bg-background border rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/40">
-          <h3 className="text-lg font-bold">Editar Programación de Mantenimiento</h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
+    <Dialog isOpen={isOpen} onClose={onClose}>
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl bg-white dark:bg-slate-900 my-auto">
+        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-primary shrink-0" />
+            Editar Programación de Mantenimiento
+          </DialogTitle>
+          <Button variant="ghost" size="icon" onClick={onClose} type="button" className="h-8 w-8 rounded-full">
+            <X className="h-4 w-4" />
           </Button>
-        </div>
+        </DialogHeader>
 
-        {/* Body Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-1 space-y-4 pt-3">
           {error && (
             <div className="p-3 text-sm bg-destructive/15 text-destructive border border-destructive/30 rounded-md font-medium">
               {error}
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="asset" className="font-semibold text-sm">
+          <div className="space-y-1">
+            <Label htmlFor="asset" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Activo / Maquinaria *
             </Label>
             <Select
               id="asset"
+              className="w-full h-10 text-sm"
               value={assetId}
               onChange={(e) => setAssetId(e.target.value)}
               required
@@ -139,12 +144,13 @@ export function ScheduleEditModal({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="taskTemplate" className="font-semibold text-sm">
+          <div className="space-y-1">
+            <Label htmlFor="taskTemplate" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Tarea / Protocolo a Programar *
             </Label>
             <Input
               id="taskTemplate"
+              className="w-full h-10 text-sm"
               value={taskTemplate}
               onChange={(e) => setTaskTemplate(e.target.value)}
               required
@@ -152,12 +158,13 @@ export function ScheduleEditModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="frequencyType" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="frequencyType" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Tipo de Frecuencia
               </Label>
               <Select
                 id="frequencyType"
+                className="w-full h-10 text-sm"
                 value={frequencyType}
                 onChange={(e) => setFrequencyType(e.target.value)}
               >
@@ -167,14 +174,15 @@ export function ScheduleEditModal({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="frequencyDays" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="frequencyDays" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Frecuencia (Días) *
               </Label>
               <Input
                 id="frequencyDays"
                 type="number"
                 min="1"
+                className="w-full h-10 text-sm"
                 value={frequencyDays}
                 onChange={(e) => setFrequencyDays(e.target.value)}
                 required
@@ -182,13 +190,14 @@ export function ScheduleEditModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="nextDueDate" className="font-semibold text-sm">
+          <div className="space-y-1">
+            <Label htmlFor="nextDueDate" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Próxima Fecha Límite *
             </Label>
             <Input
               id="nextDueDate"
               type="date"
+              className="w-full h-10 text-sm"
               value={nextDueDate}
               onChange={(e) => setNextDueDate(e.target.value)}
               required
@@ -196,11 +205,11 @@ export function ScheduleEditModal({
           </div>
 
           {/* Footer */}
-          <div className="border-t pt-4 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="w-full sm:w-auto h-10">
               Cancelar
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving} className="w-full sm:w-auto h-10 bg-blue-600 hover:bg-blue-700 text-white">
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...
@@ -211,9 +220,9 @@ export function ScheduleEditModal({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
