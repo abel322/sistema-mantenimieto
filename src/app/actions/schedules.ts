@@ -12,6 +12,21 @@ export interface SchedulePayload {
   isActive?: boolean
 }
 
+export async function getMaintenanceSchedulesAction() {
+  try {
+    const schedules = await prisma.schedule.findMany({
+      orderBy: { nextDueDate: 'asc' },
+      include: {
+        asset: true,
+      },
+    })
+    return { success: true, schedules: JSON.parse(JSON.stringify(schedules)) }
+  } catch (error: any) {
+    console.error('Error fetching maintenance schedules:', error)
+    return { success: false, schedules: [], error: error.message }
+  }
+}
+
 export async function createScheduleAction(payload: SchedulePayload) {
   try {
     const { assetId, frequencyDays, frequencyType = 'CALENDAR', nextDueDate, taskTemplate, isActive = true } = payload
@@ -32,6 +47,7 @@ export async function createScheduleAction(payload: SchedulePayload) {
 
     revalidatePath('/dashboard/schedule')
     revalidatePath('/dashboard/schedules')
+    revalidatePath('/dashboard/programacion')
     revalidatePath(`/dashboard/assets/${assetId}`)
 
     return { success: true, schedule }
@@ -63,6 +79,7 @@ export async function updateScheduleAction(id: string, payload: Partial<Schedule
 
     revalidatePath('/dashboard/schedule')
     revalidatePath('/dashboard/schedules')
+    revalidatePath('/dashboard/programacion')
     revalidatePath(`/dashboard/assets/${schedule.assetId}`)
 
     return { success: true, schedule }
@@ -89,6 +106,7 @@ export async function deleteScheduleAction(id: string) {
 
     revalidatePath('/dashboard/schedule')
     revalidatePath('/dashboard/schedules')
+    revalidatePath('/dashboard/programacion')
     revalidatePath(`/dashboard/assets/${existingSchedule.assetId}`)
 
     return { success: true, id }

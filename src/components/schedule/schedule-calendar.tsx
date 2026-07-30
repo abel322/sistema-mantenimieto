@@ -14,13 +14,12 @@ import { ScheduleEditModal } from '@/components/schedule/schedule-edit-modal'
 import {
   Plus,
   Loader2,
-  Eye,
   X,
   Pencil,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Calendar as CalendarIcon
 } from 'lucide-react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ScheduleItem } from './schedule-list'
 
@@ -43,19 +42,15 @@ export interface BigCalendarEvent {
   end: Date
   allDay: boolean
   color: string
-  type: 'WORK_ORDER' | 'SCHEDULE'
+  type: 'SCHEDULE'
   originalId: string
   assetName: string
   status?: string
-  priority?: string
-  orderType?: string
-  technicianName?: string
-  rawSchedule?: ScheduleItem
+  rawSchedule: ScheduleItem
 }
 
 interface ScheduleCalendarProps {
   schedules: ScheduleItem[]
-  workOrders: any[]
   loading?: boolean
   onDeleteSchedule: (id: string) => Promise<void>
   onUpdateSchedule: (updatedSchedule: any) => void
@@ -64,7 +59,6 @@ interface ScheduleCalendarProps {
 
 export function ScheduleCalendar({
   schedules,
-  workOrders,
   loading = false,
   onDeleteSchedule,
   onUpdateSchedule,
@@ -110,64 +104,29 @@ export function ScheduleCalendar({
     }
   }, [])
 
-  // Reactively compute calendar events whenever schedules or workOrders change
+  // Reactively compute calendar events strictly from the Schedule database records
   const events = useMemo(() => {
-    const rawEvents: BigCalendarEvent[] = []
-
-    // Map Scheduled Maintenance Routines
-    if (Array.isArray(schedules)) {
-      schedules.forEach((sch) => {
-        const startDate = new Date(sch.nextDueDate)
-        rawEvents.push({
-          id: `sch-${sch.id}`,
-          title: `${sch.asset?.name || 'Activo'}: ${sch.taskTemplate}`,
-          start: startDate,
-          end: startDate,
-          allDay: true,
-          color: '#059669', // Green (Preventivo Programado)
-          type: 'SCHEDULE',
-          originalId: sch.id,
-          assetName: sch.asset?.name || 'Activo',
-          status: sch.isActive ? 'PROGRAMADO' : 'INACTIVO',
-          rawSchedule: sch,
-        })
-      })
+    if (!Array.isArray(schedules) || schedules.length === 0) {
+      return []
     }
 
-    // Map Work Orders
-    if (Array.isArray(workOrders)) {
-      workOrders.forEach((wo) => {
-        let color = '#3b82f6' // Blue (En progreso)
-
-        if (wo.status === 'CLOSED') {
-          color = '#64748b' // Gray (Cerrado)
-        } else if (wo.type === 'CORRECTIVE' || wo.priority === 'HIGH' || wo.priority === 'CRITICAL') {
-          color = '#dc2626' // Red (Correctivo / Urgente)
-        } else if (wo.type === 'PREVENTIVE' && wo.status === 'OPEN') {
-          color = '#059669' // Green (Preventivo Abierto)
-        }
-
-        const startDate = new Date(wo.createdAt)
-        rawEvents.push({
-          id: `wo-${wo.id}`,
-          title: `OT #${wo.id.slice(0, 6)}: ${wo.asset?.name || 'Activo'} - ${wo.title}`,
-          start: startDate,
-          end: startDate,
-          allDay: true,
-          color,
-          type: 'WORK_ORDER',
-          originalId: wo.id,
-          assetName: wo.asset?.name || 'Activo',
-          status: wo.status,
-          priority: wo.priority,
-          orderType: wo.type,
-          technicianName: wo.technician?.name || 'Técnico',
-        })
-      })
-    }
-
-    return rawEvents
-  }, [schedules, workOrders])
+    return schedules.map((sch) => {
+      const startDate = new Date(sch.nextDueDate)
+      return {
+        id: `sch-${sch.id}`,
+        title: `${sch.asset?.name || 'Activo'}: ${sch.taskTemplate}`,
+        start: startDate,
+        end: startDate,
+        allDay: true,
+        color: sch.isActive ? '#059669' : '#64748b', // Green for active, Gray for inactive
+        type: 'SCHEDULE' as const,
+        originalId: sch.id,
+        assetName: sch.asset?.name || 'Activo',
+        status: sch.isActive ? 'PROGRAMADO' : 'INACTIVO',
+        rawSchedule: sch,
+      }
+    })
+  }, [schedules])
 
   // Event Styling Callback for React Big Calendar
   const eventStyleGetter = (event: BigCalendarEvent) => {
@@ -222,19 +181,11 @@ export function ScheduleCalendar({
             <span className="font-semibold text-foreground">Leyenda de Estado:</span>
             <span className="flex items-center gap-1.5 font-medium">
               <span className="w-3 h-3 rounded-full bg-emerald-600 inline-block"></span>
-              Preventivo Programado
-            </span>
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-3 h-3 rounded-full bg-blue-600 inline-block"></span>
-              En Progreso
-            </span>
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-3 h-3 rounded-full bg-red-600 inline-block"></span>
-              Correctivo / Urgente
+              Rutina Programada (Activa)
             </span>
             <span className="flex items-center gap-1.5 font-medium">
               <span className="w-3 h-3 rounded-full bg-slate-500 inline-block"></span>
-              Cerrado / Completado
+              Inactiva / Pausada
             </span>
           </div>
 
@@ -249,7 +200,7 @@ export function ScheduleCalendar({
         {loading ? (
           <div className="p-16 text-center text-muted-foreground flex flex-col items-center gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span>Cargando eventos del calendario...</span>
+            <span>Cargando programaciones de mantenimiento...</span>
           </div>
         ) : (
           <div className="w-full overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-800 p-2 sm:p-4">
@@ -313,7 +264,7 @@ export function ScheduleCalendar({
                   date: 'Fecha',
                   time: 'Hora',
                   event: 'Evento',
-                  noEventsInRange: 'No hay mantenimientos programados en este rango.',
+                  noEventsInRange: 'No hay mantenimientos programados en la base de datos.',
                 }}
               />
             </div>
@@ -342,7 +293,7 @@ export function ScheduleCalendar({
                   style={{ backgroundColor: selectedEvent.color, color: '#ffffff' }}
                   className="font-bold text-xs"
                 >
-                  {selectedEvent.type === 'WORK_ORDER' ? 'Orden de Trabajo' : 'Rutina Programada'}
+                  Rutina Programada
                 </Badge>
                 <h3 className="text-base font-bold text-foreground leading-tight pt-1">
                   {selectedEvent.title}
@@ -370,13 +321,6 @@ export function ScheduleCalendar({
                   <span className="font-semibold text-foreground">{selectedEvent.status}</span>
                 </div>
               )}
-
-              {selectedEvent.technicianName && (
-                <div className="flex justify-between border-b py-1">
-                  <span>Técnico:</span>
-                  <span className="font-semibold text-foreground">{selectedEvent.technicianName}</span>
-                </div>
-              )}
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t">
@@ -384,20 +328,14 @@ export function ScheduleCalendar({
                 Cerrar
               </Button>
 
-              {selectedEvent.type === 'WORK_ORDER' ? (
-                <Link href={`/dashboard/work-orders/${selectedEvent.originalId}`}>
-                  <Button size="sm">
-                    <Eye className="w-4 h-4 mr-1.5" /> Ver Orden de Trabajo
-                  </Button>
-                </Link>
-              ) : selectedEvent.rawSchedule ? (
+              {selectedEvent.rawSchedule && (
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     className="border-blue-300 text-blue-700 dark:text-blue-400 hover:bg-blue-50"
                     onClick={() => {
-                      setEditingSchedule(selectedEvent.rawSchedule!)
+                      setEditingSchedule(selectedEvent.rawSchedule)
                     }}
                   >
                     <Pencil className="w-3.5 h-3.5 mr-1 text-blue-500" /> Editar
@@ -406,13 +344,13 @@ export function ScheduleCalendar({
                     variant="destructive"
                     size="sm"
                     onClick={() => {
-                      setDeletingSchedule(selectedEvent.rawSchedule!)
+                      setDeletingSchedule(selectedEvent.rawSchedule)
                     }}
                   >
                     <Trash2 className="w-3.5 h-3.5 mr-1" /> Eliminar
                   </Button>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
@@ -441,7 +379,7 @@ export function ScheduleCalendar({
               <h3 className="text-lg font-bold">¿Eliminar Programación?</h3>
             </div>
             <p className="text-sm text-muted-foreground">
-              ¿Estás seguro de eliminar la programación <strong>"{deletingSchedule.taskTemplate}"</strong> para el activo <strong>{deletingSchedule.asset?.name}</strong>? Esta acción actualizará inmediatamente el calendario.
+              ¿Estás seguro de eliminar la programación <strong>"{deletingSchedule.taskTemplate}"</strong> para el activo <strong>{deletingSchedule.asset?.name}</strong>? Esta acción actualizará inmediatamente el calendario y la lista.
             </p>
             <div className="flex justify-end gap-3 pt-2">
               <Button

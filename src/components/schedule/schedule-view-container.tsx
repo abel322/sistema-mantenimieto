@@ -7,34 +7,29 @@ import { ScheduleList, ScheduleItem } from '@/components/schedule/schedule-list'
 import { Calendar, List, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { deleteScheduleAction } from '@/app/actions/schedules'
+import { deleteScheduleAction, getMaintenanceSchedulesAction } from '@/app/actions/schedules'
 
 export function ScheduleViewContainer() {
   const router = useRouter()
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [schedules, setSchedules] = useState<ScheduleItem[]>([])
-  const [workOrders, setWorkOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      const [schedulesRes, ordersRes] = await Promise.all([
-        fetch('/api/schedule', { cache: 'no-store' }),
-        fetch('/api/work-orders', { cache: 'no-store' }),
-      ])
-
-      if (schedulesRes.ok) {
-        const schData = await schedulesRes.json()
-        setSchedules(Array.isArray(schData) ? schData : [])
-      }
-
-      if (ordersRes.ok) {
-        const woData = await ordersRes.json()
-        setWorkOrders(Array.isArray(woData) ? woData : [])
+      const res = await getMaintenanceSchedulesAction()
+      if (res.success && Array.isArray(res.schedules)) {
+        setSchedules(res.schedules)
+      } else {
+        const apiRes = await fetch('/api/schedule', { cache: 'no-store' })
+        if (apiRes.ok) {
+          const schData = await apiRes.json()
+          setSchedules(Array.isArray(schData) ? schData : [])
+        }
       }
     } catch (error) {
-      console.error('Error fetching unified schedule data:', error)
+      console.error('Error fetching maintenance schedules:', error)
     } finally {
       setLoading(false)
     }
@@ -82,7 +77,7 @@ export function ScheduleViewContainer() {
             Programación de Mantenimiento
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Calendario interactivo de rutinas preventivas y órdenes de trabajo en planta.
+            Calendario interactivo y catálogo de rutinas de mantenimiento preventivo.
           </p>
         </div>
 
@@ -95,7 +90,7 @@ export function ScheduleViewContainer() {
               onClick={() => setViewMode('calendar')}
               className="flex-1 sm:flex-none text-xs flex items-center justify-center gap-1.5"
             >
-              <Calendar className="w-4 h-4" /> Calendario
+              <Calendar className="w-4 h-4" /> Calendario ({schedules.length})
             </Button>
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -103,7 +98,7 @@ export function ScheduleViewContainer() {
               onClick={() => setViewMode('list')}
               className="flex-1 sm:flex-none text-xs flex items-center justify-center gap-1.5"
             >
-              <List className="w-4 h-4" /> Lista
+              <List className="w-4 h-4" /> Lista ({schedules.length})
             </Button>
           </div>
 
@@ -119,7 +114,6 @@ export function ScheduleViewContainer() {
       {viewMode === 'calendar' ? (
         <ScheduleCalendar
           schedules={schedules}
-          workOrders={workOrders}
           loading={loading}
           onDeleteSchedule={handleDeleteSchedule}
           onUpdateSchedule={handleUpdateSchedule}
