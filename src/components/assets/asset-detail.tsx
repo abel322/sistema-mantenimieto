@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Toast, ToastMessage } from '@/components/ui/toast'
 import { formatDateTime, formatCurrency } from '@/lib/utils'
 import { FailureLogModal } from '@/components/assets/failure-log-modal'
+import { EditFailureModal } from '@/components/assets/edit-failure-modal'
+import { DeleteFailureModal } from '@/components/assets/delete-failure-modal'
 import {
   ArrowLeft,
   AlertTriangle,
@@ -30,8 +33,7 @@ import {
   DollarSign,
   Cpu,
   Loader2,
-  TrendingDown,
-  ShoppingCart
+  MoreVertical
 } from 'lucide-react'
 import { generateAssetPDF } from '@/lib/pdf-generator'
 import { AssetEditModal } from '@/components/assets/asset-edit-modal'
@@ -130,6 +132,13 @@ export function AssetDetail({ asset }: AssetDetailProps) {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [woFilter, setWoFilter] = useState<'ALL' | 'ACTIVE' | 'CLOSED' | 'CORRECTIVE' | 'PREVENTIVE'>('ALL')
+
+  // Failure Log Edit / Delete states
+  const [editingFailureLog, setEditingFailureLog] = useState<any | null>(null)
+  const [deletingFailureLog, setDeletingFailureLog] = useState<any | null>(null)
+
+  // Toast state
+  const [toast, setToast] = useState<ToastMessage | null>(null)
 
   // Stock adjustment loading state
   const [updatingStockId, setUpdatingStockId] = useState<string | null>(null)
@@ -275,6 +284,26 @@ export function AssetDetail({ asset }: AssetDetailProps) {
     }
   }
 
+  const handleFailureEditSuccess = () => {
+    setToast({
+      id: Date.now().toString(),
+      title: 'Éxito',
+      description: 'Registro de falla actualizado correctamente.',
+      type: 'success',
+    })
+    router.refresh()
+  }
+
+  const handleFailureDeleteSuccess = () => {
+    setToast({
+      id: Date.now().toString(),
+      title: 'Éxito',
+      description: 'Registro de falla eliminado del historial.',
+      type: 'success',
+    })
+    router.refresh()
+  }
+
   async function handleGeneratePDF() {
     try {
       const doc = generateAssetPDF(asset)
@@ -289,6 +318,9 @@ export function AssetDetail({ asset }: AssetDetailProps) {
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
+      {/* Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 w-full">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -764,19 +796,44 @@ export function AssetDetail({ asset }: AssetDetailProps) {
               {asset.failureLogs && asset.failureLogs.length > 0 ? (
                 <div className="space-y-3">
                   {asset.failureLogs.map((log) => (
-                    <div key={log.id} className="p-4 border rounded-lg bg-card space-y-2 border-red-500/20 shadow-sm">
+                    <div key={log.id} className="p-4 border rounded-lg bg-card space-y-2 border-red-500/20 shadow-sm relative group">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="destructive" className="font-mono text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Badge variant="destructive" className="font-mono text-xs shrink-0">
                             {log.downtimeHours}h Paro
                           </Badge>
-                          <h4 className="font-bold text-sm text-foreground">
+                          <h4 className="font-bold text-sm text-foreground truncate" title={log.symptom}>
                             {log.symptom}
                           </h4>
                         </div>
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {formatDateTime(log.reportedAt)}
-                        </span>
+
+                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {formatDateTime(log.reportedAt)}
+                          </span>
+
+                          {/* Action Buttons: Edit and Delete with touch target size h-8 w-8 */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-md"
+                              onClick={() => setEditingFailureLog(log)}
+                              title="Editar Falla"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 rounded-md"
+                              onClick={() => setDeletingFailureLog(log)}
+                              title="Eliminar Falla"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
 
                       <p className="text-xs text-muted-foreground">
@@ -841,7 +898,6 @@ export function AssetDetail({ asset }: AssetDetailProps) {
                     <tbody className="divide-y">
                       {assignedParts.map((part) => {
                         const isAvailable = part.stock > part.minStock
-                        const isCritical = part.stock <= part.minStock
 
                         return (
                           <tr key={part.id} className="hover:bg-muted/30 transition-colors">
@@ -1042,7 +1098,27 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         }}
       />
 
-      {/* Edit Modal */}
+      {/* Modal to Edit failure events */}
+      {editingFailureLog && (
+        <EditFailureModal
+          isOpen={!!editingFailureLog}
+          failureLog={editingFailureLog}
+          onClose={() => setEditingFailureLog(null)}
+          onSuccess={handleFailureEditSuccess}
+        />
+      )}
+
+      {/* Modal to Delete failure events */}
+      {deletingFailureLog && (
+        <DeleteFailureModal
+          isOpen={!!deletingFailureLog}
+          failureLog={deletingFailureLog}
+          onClose={() => setDeletingFailureLog(null)}
+          onSuccess={handleFailureDeleteSuccess}
+        />
+      )}
+
+      {/* Edit Asset Modal */}
       <AssetEditModal
         isOpen={editModalOpen}
         asset={asset}
