@@ -3,9 +3,15 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { X, Save, Loader2, Star } from 'lucide-react'
 
 export interface SupplierData {
@@ -146,62 +152,62 @@ export function SupplierModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="bg-background border rounded-lg shadow-xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/40">
-          <h3 className="text-lg font-bold">
+    <Dialog isOpen={isOpen} onClose={onClose}>
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl bg-white dark:bg-slate-900 my-auto">
+        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
             {isEditing ? 'Editar Proveedor / Contratista' : 'Registrar Nuevo Proveedor'}
-          </h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
+          </DialogTitle>
+          <Button variant="ghost" size="icon" onClick={onClose} type="button" className="h-8 w-8 rounded-full">
+            <X className="h-4 w-4" />
           </Button>
-        </div>
+        </DialogHeader>
 
-        {/* Body Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-3">
           {error && (
             <div className="p-3 text-sm bg-destructive/15 text-destructive border border-destructive/30 rounded-md font-medium">
               {error}
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="font-semibold text-sm">
-                Nombre / Razón Social *
-              </Label>
-              <Input
-                id="name"
-                placeholder="Ej: TecnoSellos & Teflones"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="taxId" className="font-semibold text-sm">
-                RIF / Tax ID
-              </Label>
-              <Input
-                id="taxId"
-                placeholder="Ej: J-30495821-0"
-                value={taxId}
-                onChange={(e) => setTaxId(e.target.value)}
-              />
-            </div>
+          {/* 1. Mandatory First Field: Provider / Company Name */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Nombre de la Empresa / Proveedor *
+            </label>
+            <Input
+              className="w-full h-10 text-sm"
+              placeholder="Ej: Inversiones Mecánicas C.A."
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
 
+          {/* 2. RIF / Tax ID */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              RIF / Tax ID *
+            </label>
+            <Input
+              className="w-full h-10 text-sm font-mono"
+              placeholder="Ej: J-30495821-0"
+              value={taxId}
+              onChange={(e) => setTaxId(e.target.value)}
+            />
+          </div>
+
+          {/* Categoría y Estado */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Categoría *
-              </Label>
+              </label>
               <Select
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                className="w-full h-10 text-sm"
                 required
               >
                 {CATEGORY_OPTIONS.map((cat) => (
@@ -212,14 +218,15 @@ export function SupplierModal({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Estado *
-              </Label>
+              </label>
               <Select
                 id="status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
+                className="w-full h-10 text-sm"
               >
                 <option value="ACTIVE">Activo</option>
                 <option value="INACTIVE">Inactivo</option>
@@ -227,38 +234,39 @@ export function SupplierModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="contactName" className="font-semibold text-sm">
+          {/* Contacto, Teléfono, Email */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Persona de Contacto
-              </Label>
+              </label>
               <Input
-                id="contactName"
+                className="w-full h-10 text-sm"
                 placeholder="Ej: Carlos Mendoza"
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Teléfono
-              </Label>
+              </label>
               <Input
-                id="phone"
+                className="w-full h-10 text-sm"
                 placeholder="Ej: +58 414-555-0101"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Correo Electrónico
-              </Label>
+              </label>
               <Input
-                id="email"
                 type="email"
+                className="w-full h-10 text-sm"
                 placeholder="Ej: ventas@proveedor.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -266,22 +274,24 @@ export function SupplierModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address" className="font-semibold text-sm">
+          {/* Dirección */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Dirección Física / Ubicación
-            </Label>
+            </label>
             <Input
-              id="address"
+              className="w-full h-10 text-sm"
               placeholder="Ej: Zona Industrial Paramillo, Galpón 12"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="font-semibold text-sm">
+          {/* Calificación */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Calificación (1 a 5 estrellas)
-            </Label>
+            </label>
             <div className="flex items-center gap-1.5 pt-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -305,13 +315,14 @@ export function SupplierModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="font-semibold text-sm">
+          {/* Notas */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Notas / Especialidad / Observaciones
-            </Label>
+            </label>
             <Textarea
-              id="notes"
               rows={3}
+              className="text-sm"
               placeholder="Descripción de repuestos, marcas que distribuye o tipo de trabajos especiales..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -319,11 +330,21 @@ export function SupplierModal({
           </div>
 
           {/* Footer */}
-          <div className="border-t pt-4 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row gap-2">
+            <Button
+              className="w-full sm:w-auto"
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={saving}
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+              type="submit"
+              disabled={saving}
+            >
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...
@@ -334,9 +355,9 @@ export function SupplierModal({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
