@@ -6,6 +6,14 @@ async function getAsset(id: string) {
   const asset = await prisma.asset.findUnique({
     where: { id },
     include: {
+      parts: {
+        include: {
+          preferredSupplier: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      },
       workOrders: {
         include: {
           technician: true,

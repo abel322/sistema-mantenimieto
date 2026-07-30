@@ -6,12 +6,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
-import { X, Save, Loader2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { X, Save, Loader2, Cpu, Check } from 'lucide-react'
 
 interface SupplierOption {
   id: string
   name: string
   category: string
+}
+
+interface AssetOption {
+  id: string
+  name: string
+  code: string
 }
 
 interface PartEditModalProps {
@@ -30,6 +44,7 @@ interface PartEditModalProps {
     location?: string | null
     description?: string | null
     preferredSupplierId?: string | null
+    assets?: AssetOption[]
   }
 }
 
@@ -41,7 +56,7 @@ export function PartEditModal({
 }: PartEditModalProps) {
   const [name, setName] = useState(part.name)
   const [code, setCode] = useState(part.code)
-  const [category, setCategory] = useState(part.category)
+  const [category, setCategory] = useState(part.category || '')
   const [stock, setStock] = useState(part.stock.toString())
   const [minStock, setMinStock] = useState(part.minStock.toString())
   const [unit, setUnit] = useState(part.unit)
@@ -52,6 +67,8 @@ export function PartEditModal({
     part.preferredSupplierId || ''
   )
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
+  const [allAssets, setAllAssets] = useState<AssetOption[]>([])
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,7 +77,7 @@ export function PartEditModal({
     if (isOpen) {
       setName(part.name)
       setCode(part.code)
-      setCategory(part.category)
+      setCategory(part.category || '')
       setStock(part.stock.toString())
       setMinStock(part.minStock.toString())
       setUnit(part.unit)
@@ -69,14 +86,40 @@ export function PartEditModal({
       setDescription(part.description || '')
       setPreferredSupplierId(part.preferredSupplierId || '')
 
+      const initialAssetIds = part.assets?.map((a) => a.id) || []
+      setSelectedAssetIds(initialAssetIds)
+
       fetch('/api/suppliers?status=ACTIVE')
         .then((res) => res.json())
         .then((data) => setSuppliers(Array.isArray(data) ? data : []))
+        .catch(console.error)
+
+      fetch('/api/assets')
+        .then((res) => res.json())
+        .then((data) => setAllAssets(Array.isArray(data) ? data : []))
+        .catch(console.error)
+
+      // Also fetch full part data to ensure assets are loaded if not in prop
+      fetch(`/api/inventory/${part.id}`)
+        .then((res) => res.json())
+        .then((fullPart) => {
+          if (fullPart && Array.isArray(fullPart.assets)) {
+            setSelectedAssetIds(fullPart.assets.map((a: AssetOption) => a.id))
+          }
+        })
         .catch(console.error)
     }
   }, [isOpen, part])
 
   if (!isOpen) return null
+
+  const toggleAsset = (assetId: string) => {
+    setSelectedAssetIds((prev) =>
+      prev.includes(assetId)
+        ? prev.filter((id) => id !== assetId)
+        : [...prev, assetId]
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,6 +147,7 @@ export function PartEditModal({
           location,
           description,
           preferredSupplierId: preferredSupplierId || null,
+          assetIds: selectedAssetIds,
         }),
       })
 
@@ -123,18 +167,18 @@ export function PartEditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-      <div className="bg-background border rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-8">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-6 py-4 bg-muted/40">
-          <h3 className="text-lg font-bold">Editar Repuesto / Insumo</h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
+    <Dialog isOpen={isOpen} onClose={onClose}>
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl bg-white dark:bg-slate-900 my-auto">
+        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
+            Editar Repuesto / Insumo
+          </DialogTitle>
+          <Button variant="ghost" size="icon" onClick={onClose} type="button" className="h-8 w-8 rounded-full">
+            <X className="h-4 w-4" />
           </Button>
-        </div>
+        </DialogHeader>
 
-        {/* Body Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-1 space-y-4 pt-3">
           {error && (
             <div className="p-3 text-sm bg-destructive/15 text-destructive border border-destructive/30 rounded-md font-medium">
               {error}
@@ -142,24 +186,26 @@ export function PartEditModal({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Nombre del Repuesto *
               </Label>
               <Input
                 id="name"
+                className="w-full h-10 text-sm"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="code" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="code" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Código SKU *
               </Label>
               <Input
                 id="code"
+                className="w-full h-10 text-sm font-mono"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
@@ -168,23 +214,25 @@ export function PartEditModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="category" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Categoría
               </Label>
               <Input
                 id="category"
+                className="w-full h-10 text-sm"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="unit" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="unit" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Unidad de Medida
               </Label>
               <Input
                 id="unit"
+                className="w-full h-10 text-sm"
                 placeholder="Unidades, Litros, Metros"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
@@ -192,37 +240,39 @@ export function PartEditModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="stock" className="font-semibold text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="stock" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Stock Actual *
               </Label>
               <Input
                 id="stock"
                 type="number"
                 min="0"
+                className="w-full h-10 text-sm"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="minStock" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="minStock" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Stock Mínimo *
               </Label>
               <Input
                 id="minStock"
                 type="number"
                 min="0"
+                className="w-full h-10 text-sm"
                 value={minStock}
                 onChange={(e) => setMinStock(e.target.value)}
                 required
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="price" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="price" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Precio ($) *
               </Label>
               <Input
@@ -230,6 +280,7 @@ export function PartEditModal({
                 type="number"
                 step="0.01"
                 min="0"
+                className="w-full h-10 text-sm"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 required
@@ -238,24 +289,26 @@ export function PartEditModal({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="location" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="location" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Ubicación en Almacén
               </Label>
               <Input
                 id="location"
+                className="w-full h-10 text-sm"
                 placeholder="Estante A-2, Pasillo 3"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="preferredSupplierId" className="font-semibold text-sm">
+            <div className="space-y-1">
+              <Label htmlFor="preferredSupplierId" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Proveedor Sugerido / Principal
               </Label>
               <Select
                 id="preferredSupplierId"
+                className="w-full h-10 text-sm"
                 value={preferredSupplierId}
                 onChange={(e) => setPreferredSupplierId(e.target.value)}
               >
@@ -269,24 +322,69 @@ export function PartEditModal({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description" className="font-semibold text-sm">
+          {/* Activos / Máquinas Compatibles */}
+          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Cpu className="w-4 h-4 text-primary" />
+                Activos / Máquinas Compatibles
+              </Label>
+              {selectedAssetIds.length > 0 && (
+                <Badge variant="secondary" className="text-[11px]">
+                  {selectedAssetIds.length} seleccionada(s)
+                </Badge>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border rounded-lg bg-slate-50 dark:bg-slate-800/40">
+              {allAssets.map((asset) => {
+                const isSelected = selectedAssetIds.includes(asset.id)
+                return (
+                  <button
+                    key={asset.id}
+                    type="button"
+                    onClick={() => toggleAsset(asset.id)}
+                    className={`flex items-center justify-between p-2 rounded text-xs font-medium border transition-all text-left ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary font-semibold'
+                        : 'border-slate-200 dark:border-slate-800 bg-background text-muted-foreground hover:border-muted-foreground/40'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 pr-2">
+                      <p className="truncate text-foreground font-semibold text-[11px]">{asset.name}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">{asset.code}</p>
+                    </div>
+                    {isSelected && <Check className="w-3.5 h-3.5 shrink-0 text-primary" />}
+                  </button>
+                )
+              })}
+              {allAssets.length === 0 && (
+                <p className="col-span-full text-xs text-muted-foreground text-center py-2">
+                  No hay máquinas registradas en el sistema.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="description" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Descripción
             </Label>
             <Textarea
               id="description"
               rows={2}
+              className="text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           {/* Footer */}
-          <div className="border-t pt-4 flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <DialogFooter className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving} className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white">
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...
@@ -297,9 +395,9 @@ export function PartEditModal({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

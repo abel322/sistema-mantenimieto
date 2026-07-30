@@ -11,6 +11,13 @@ export async function GET(
       where: { id: params.id },
       include: {
         preferredSupplier: true,
+        assets: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
         workOrders: {
           include: {
             workOrder: {
@@ -66,6 +73,16 @@ export async function PATCH(
       data: {
         stock: Math.max(0, newStock), // Prevent negative stock
       },
+      include: {
+        preferredSupplier: true,
+        assets: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
+      },
     })
 
     // Auto-trigger stock alert if at or below minStock
@@ -87,19 +104,37 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { name, code, category, stock, minStock, unit, price, preferredSupplierId } = body
+    const { name, code, category, stock, minStock, unit, price, preferredSupplierId, assetIds } = body
+
+    const updateData: any = {
+      name,
+      code,
+      category,
+      stock: parseInt(stock) || 0,
+      minStock: parseInt(minStock) || 0,
+      unit,
+      price: parseFloat(price) || 0,
+      preferredSupplierId: preferredSupplierId || null,
+    }
+
+    if (assetIds !== undefined) {
+      updateData.assets = {
+        set: Array.isArray(assetIds) ? assetIds.map((id: string) => ({ id })) : [],
+      }
+    }
 
     const part = await prisma.part.update({
       where: { id: params.id },
-      data: {
-        name,
-        code,
-        category,
-        stock: parseInt(stock) || 0,
-        minStock: parseInt(minStock) || 0,
-        unit,
-        price: parseFloat(price) || 0,
-        preferredSupplierId: preferredSupplierId || null,
+      data: updateData,
+      include: {
+        preferredSupplier: true,
+        assets: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
       },
     })
 

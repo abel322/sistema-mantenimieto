@@ -27,7 +27,11 @@ import {
   Package,
   Timer,
   CheckCircle2,
-  DollarSign
+  DollarSign,
+  Cpu,
+  Loader2,
+  TrendingDown,
+  ShoppingCart
 } from 'lucide-react'
 import { generateAssetPDF } from '@/lib/pdf-generator'
 import { AssetEditModal } from '@/components/assets/asset-edit-modal'
@@ -53,15 +57,12 @@ type WorkOrderWithFullRelations = WorkOrder & {
 }
 
 type AssetWithRelations = Asset & {
+  parts?: (Part & { preferredSupplier?: Supplier | null })[]
   workOrders: WorkOrderWithFullRelations[]
   failureLogs: FailureLog[]
   maintenanceLogs: MaintenanceLog[]
   schedules: Schedule[]
   checklistExecutions?: any[]
-}
-
-interface AssetDetailProps {
-  asset: AssetWithRelations
 }
 
 const statusColors: Record<string, any> = {
@@ -124,11 +125,14 @@ interface ConsumedPartSummary {
 
 export function AssetDetail({ asset }: AssetDetailProps) {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'failures' | 'parts'>('info')
+  const [activeTab, setActiveTab] = useState<'info' | 'history' | 'failures' | 'critical_parts' | 'consumed_parts'>('info')
   const [failureModalOpen, setFailureModalOpen] = useState(false)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [woFilter, setWoFilter] = useState<'ALL' | 'ACTIVE' | 'CLOSED' | 'CORRECTIVE' | 'PREVENTIVE'>('ALL')
+
+  // Stock adjustment loading state
+  const [updatingStockId, setUpdatingStockId] = useState<string | null>(null)
 
   // Total downtime hours
   const totalDowntime = useMemo(() => {
@@ -253,6 +257,24 @@ export function AssetDetail({ asset }: AssetDetailProps) {
     })
   }, [asset.workOrders, woFilter])
 
+  const handleQuickStockAdd = async (partId: string) => {
+    setUpdatingStockId(partId)
+    try {
+      const res = await fetch(`/api/inventory/${partId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adjustment: 1 }),
+      })
+      if (res.ok) {
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Error adding stock:', error)
+    } finally {
+      setUpdatingStockId(null)
+    }
+  }
+
   async function handleGeneratePDF() {
     try {
       const doc = generateAssetPDF(asset)
@@ -262,6 +284,8 @@ export function AssetDetail({ asset }: AssetDetailProps) {
       alert('Error al generar la Hoja de Vida PDF')
     }
   }
+
+  const assignedParts = asset.parts || []
 
   return (
     <div className="w-full max-w-full overflow-x-hidden space-y-4 sm:space-y-6">
@@ -359,15 +383,27 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </button>
 
         <button
-          onClick={() => setActiveTab('parts')}
+          onClick={() => setActiveTab('critical_parts')}
           className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all shrink-0 ${
-            activeTab === 'parts'
+            activeTab === 'critical_parts'
+              ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-500/5'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Box className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+          <span>📦 Repuestos Críticos ({assignedParts.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('consumed_parts')}
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all shrink-0 ${
+            activeTab === 'consumed_parts'
               ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
               : 'border-transparent text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Box className="w-4 h-4 text-emerald-500 shrink-0" />
-          <span>📦 Repuestos Consumidos ({consumedPartsList.length})</span>
+          <Package className="w-4 h-4 text-emerald-500 shrink-0" />
+          <span>📈 Consumo Histórico ({consumedPartsList.length})</span>
         </button>
       </div>
 
@@ -766,8 +802,124 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </div>
       )}
 
-      {/* TAB 4: REPUESTOS Y MATERIALES CONSUMIDOS */}
-      {activeTab === 'parts' && (
+      {/* TAB 4: REPUESTOS CRÍTICOS Y ASIGNADOS */}
+      {activeTab === 'critical_parts' && (
+        <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <Card>
+            <CardHeader className="p-4 pb-3 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                  <Box className="h-5 w-5 shrink-0" /> Repuestos Críticos & Refacciones Asignadas
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Catálogo de repuestos mapeados directamente a {asset.name} para prevención de paros de planta.
+                </p>
+              </div>
+
+              <Link href="/dashboard/inventory/new">
+                <Button size="sm" className="w-full sm:w-auto text-xs font-semibold shadow-sm">
+                  <Plus className="w-4 h-4 mr-1.5" /> + Asignar / Nuevo Repuesto
+                </Button>
+              </Link>
+            </CardHeader>
+
+            <CardContent className="p-4">
+              {assignedParts.length > 0 ? (
+                <div className="border rounded-md w-full max-w-full overflow-x-auto">
+                  <table className="w-full min-w-[700px] text-sm text-left">
+                    <thead className="bg-muted/50 text-muted-foreground font-semibold border-b">
+                      <tr>
+                        <th className="p-3">TAG / Código</th>
+                        <th className="p-3">Nombre del Repuesto</th>
+                        <th className="p-3 text-center">Stock Actual</th>
+                        <th className="p-3 text-center">Stock Mínimo</th>
+                        <th className="p-3 text-right">Precio Unitario</th>
+                        <th className="p-3 text-center">Estado del Stock</th>
+                        <th className="p-3 text-center">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {assignedParts.map((part) => {
+                        const isAvailable = part.stock > part.minStock
+                        const isCritical = part.stock <= part.minStock
+
+                        return (
+                          <tr key={part.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="p-3 font-mono text-xs font-bold text-primary">
+                              <Link href={`/dashboard/inventory/${part.id}`} className="hover:underline">
+                                {part.code}
+                              </Link>
+                            </td>
+                            <td className="p-3 font-semibold">
+                              <Link href={`/dashboard/inventory/${part.id}`} className="hover:text-primary">
+                                {part.name}
+                              </Link>
+                              {part.category && (
+                                <p className="text-[11px] font-normal text-muted-foreground">{part.category}</p>
+                              )}
+                            </td>
+                            <td className="p-3 text-center font-bold text-sm">
+                              {part.stock} {part.unit}
+                            </td>
+                            <td className="p-3 text-center font-mono text-xs text-muted-foreground">
+                              {part.minStock} {part.unit}
+                            </td>
+                            <td className="p-3 text-right font-medium">
+                              {formatCurrency(part.price)}
+                            </td>
+                            <td className="p-3 text-center">
+                              {isAvailable ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-2 py-0.5">
+                                  🟢 Stock Disponible
+                                </Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-xs font-semibold px-2 py-0.5 animate-pulse">
+                                  🔴 Stock Crítico (Falta Repuesto)
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="p-3 text-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-8 px-2.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 font-semibold"
+                                disabled={updatingStockId === part.id}
+                                onClick={() => handleQuickStockAdd(part.id)}
+                                title="Añadir 1 unidad al stock"
+                              >
+                                {updatingStockId === part.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Plus className="w-3.5 h-3.5 mr-1" /> + Registrar Entrada / Pedido
+                                  </>
+                                )}
+                              </Button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-10 text-center text-muted-foreground border border-dashed rounded-lg space-y-3">
+                  <Box className="w-12 h-12 text-muted-foreground/30 mx-auto" />
+                  <p className="text-sm font-semibold">
+                    No hay repuestos críticos vinculados directamente a {asset.name}.
+                  </p>
+                  <p className="text-xs max-w-sm mx-auto">
+                    Asigna o edita un repuesto en la sección de Inventario seleccionando este activo en la casilla "Activos / Máquinas Compatibles".
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* TAB 5: CONSUMO HISTÓRICO ACUMULADO */}
+      {activeTab === 'consumed_parts' && (
         <div className="space-y-6 animate-in fade-in-50 duration-200">
           {/* Key Spare Parts Metrics */}
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
@@ -816,7 +968,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
           <Card>
             <CardHeader className="p-4 pb-3 border-b">
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Box className="h-5 w-5 text-emerald-500 shrink-0" /> Consumo Acumulado de Repuestos & Insumos
+                <Package className="h-5 w-5 text-emerald-500 shrink-0" /> Consumo Acumulado de Repuestos & Insumos
               </CardTitle>
               <p className="text-xs text-muted-foreground">
                 Consolidado de materiales y refacciones utilizadas durante los mantenimientos de este activo.
