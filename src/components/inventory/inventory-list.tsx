@@ -237,13 +237,18 @@ export function InventoryList() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <Link href={`/dashboard/inventory/${part.id}`}>
-                            <h3 className="font-semibold text-base hover:text-primary transition-colors truncate" title={part.name}>
+                            <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug break-words hover:text-primary transition-colors">
                               {part.name}
                             </h3>
                           </Link>
-                          <p className="text-xs font-mono text-muted-foreground truncate">
+                          <p className="text-xs font-mono text-muted-foreground break-words pt-0.5">
                             {part.code} • {part.category || 'General'}
                           </p>
+                          {part.description && (
+                            <p className="text-xs text-muted-foreground break-words whitespace-normal pt-1.5 leading-relaxed">
+                              {part.description}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -337,7 +342,7 @@ export function InventoryList() {
                               <Link key={asset.id} href={`/dashboard/assets/${asset.id}`}>
                                 <Badge
                                   variant="secondary"
-                                  className="text-[10px] py-0 px-1.5 hover:bg-primary/20 transition-colors cursor-pointer truncate max-w-[130px]"
+                                  className="text-[10px] py-0.5 px-2 hover:bg-primary/20 transition-colors cursor-pointer break-words whitespace-normal"
                                   title={`Ver activo: ${asset.name}`}
                                 >
                                   {asset.name}
@@ -358,7 +363,7 @@ export function InventoryList() {
                             <Truck className="w-3.5 h-3.5 text-primary shrink-0" />
                             Proveedor:
                           </span>
-                          <span className="font-medium text-foreground truncate max-w-[140px]" title={part.preferredSupplier.name}>
+                          <span className="font-medium text-foreground break-words text-right" title={part.preferredSupplier.name}>
                             {part.preferredSupplier.name}
                           </span>
                         </div>
