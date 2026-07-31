@@ -43,9 +43,18 @@ async function getAsset(id: string) {
       },
       checklistExecutions: {
         include: {
-          template: true,
+          template: {
+            include: {
+              items: true,
+            },
+          },
           technician: true,
           workOrders: true,
+          responses: {
+            include: {
+              item: true,
+            },
+          },
         },
         orderBy: {
           completedAt: 'desc',

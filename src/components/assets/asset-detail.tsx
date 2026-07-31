@@ -247,24 +247,112 @@ export function AssetDetail({ asset }: AssetDetailProps) {
     return consumedPartsList.reduce((acc, p) => acc + p.totalCost, 0)
   }, [consumedPartsList])
 
-  // Filtered work orders for Tab 2
-  const filteredWorkOrders = useMemo(() => {
-    return asset.workOrders.filter((wo) => {
-      if (woFilter === 'ACTIVE') {
-        return !['CLOSED', 'FINALIZADA', 'CANCELADA'].includes(wo.status)
+  // History Filter for Tab 2
+  const [historyFilter, setHistoryFilter] = useState<'ALL' | 'WORK_ORDERS' | 'PREVENTIVE_ROUTINES'>('ALL')
+
+  // Unified Completed Maintenance History (ONLY Completed Work Orders & Completed Routines/Checklists)
+  const completedHistory = useMemo(() => {
+    const items: Array<{
+      id: string
+      type: 'WORK_ORDER' | 'PREVENTIVE_ROUTINE'
+      date: Date
+      title: string
+      description?: string | null
+      orderType?: string
+      status: string
+      technicianName: string
+      externalVendorName?: string | null
+      laborHours?: number | null
+      partsConsumed?: { name: string; quantity: number; unit: string; cost: number }[]
+      totalCost?: number
+      checklistScore?: string
+      notes?: string | null
+      workOrderId?: string
+    }> = []
+
+    // 1. Completed Work Orders (status === 'FINALIZADA' or 'CLOSED')
+    asset.workOrders.forEach((wo) => {
+      if (['FINALIZADA', 'CLOSED'].includes(wo.status)) {
+        const partsCost = wo.partsUsed?.reduce((a, b) => a + (b.part.price * b.quantity), 0) || 0
+        const matCost = wo.materials?.reduce((a, b) => a + ((b.inventoryItem?.price || 0) * b.quantityUsed), 0) || 0
+        const laborCost = (wo.laborHours || 0) * 150
+        const totalCost = partsCost + matCost + laborCost
+
+        const consumed: { name: string; quantity: number; unit: string; cost: number }[] = []
+        wo.partsUsed?.forEach((pu) => {
+          consumed.push({
+            name: pu.part?.name || 'Repuesto',
+            quantity: pu.quantity,
+            unit: pu.part?.unit || 'unidad',
+            cost: (pu.part?.price || 0) * pu.quantity,
+          })
+        })
+        wo.materials?.forEach((mat) => {
+          const name = mat.isCustom ? (mat.customName || 'Material Especial') : (mat.inventoryItem?.name || 'Material')
+          const price = mat.inventoryItem?.price || 0
+          consumed.push({
+            name,
+            quantity: mat.quantityUsed,
+            unit: mat.inventoryItem?.unit || 'unidad',
+            cost: price * mat.quantityUsed,
+          })
+        })
+
+        const date = new Date(wo.completedAt || wo.closedAt || wo.updatedAt || wo.createdAt)
+
+        items.push({
+          id: `wo-${wo.id}`,
+          type: 'WORK_ORDER',
+          date,
+          title: wo.title,
+          description: wo.description,
+          orderType: wo.type,
+          status: wo.status,
+          technicianName: wo.technician?.name || 'Técnico Asignado',
+          externalVendorName: wo.externalVendor?.name,
+          laborHours: wo.laborHours,
+          partsConsumed: consumed,
+          totalCost,
+          workOrderId: wo.id,
+        })
       }
-      if (woFilter === 'CLOSED') {
-        return ['CLOSED', 'FINALIZADA'].includes(wo.status)
-      }
-      if (woFilter === 'CORRECTIVE') {
-        return wo.type === 'CORRECTIVE'
-      }
-      if (woFilter === 'PREVENTIVE') {
-        return wo.type === 'PREVENTIVE'
-      }
+    })
+
+    // 2. Completed Maintenance Schedule Routines / Checklist Executions
+    if (asset.checklistExecutions && Array.isArray(asset.checklistExecutions)) {
+      asset.checklistExecutions.forEach((ce: any) => {
+        if (ce.completedAt || ['PASSED', 'FLAGGED', 'COMPLETADO', 'FINALIZADA'].includes(ce.status)) {
+          const totalItems = ce.template?.items?.length || ce.responses?.length || 0
+          const passedItems = ce.responses?.filter((r: any) => r.valueBoolean === true || r.isFlagged === false)?.length || totalItems
+          const scoreStr = totalItems > 0 ? `${passedItems}/${totalItems} ítems verificados (100% Ok)` : 'Rutina Ejecutada'
+
+          const date = new Date(ce.completedAt || ce.createdAt)
+
+          items.push({
+            id: `ce-${ce.id}`,
+            type: 'PREVENTIVE_ROUTINE',
+            date,
+            title: ce.template?.title || 'Rutina de Mantenimiento Preventivo',
+            description: ce.template?.description,
+            status: ce.status,
+            technicianName: ce.technician?.name || 'Técnico de Mantenimiento',
+            checklistScore: scoreStr,
+            notes: ce.notes,
+          })
+        }
+      })
+    }
+
+    return items.sort((a, b) => b.date.getTime() - a.date.getTime())
+  }, [asset.workOrders, asset.checklistExecutions])
+
+  const filteredCompletedHistory = useMemo(() => {
+    return completedHistory.filter((item) => {
+      if (historyFilter === 'WORK_ORDERS') return item.type === 'WORK_ORDER'
+      if (historyFilter === 'PREVENTIVE_ROUTINES') return item.type === 'PREVENTIVE_ROUTINE'
       return true
     })
-  }, [asset.workOrders, woFilter])
+  }, [completedHistory, historyFilter])
 
   const handleQuickStockAdd = async (partId: string) => {
     setUpdatingStockId(partId)
@@ -399,7 +487,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
           }`}
         >
           <History className="w-4 h-4 shrink-0" />
-          <span>📜 Historial de Órdenes ({asset.workOrders.length})</span>
+          <span>📜 Historial de Mantenimiento ({completedHistory.length})</span>
         </button>
 
         <button
@@ -539,7 +627,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
         </div>
       )}
 
-      {/* TAB 2: HISTORIAL DE ÓRDENES DE TRABAJO */}
+      {/* TAB 2: HISTORIAL DE MANTENIMIENTO FINALIZADO */}
       {activeTab === 'history' && (
         <div className="space-y-6 animate-in fade-in-50 duration-200">
           {/* Key Metrics Bar */}
@@ -547,10 +635,24 @@ export function AssetDetail({ asset }: AssetDetailProps) {
             <Card className="bg-card">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total OTs Ejecutadas</p>
-                  <p className="text-2xl font-bold mt-1">{asset.workOrders.length}</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Históricos Finalizados</p>
+                  <p className="text-2xl font-bold mt-1">{completedHistory.length}</p>
                 </div>
                 <div className="p-2.5 bg-primary/10 text-primary rounded-lg">
+                  <History className="w-6 h-6" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Órdenes de Trabajo Cerradas</p>
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 mt-1">
+                    {completedHistory.filter((i) => i.type === 'WORK_ORDER').length}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-indigo-500/10 text-indigo-500 rounded-lg">
                   <Wrench className="w-6 h-6" />
                 </div>
               </CardContent>
@@ -559,35 +661,28 @@ export function AssetDetail({ asset }: AssetDetailProps) {
             <Card className="bg-card">
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Horas Mano de Obra</p>
-                  <p className="text-2xl font-bold mt-1">{totalLaborHours.toFixed(1)} h</p>
-                </div>
-                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-lg">
-                  <Timer className="w-6 h-6" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Inversión Total Mant.</p>
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(totalWOCost)}</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rutinas Preventivas Ejecutadas</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                    {completedHistory.filter((i) => i.type === 'PREVENTIVE_ROUTINE').length}
+                  </p>
                 </div>
                 <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-lg">
-                  <DollarSign className="w-6 h-6" />
+                  <ClipboardCheck className="w-6 h-6" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Action Header & Filters */}
+          {/* Timeline Card & Filter Header */}
           <Card>
             <CardHeader className="p-4 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b">
               <div>
-                <CardTitle className="text-base font-bold">Historial Completo de Mantenimiento</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Todas las órdenes correctivas, preventivas y predictivas asignadas a esta máquina.
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <History className="h-5 w-5 text-primary shrink-0" />
+                  Historial de Mantenimientos Finalizados
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Línea de tiempo cronológica exclusiva de eventos de mantenimiento completados para {asset.name}.
                 </p>
               </div>
 
@@ -601,121 +696,196 @@ export function AssetDetail({ asset }: AssetDetailProps) {
 
             <CardContent className="p-4 space-y-4">
               {/* Filter Tabs */}
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                 <Button
-                  variant={woFilter === 'ALL' ? 'default' : 'outline'}
+                  variant={historyFilter === 'ALL' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setWoFilter('ALL')}
-                  className="text-xs h-7 px-2.5"
+                  onClick={() => setHistoryFilter('ALL')}
+                  className="text-xs h-8 px-3 font-medium"
                 >
-                  Todas ({asset.workOrders.length})
+                  Todos los Finalizados ({completedHistory.length})
                 </Button>
+
                 <Button
-                  variant={woFilter === 'ACTIVE' ? 'default' : 'outline'}
+                  variant={historyFilter === 'WORK_ORDERS' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setWoFilter('ACTIVE')}
-                  className="text-xs h-7 px-2.5"
+                  onClick={() => setHistoryFilter('WORK_ORDERS')}
+                  className="text-xs h-8 px-3 font-medium border-indigo-200 dark:border-indigo-900 text-indigo-700 dark:text-indigo-400"
                 >
-                  Activas ({asset.workOrders.filter(w => !['CLOSED', 'FINALIZADA', 'CANCELADA'].includes(w.status)).length})
+                  🛠️ Órdenes de Trabajo ({completedHistory.filter((i) => i.type === 'WORK_ORDER').length})
                 </Button>
+
                 <Button
-                  variant={woFilter === 'CLOSED' ? 'default' : 'outline'}
+                  variant={historyFilter === 'PREVENTIVE_ROUTINES' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setWoFilter('CLOSED')}
-                  className="text-xs h-7 px-2.5"
+                  onClick={() => setHistoryFilter('PREVENTIVE_ROUTINES')}
+                  className="text-xs h-8 px-3 font-medium border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400"
                 >
-                  Finalizadas ({asset.workOrders.filter(w => ['CLOSED', 'FINALIZADA'].includes(w.status)).length})
-                </Button>
-                <Button
-                  variant={woFilter === 'CORRECTIVE' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setWoFilter('CORRECTIVE')}
-                  className="text-xs h-7 px-2.5"
-                >
-                  Correctivas ({asset.workOrders.filter(w => w.type === 'CORRECTIVE').length})
-                </Button>
-                <Button
-                  variant={woFilter === 'PREVENTIVE' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setWoFilter('PREVENTIVE')}
-                  className="text-xs h-7 px-2.5"
-                >
-                  Preventivas ({asset.workOrders.filter(w => w.type === 'PREVENTIVE').length})
+                  📅 Programas Preventivos ({completedHistory.filter((i) => i.type === 'PREVENTIVE_ROUTINE').length})
                 </Button>
               </div>
 
-              {/* High-density Work Orders List */}
-              {filteredWorkOrders.length > 0 ? (
-                <div className="space-y-3">
-                  {filteredWorkOrders.map((order) => {
-                    const partsCost = order.partsUsed?.reduce((a, b) => a + (b.part.price * b.quantity), 0) || 0
-                    const matCost = order.materials?.reduce((a, b) => a + ((b.inventoryItem?.price || 0) * b.quantityUsed), 0) || 0
-                    const laborCost = (order.laborHours || 0) * 150
-                    const totalOrderCost = partsCost + matCost + laborCost
+              {/* Timeline Container */}
+              {filteredCompletedHistory.length > 0 ? (
+                <div className="relative pl-4 sm:pl-6 space-y-6 before:absolute before:left-2 sm:before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-slate-800">
+                  {filteredCompletedHistory.map((item) => {
+                    const isWorkOrder = item.type === 'WORK_ORDER'
 
                     return (
-                      <div
-                        key={order.id}
-                        className="p-4 border rounded-lg hover:border-primary/50 transition-colors bg-card space-y-2 shadow-sm"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <Link href={`/dashboard/work-orders/${order.id}`}>
-                            <h4 className="font-bold text-sm sm:text-base text-foreground hover:text-primary transition-colors">
-                              {order.title}
-                            </h4>
-                          </Link>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <Badge variant={statusColors[order.status] || 'default'} className="text-xs">
-                              {statusLabels[order.status] || order.status}
-                            </Badge>
-                            <Badge variant={priorityColors[order.priority]} className="text-xs">
-                              {priorityLabels[order.priority]}
-                            </Badge>
-                          </div>
+                      <div key={item.id} className="relative group">
+                        {/* Timeline Bullet Node */}
+                        <div
+                          className={`absolute -left-[21px] sm:-left-[25px] top-4 w-4 h-4 rounded-full border-2 bg-background flex items-center justify-center transition-transform group-hover:scale-110 ${
+                            isWorkOrder
+                              ? 'border-indigo-500 text-indigo-500'
+                              : 'border-emerald-500 text-emerald-500'
+                          }`}
+                        >
+                          <div
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isWorkOrder ? 'bg-indigo-500' : 'bg-emerald-500'
+                            }`}
+                          />
                         </div>
 
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {order.description || 'Sin descripción'}
-                        </p>
+                        {/* History Entry Card */}
+                        <div className="p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all space-y-3">
+                          {/* Entry Header */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2 border-slate-100 dark:border-slate-800">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* Source Tag Badge */}
+                              {isWorkOrder ? (
+                                <Badge className="bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-400/30 text-xs font-bold px-2.5 py-0.5 flex items-center gap-1.5">
+                                  <span>🛠️ OT: {typeLabels[item.orderType || 'CORRECTIVE'] || item.orderType}</span>
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-400/30 text-xs font-bold px-2.5 py-0.5 flex items-center gap-1.5">
+                                  <span>📅 Programa Preventivo</span>
+                                </Badge>
+                              )}
 
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t text-xs text-muted-foreground font-medium">
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                            <span><strong>Tipo:</strong> {typeLabels[order.type] || order.type}</span>
-                            <span>•</span>
-                            <span><strong>Técnico:</strong> {order.technician?.name || 'N/A'}</span>
-                            {order.externalVendor && (
-                              <>
-                                <span>•</span>
-                                <span><strong>Proveedor:</strong> {order.externalVendor.name}</span>
-                              </>
-                            )}
-                            {order.laborHours ? (
-                              <>
-                                <span>•</span>
-                                <span><strong>Mano Obra:</strong> {order.laborHours}h</span>
-                              </>
-                            ) : null}
+                              <h4 className="font-bold text-sm sm:text-base text-foreground">
+                                {item.title}
+                              </h4>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0 text-xs font-mono text-muted-foreground">
+                              <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span>{formatDateTime(item.date)}</span>
+                            </div>
                           </div>
 
-                          <div className="flex items-center gap-3 shrink-0 ml-auto">
-                            <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                              {formatCurrency(totalOrderCost)}
-                            </span>
-                            <Link href={`/dashboard/work-orders/${order.id}`}>
-                              <Button variant="outline" size="sm" className="h-7 text-xs px-2.5 font-semibold">
-                                <Eye className="w-3.5 h-3.5 mr-1 text-primary" /> Ver Detalle / PDF
-                              </Button>
-                            </Link>
-                          </div>
+                          {/* Description / Summary */}
+                          {item.description && (
+                            <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                              {item.description}
+                            </p>
+                          )}
+
+                          {/* Specific Entry Details */}
+                          {isWorkOrder ? (
+                            <div className="space-y-2 pt-1 text-xs">
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-muted-foreground font-medium">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                  <span>
+                                    <strong>Técnico:</strong> {item.technicianName}
+                                  </span>
+                                  {item.externalVendorName && (
+                                    <>
+                                      <span>•</span>
+                                      <span>
+                                        <strong>Proveedor:</strong> {item.externalVendorName}
+                                      </span>
+                                    </>
+                                  )}
+                                  {item.laborHours ? (
+                                    <>
+                                      <span>•</span>
+                                      <span>
+                                        <strong>Mano de Obra:</strong> {item.laborHours} h
+                                      </span>
+                                    </>
+                                  ) : null}
+                                </div>
+
+                                {item.totalCost !== undefined && item.totalCost > 0 && (
+                                  <span className="font-extrabold text-emerald-600 dark:text-emerald-400 text-sm">
+                                    {formatCurrency(item.totalCost)}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Consumed Materials / Parts */}
+                              {item.partsConsumed && item.partsConsumed.length > 0 && (
+                                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                                  <span className="text-[11px] font-semibold text-muted-foreground block">
+                                    📦 Insumos / Repuestos Utilizados:
+                                  </span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {item.partsConsumed.map((part, pIdx) => (
+                                      <Badge
+                                        key={pIdx}
+                                        variant="secondary"
+                                        className="text-[11px] font-mono py-0.5 px-2 bg-slate-100 dark:bg-slate-800 text-foreground border"
+                                      >
+                                        {part.name} × {part.quantity} {part.unit}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Footer Action */}
+                              <div className="pt-2 flex justify-end">
+                                <Link href={`/dashboard/work-orders/${item.workOrderId}`}>
+                                  <Button variant="outline" size="sm" className="h-8 text-xs font-semibold">
+                                    <Eye className="w-3.5 h-3.5 mr-1.5 text-indigo-600 dark:text-indigo-400" />
+                                    Ver Ficha Completa / PDF
+                                  </Button>
+                                </Link>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Preventive Routine Execution Details */
+                            <div className="space-y-2 pt-1 text-xs">
+                              <div className="flex flex-wrap items-center justify-between gap-2 bg-emerald-500/5 p-2.5 rounded-lg border border-emerald-500/20">
+                                <div className="space-y-0.5">
+                                  <span className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                    {item.checklistScore}
+                                  </span>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Técnico Evaluador: <strong>{item.technicianName}</strong>
+                                  </p>
+                                </div>
+
+                                <Badge variant="success" className="text-xs">
+                                  ✓ Mantenimiento Completado
+                                </Badge>
+                              </div>
+
+                              {item.notes && (
+                                <div className="p-2 rounded bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 italic text-xs">
+                                  💬 <strong>Observaciones:</strong> {item.notes}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-                  No hay órdenes de trabajo que coincidan con los filtros seleccionados.
+                /* Empty State when no completed records exist */
+                <div className="p-10 text-center text-muted-foreground border border-dashed rounded-xl space-y-3 bg-muted/20 my-4">
+                  <History className="w-12 h-12 text-muted-foreground/30 mx-auto" />
+                  <p className="text-base font-bold text-foreground">
+                    No hay mantenimientos ni órdenes de trabajo finalizadas registradas para este activo aún.
+                  </p>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                    Las órdenes de trabajo cerradas y las rutinas preventivas ejecutadas aparecerán automáticamente en esta línea de tiempo para control de auditoría.
+                  </p>
                 </div>
               )}
             </CardContent>
