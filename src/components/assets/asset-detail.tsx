@@ -38,6 +38,7 @@ import {
 import { generateAssetPDF } from '@/lib/pdf-generator'
 import { AssetEditModal } from '@/components/assets/asset-edit-modal'
 import { AssetDeleteModal } from '@/components/assets/asset-delete-modal'
+import { WorkOrderEditModal } from '@/components/work-orders/work-order-edit-modal'
 import Link from 'next/link'
 import type { Asset, WorkOrder, FailureLog, MaintenanceLog, Schedule, User, PartOnOrder, Part, Supplier } from '@prisma/client'
 import { getAreaLabel, getCriticalityBadge } from '@/lib/constants'
@@ -136,6 +137,9 @@ export function AssetDetail({ asset }: AssetDetailProps) {
   // Failure Log Edit / Delete states
   const [editingFailureLog, setEditingFailureLog] = useState<any | null>(null)
   const [deletingFailureLog, setDeletingFailureLog] = useState<any | null>(null)
+
+  // Work Order Edit modal state
+  const [editingWorkOrder, setEditingWorkOrder] = useState<any | null>(null)
 
   // Toast state
   const [toast, setToast] = useState<ToastMessage | null>(null)
@@ -268,6 +272,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
       checklistScore?: string
       notes?: string | null
       workOrderId?: string
+      rawOrder?: any
     }> = []
 
     // 1. Completed Work Orders (status === 'FINALIZADA' or 'CLOSED')
@@ -314,6 +319,7 @@ export function AssetDetail({ asset }: AssetDetailProps) {
           partsConsumed: consumed,
           totalCost,
           workOrderId: wo.id,
+          rawOrder: wo,
         })
       }
     })
@@ -836,7 +842,20 @@ export function AssetDetail({ asset }: AssetDetailProps) {
                               )}
 
                               {/* Footer Action */}
-                              <div className="pt-2 flex justify-end">
+                              <div className="pt-2 flex items-center justify-end gap-2">
+                                {item.rawOrder && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs font-semibold hover:border-primary text-slate-700 dark:text-slate-300"
+                                    onClick={() => setEditingWorkOrder(item.rawOrder)}
+                                    title="Editar Orden de Trabajo"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5 mr-1.5 text-blue-600 dark:text-blue-400" />
+                                    Editar OT
+                                  </Button>
+                                )}
+
                                 <Link href={`/dashboard/work-orders/${item.workOrderId}`}>
                                   <Button variant="outline" size="sm" className="h-8 text-xs font-semibold">
                                     <Eye className="w-3.5 h-3.5 mr-1.5 text-indigo-600 dark:text-indigo-400" />
@@ -1308,6 +1327,26 @@ export function AssetDetail({ asset }: AssetDetailProps) {
           router.refresh()
         }}
       />
+
+      {/* Edit Work Order Modal */}
+      {editingWorkOrder && (
+        <WorkOrderEditModal
+          isOpen={!!editingWorkOrder}
+          workOrder={editingWorkOrder}
+          onClose={() => setEditingWorkOrder(null)}
+          onSuccess={(wasReassigned?: boolean) => {
+            setToast({
+              id: Date.now().toString(),
+              title: wasReassigned ? 'Activo Reasignado' : 'Orden Actualizada',
+              description: wasReassigned
+                ? 'Orden de trabajo reasignada correctamente al nuevo activo.'
+                : 'Orden de trabajo actualizada exitosamente.',
+              type: 'success',
+            })
+            router.refresh()
+          }}
+        />
+      )}
     </div>
   )
 }

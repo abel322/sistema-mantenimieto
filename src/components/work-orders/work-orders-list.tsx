@@ -608,6 +608,17 @@ export function WorkOrdersList() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0 ml-auto">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-xs font-semibold hover:border-primary text-slate-700 dark:text-slate-300"
+                          onClick={() => setEditingOrder(order)}
+                          title="Editar Orden de Trabajo"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          Editar
+                        </Button>
+
                         <Link href={`/dashboard/work-orders/${order.id}`}>
                           <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-semibold hover:border-primary">
                             <FileText className="w-3.5 h-3.5 text-primary" />
@@ -680,9 +691,17 @@ export function WorkOrdersList() {
           isOpen={!!editingOrder}
           workOrder={editingOrder}
           onClose={() => setEditingOrder(null)}
-          onSuccess={() => {
+          onSuccess={(wasReassigned?: boolean) => {
             fetchOrders()
             router.refresh()
+            setToast({
+              id: Date.now().toString(),
+              title: wasReassigned ? 'Activo Reasignado' : 'Orden Actualizada',
+              description: wasReassigned
+                ? 'Orden de trabajo reasignada correctamente al nuevo activo.'
+                : 'La orden de trabajo se ha actualizado exitosamente.',
+              type: 'success',
+            })
           }}
         />
       )}

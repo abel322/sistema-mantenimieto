@@ -72,7 +72,7 @@ interface CustomToolItem {
 export interface WorkOrderEditModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: () => void
+  onSuccess: (wasReassigned?: boolean) => void
   workOrder: {
     id: string
     title: string
@@ -355,7 +355,8 @@ export function WorkOrderEditModal({
         throw new Error(data.error || 'Error al actualizar la orden')
       }
 
-      onSuccess()
+      const wasReassigned = assetId !== workOrder.assetId
+      onSuccess(wasReassigned)
       onClose()
     } catch (err: any) {
       console.error(err)

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(
@@ -249,6 +250,17 @@ export async function PUT(
 
       return updated
     })
+
+    revalidatePath('/dashboard/work-orders')
+    revalidatePath(`/dashboard/work-orders/${params.id}`)
+    revalidatePath('/dashboard/assets')
+    if (existingWO.assetId) {
+      revalidatePath(`/dashboard/assets/${existingWO.assetId}`)
+    }
+    if (assetId && assetId !== existingWO.assetId) {
+      revalidatePath(`/dashboard/assets/${assetId}`)
+    }
+    revalidatePath('/dashboard')
 
     return NextResponse.json(workOrder)
   } catch (error) {
