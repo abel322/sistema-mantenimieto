@@ -13,6 +13,7 @@ import {
   BookOpen,
   FileText,
   Truck,
+  User,
   X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -79,6 +80,12 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       label: 'Reportes',
       icon: FileText,
       active: pathname?.startsWith('/dashboard/reports'),
+    },
+    {
+      href: '/dashboard/profile',
+      label: 'Mi Perfil',
+      icon: User,
+      active: pathname?.startsWith('/dashboard/profile'),
     },
   ]
 

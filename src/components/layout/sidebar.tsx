@@ -13,6 +13,7 @@ import {
   BookOpen,
   FileText,
   Truck,
+  User,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
@@ -77,6 +78,12 @@ export function Sidebar() {
       label: 'Reportes',
       icon: FileText,
       active: pathname?.startsWith('/dashboard/reports'),
+    },
+    {
+      href: '/dashboard/profile',
+      label: 'Mi Perfil',
+      icon: User,
+      active: pathname?.startsWith('/dashboard/profile'),
     },
   ]
 
