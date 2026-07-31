@@ -199,6 +199,16 @@ export function PartDetail({ part }: PartDetailProps) {
               </p>
               <p className="text-lg font-semibold">{part.unit}</p>
             </div>
+            {part.description && (
+              <div className="md:col-span-2 pt-2 border-t">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Descripción
+                </p>
+                <p className="text-sm text-foreground mt-1 whitespace-pre-wrap">
+                  {part.description}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

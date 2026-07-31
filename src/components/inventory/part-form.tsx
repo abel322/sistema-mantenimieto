@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
@@ -57,6 +58,7 @@ export function PartForm() {
     const data = {
       name: formData.get('name') as string,
       code: formData.get('code') as string,
+      description: (formData.get('description') as string) || null,
       stock: parseInt(formData.get('stock') as string) || 0,
       minStock: parseInt(formData.get('minStock') as string) || 0,
       price: parseFloat(formData.get('price') as string) || 0,
@@ -194,6 +196,18 @@ export function PartForm() {
                   </option>
                 ))}
               </Select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="description" className="font-semibold text-sm">
+                Descripción
+              </Label>
+              <Textarea
+                id="description"
+                name="description"
+                rows={3}
+                placeholder="Ej: Resistencia blindada para extrusora n°3, 1000W, diámetro 120mm..."
+              />
             </div>
           </div>
 

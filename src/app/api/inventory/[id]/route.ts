@@ -104,11 +104,12 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { name, code, category, stock, minStock, unit, price, preferredSupplierId, assetIds } = body
+    const { name, code, description, category, stock, minStock, unit, price, preferredSupplierId, assetIds } = body
 
     const updateData: any = {
       name,
       code,
+      description: description || null,
       category,
       stock: parseInt(stock) || 0,
       minStock: parseInt(minStock) || 0,

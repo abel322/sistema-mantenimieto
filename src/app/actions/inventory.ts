@@ -7,6 +7,7 @@ import { triggerLowStockAlert } from '@/lib/notifications'
 export interface InventoryItemPayload {
   name: string
   code: string
+  description?: string | null
   stock: number
   minStock: number
   price: number
@@ -21,6 +22,7 @@ export async function createInventoryItem(payload: InventoryItemPayload) {
     const {
       name,
       code,
+      description,
       stock,
       minStock,
       price,
@@ -34,6 +36,7 @@ export async function createInventoryItem(payload: InventoryItemPayload) {
       data: {
         name,
         code,
+        description: description || null,
         stock: Number(stock) || 0,
         minStock: Number(minStock) || 0,
         price: Number(price) || 0,
@@ -70,6 +73,7 @@ export async function updateInventoryItem(id: string, payload: Partial<Inventory
     const {
       name,
       code,
+      description,
       stock,
       minStock,
       price,
@@ -83,6 +87,7 @@ export async function updateInventoryItem(id: string, payload: Partial<Inventory
 
     if (name !== undefined) updateData.name = name
     if (code !== undefined) updateData.code = code
+    if (description !== undefined) updateData.description = description || null
     if (stock !== undefined) updateData.stock = Number(stock) || 0
     if (minStock !== undefined) updateData.minStock = Number(minStock) || 0
     if (price !== undefined) updateData.price = Number(price) || 0

@@ -4,12 +4,13 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, code, stock, minStock, price, unit, category, preferredSupplierId, assetIds } = body
+    const { name, code, description, stock, minStock, price, unit, category, preferredSupplierId, assetIds } = body
 
     const part = await prisma.part.create({
       data: {
         name,
         code,
+        description: description || null,
         stock: Number(stock) || 0,
         minStock: Number(minStock) || 0,
         price: Number(price) || 0,
@@ -69,6 +70,7 @@ export async function GET(request: Request) {
         { name: { contains: query, mode: 'insensitive' } },
         { code: { contains: query, mode: 'insensitive' } },
         { category: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
       ]
     }
 

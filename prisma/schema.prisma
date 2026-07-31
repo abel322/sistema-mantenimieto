@@ -84,6 +84,7 @@ model Part {
   id                  String         @id @default(uuid())
   name                String
   code                String         @unique
+  description         String?
   stock               Int            @default(0)
   minStock            Int            @default(5)
   price               Float
