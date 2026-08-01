@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
-import { X, Loader2, Wrench } from 'lucide-react'
+import { X, Loader2, Wrench, Mic } from 'lucide-react'
+import { useSpeechToText } from '@/hooks/use-speech-to-text'
 
 export interface ToolData {
   id?: string
@@ -78,6 +79,10 @@ export function ToolFormModal({ isOpen, tool, onClose, onSuccess }: ToolFormModa
     area: tool?.area || '',
     notes: tool?.notes || '',
   })
+
+  const { isListening, listeningField, startListening } = useSpeechToText()
+  const isListeningName = isListening && listeningField === 'name'
+  const isListeningNotes = isListening && listeningField === 'notes'
 
   useEffect(() => {
     // Fetch assets for machine assignment
@@ -194,12 +199,31 @@ export function ToolFormModal({ isOpen, tool, onClose, onSuccess }: ToolFormModa
 
           {/* Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="name" className="text-xs font-semibold">
-              Nombre de la Herramienta <span className="text-destructive">*</span>
-            </Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label htmlFor="name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Nombre de la Herramienta <span className="text-destructive">*</span>
+              </Label>
+              <Button
+                onClick={() =>
+                  startListening('name', (transcript) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      name: prev.name ? `${prev.name} ${transcript}` : transcript,
+                    }))
+                  )
+                }
+                size="sm"
+                type="button"
+                variant="ghost"
+                className={isListeningName ? 'text-red-500 animate-pulse' : 'text-slate-500 hover:text-blue-600'}
+                title="Dictar nombre por voz"
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            </div>
             <Input
               id="name"
-              placeholder="e.g. Multímetro Fluke 87V"
+              placeholder="Ej: Pistola Neumática de Impacto 1/2"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -304,9 +328,28 @@ export function ToolFormModal({ isOpen, tool, onClose, onSuccess }: ToolFormModa
 
           {/* Notes */}
           <div className="space-y-1.5">
-            <Label htmlFor="notes" className="text-xs font-semibold">
-              Notas / Observaciones
-            </Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label htmlFor="notes" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Notas / Observaciones
+              </Label>
+              <Button
+                onClick={() =>
+                  startListening('notes', (transcript) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      notes: prev.notes ? `${prev.notes} ${transcript}` : transcript,
+                    }))
+                  )
+                }
+                size="sm"
+                type="button"
+                variant="ghost"
+                className={isListeningNotes ? 'text-red-500 animate-pulse' : 'text-slate-500 hover:text-blue-600'}
+                title="Dictar notas por voz"
+              >
+                <Mic className="h-4 w-4" />
+              </Button>
+            </div>
             <Textarea
               id="notes"
               placeholder="Detalles adicionales sobre el estado, calibración o ubicación..."
@@ -337,4 +380,12 @@ export function ToolFormModal({ isOpen, tool, onClose, onSuccess }: ToolFormModa
       </div>
     </div>
   )
+}
+
+export function NewToolModal(props: Omit<ToolFormModalProps, 'tool'>) {
+  return <ToolFormModal {...props} tool={null} />
+}
+
+export function EditToolModal(props: ToolFormModalProps) {
+  return <ToolFormModal {...props} />
 }
