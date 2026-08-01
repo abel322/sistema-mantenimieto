@@ -90,6 +90,7 @@ model Part {
   price               Float
   unit                String         @default("unidad")
   category            String?
+  location            String?
   preferredSupplierId String?
   preferredSupplier   Supplier?      @relation(fields: [preferredSupplierId], references: [id], onDelete: SetNull)
   workOrders          PartOnOrder[]
