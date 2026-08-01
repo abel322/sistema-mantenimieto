@@ -14,9 +14,11 @@ import {
   FileText,
   Truck,
   User,
+  Users,
   X
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useSession } from 'next-auth/react'
 
 interface MobileSidebarProps {
   isOpen: boolean
@@ -25,6 +27,8 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === 'ADMIN'
 
   const routes = [
     {
@@ -81,6 +85,16 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
       icon: FileText,
       active: pathname?.startsWith('/dashboard/reports'),
     },
+    ...(isAdmin
+      ? [
+          {
+            href: '/dashboard/users',
+            label: 'Usuarios',
+            icon: Users,
+            active: pathname?.startsWith('/dashboard/users'),
+          },
+        ]
+      : []),
     {
       href: '/dashboard/profile',
       label: 'Mi Perfil',

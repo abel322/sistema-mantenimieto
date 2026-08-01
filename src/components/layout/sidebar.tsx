@@ -14,15 +14,20 @@ import {
   FileText,
   Truck,
   User,
+  Users,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 
 export function Sidebar() {
   const pathname = usePathname()
+  const { data: session } = useSession()
   const [collapsed, setCollapsed] = useState(false)
+
+  const isAdmin = session?.user?.role === 'ADMIN'
 
   const routes = [
     {
@@ -79,6 +84,16 @@ export function Sidebar() {
       icon: FileText,
       active: pathname?.startsWith('/dashboard/reports'),
     },
+    ...(isAdmin
+      ? [
+          {
+            href: '/dashboard/users',
+            label: 'Usuarios',
+            icon: Users,
+            active: pathname?.startsWith('/dashboard/users'),
+          },
+        ]
+      : []),
     {
       href: '/dashboard/profile',
       label: 'Mi Perfil',

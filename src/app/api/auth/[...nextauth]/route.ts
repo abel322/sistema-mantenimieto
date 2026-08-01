@@ -26,6 +26,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Usuario no encontrado')
         }
 
+        if (user.isActive === false) {
+          throw new Error('Cuenta desactivada. Contacte al administrador.')
+        }
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password

@@ -13,6 +13,7 @@ model User {
   name               String
   password           String
   role               UserRole             @default(TECHNICIAN)
+  isActive           Boolean              @default(true)
   workOrders         WorkOrder[]
   checklistExecutions ChecklistExecution[]
   createdAt          DateTime             @default(now())
@@ -308,6 +309,7 @@ enum UserRole {
   ADMIN
   SUPERVISOR
   TECHNICIAN
+  OPERATOR
 }
 
 enum AssetArea {

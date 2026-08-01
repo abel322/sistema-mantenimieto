@@ -19,12 +19,18 @@ import {
   Save,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Users,
+  ShieldAlert
 } from 'lucide-react'
+import { UserManagementTab } from '@/components/users/user-management-tab'
 
 export function ProfileView() {
   const { data: session, update: updateSession } = useSession()
   const router = useRouter()
+  const [activeTab, setActiveTab] = useState<'profile' | 'users'>('profile')
+
+  const isAdmin = session?.user?.role === 'ADMIN'
 
   // Personal Info form state
   const [name, setName] = useState('')
@@ -160,8 +166,42 @@ export function ProfileView() {
         </div>
       </div>
 
-      {/* Settings Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Navigation Tabs if ADMIN */}
+      {isAdmin && (
+        <div className="border-b border-border">
+          <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'profile'
+                  ? 'border-primary text-primary font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span>Mi Perfil y Seguridad</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'users'
+                  ? 'border-primary text-primary font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+              }`}
+            >
+              <Users className="w-4 h-4 text-purple-600" />
+              <span>Gestión de Usuarios (Administrador)</span>
+            </button>
+          </nav>
+        </div>
+      )}
+
+      {activeTab === 'users' && isAdmin ? (
+        <UserManagementTab />
+      ) : (
+        /* Settings Grid */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* CARD A: Información Personal */}
         <Card className="shadow-sm border">
           <CardHeader className="border-b pb-4">
@@ -344,6 +384,7 @@ export function ProfileView() {
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
   )
 }
