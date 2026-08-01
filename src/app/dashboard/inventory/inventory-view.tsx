@@ -3,12 +3,14 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus, Package, Wrench } from 'lucide-react'
-import Link from 'next/link'
 import { InventoryList } from '@/components/inventory/inventory-list'
 import { ToolsList } from '@/components/tools/tools-list'
+import { NewItemModal } from '@/components/inventory/new-item-modal'
 
 export function InventoryView() {
   const [activeTab, setActiveTab] = useState<'parts' | 'tools'>('parts')
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   return (
     <div className="flex-1 space-y-6 p-3 sm:p-4 md:p-6 lg:p-8 pt-6 w-full max-w-full overflow-hidden">
@@ -26,14 +28,21 @@ export function InventoryView() {
         </div>
 
         {activeTab === 'parts' && (
-          <Link href="/dashboard/inventory/new" className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto shadow-sm">
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Repuesto
-            </Button>
-          </Link>
+          <Button
+            onClick={() => setIsNewModalOpen(true)}
+            className="w-full sm:w-auto shadow-sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Repuesto
+          </Button>
         )}
       </div>
+
+      <NewItemModal
+        isOpen={isNewModalOpen}
+        onClose={() => setIsNewModalOpen(false)}
+        onSuccess={() => setRefreshKey((prev) => prev + 1)}
+      />
 
       {/* Tabs Navigation */}
       <div className="border-b border-border overflow-x-auto max-w-full">
@@ -66,7 +75,7 @@ export function InventoryView() {
 
       {/* Tab Contents */}
       {activeTab === 'parts' ? (
-        <InventoryList />
+        <InventoryList key={refreshKey} />
       ) : (
         <ToolsList />
       )}

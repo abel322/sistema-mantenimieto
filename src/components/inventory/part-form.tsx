@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Cpu, Check } from 'lucide-react'
+import { Cpu, Check, Mic } from 'lucide-react'
+import { useSpeechToText } from '@/hooks/use-speech-to-text'
 
 interface SupplierOption {
   id: string
@@ -29,6 +30,13 @@ export function PartForm() {
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
   const [assets, setAssets] = useState<AssetOption[]>([])
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+
+  const { isListening, listeningField, startListening } = useSpeechToText()
+
+  const isListeningName = isListening && listeningField === 'name'
+  const isListeningDescription = isListening && listeningField === 'description'
 
   useEffect(() => {
     fetch('/api/suppliers?status=ACTIVE')
@@ -95,12 +103,30 @@ export function PartForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="name" className="font-semibold text-sm">
-                Nombre del Repuesto *
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="name" className="font-semibold text-sm">
+                  Nombre del Repuesto *
+                </Label>
+                <Button
+                  onClick={() =>
+                    startListening('name', (transcript) => {
+                      setName((prev) => (prev ? `${prev} ${transcript}` : transcript))
+                    })
+                  }
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                  className={isListeningName ? 'text-red-500 animate-pulse' : 'text-slate-500'}
+                  title="Dictar por voz"
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
               <Input
                 id="name"
                 name="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Ej: Resistencia tipo banda 220V"
                 required
               />
@@ -199,13 +225,31 @@ export function PartForm() {
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="description" className="font-semibold text-sm">
-                Descripción
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="description" className="font-semibold text-sm">
+                  Descripción
+                </Label>
+                <Button
+                  onClick={() =>
+                    startListening('description', (transcript) => {
+                      setDescription((prev) => (prev ? `${prev} ${transcript}` : transcript))
+                    })
+                  }
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                  className={isListeningDescription ? 'text-red-500 animate-pulse' : 'text-slate-500'}
+                  title="Dictar por voz"
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+              </div>
               <Textarea
                 id="description"
                 name="description"
                 rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder="Ej: Resistencia blindada para extrusora n°3, 1000W, diámetro 120mm..."
               />
             </div>

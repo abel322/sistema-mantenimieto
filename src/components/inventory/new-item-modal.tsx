@@ -29,44 +29,23 @@ interface AssetOption {
   code: string
 }
 
-interface PartEditModalProps {
+interface NewItemModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-  part: {
-    id: string
-    name: string
-    code: string
-    category: string
-    stock: number
-    minStock: number
-    unit: string
-    price: number
-    location?: string | null
-    description?: string | null
-    preferredSupplierId?: string | null
-    assets?: AssetOption[]
-  }
 }
 
-export function PartEditModal({
-  isOpen,
-  onClose,
-  onSuccess,
-  part,
-}: PartEditModalProps) {
-  const [name, setName] = useState(part.name)
-  const [code, setCode] = useState(part.code)
-  const [category, setCategory] = useState(part.category || '')
-  const [stock, setStock] = useState(part.stock.toString())
-  const [minStock, setMinStock] = useState(part.minStock.toString())
-  const [unit, setUnit] = useState(part.unit)
-  const [price, setPrice] = useState(part.price.toString())
-  const [location, setLocation] = useState(part.location || '')
-  const [description, setDescription] = useState(part.description || '')
-  const [preferredSupplierId, setPreferredSupplierId] = useState(
-    part.preferredSupplierId || ''
-  )
+export function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModalProps) {
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [category, setCategory] = useState('')
+  const [stock, setStock] = useState('0')
+  const [minStock, setMinStock] = useState('5')
+  const [unit, setUnit] = useState('pieza')
+  const [price, setPrice] = useState('0')
+  const [location, setLocation] = useState('')
+  const [description, setDescription] = useState('')
+  const [preferredSupplierId, setPreferredSupplierId] = useState('')
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
   const [allAssets, setAllAssets] = useState<AssetOption[]>([])
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([])
@@ -81,19 +60,18 @@ export function PartEditModal({
 
   useEffect(() => {
     if (isOpen) {
-      setName(part.name)
-      setCode(part.code)
-      setCategory(part.category || '')
-      setStock(part.stock.toString())
-      setMinStock(part.minStock.toString())
-      setUnit(part.unit)
-      setPrice(part.price.toString())
-      setLocation(part.location || '')
-      setDescription(part.description || '')
-      setPreferredSupplierId(part.preferredSupplierId || '')
-
-      const initialAssetIds = part.assets?.map((a) => a.id) || []
-      setSelectedAssetIds(initialAssetIds)
+      setName('')
+      setCode('')
+      setCategory('')
+      setStock('0')
+      setMinStock('5')
+      setUnit('pieza')
+      setPrice('0')
+      setLocation('')
+      setDescription('')
+      setPreferredSupplierId('')
+      setSelectedAssetIds([])
+      setError(null)
 
       fetch('/api/suppliers?status=ACTIVE')
         .then((res) => res.json())
@@ -104,18 +82,8 @@ export function PartEditModal({
         .then((res) => res.json())
         .then((data) => setAllAssets(Array.isArray(data) ? data : []))
         .catch(console.error)
-
-      // Also fetch full part data to ensure assets are loaded if not in prop
-      fetch(`/api/inventory/${part.id}`)
-        .then((res) => res.json())
-        .then((fullPart) => {
-          if (fullPart && Array.isArray(fullPart.assets)) {
-            setSelectedAssetIds(fullPart.assets.map((a: AssetOption) => a.id))
-          }
-        })
-        .catch(console.error)
     }
-  }, [isOpen, part])
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -139,19 +107,19 @@ export function PartEditModal({
     setError(null)
 
     try {
-      const res = await fetch(`/api/inventory/${part.id}`, {
-        method: 'PUT',
+      const res = await fetch('/api/inventory', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          code,
-          category,
+          name: name.trim(),
+          code: code.trim(),
+          category: category.trim(),
           stock: parseInt(stock) || 0,
           minStock: parseInt(minStock) || 0,
-          unit,
+          unit: unit.trim(),
           price: parseFloat(price) || 0,
-          location,
-          description,
+          location: location.trim() || null,
+          description: description.trim() || null,
           preferredSupplierId: preferredSupplierId || null,
           assetIds: selectedAssetIds,
         }),
@@ -159,14 +127,14 @@ export function PartEditModal({
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.error || 'Error al actualizar el repuesto')
+        throw new Error(data.error || 'Error al crear el repuesto')
       }
 
       onSuccess()
       onClose()
     } catch (err: any) {
       console.error(err)
-      setError(err.message || 'Error al actualizar el repuesto.')
+      setError(err.message || 'Error al crear el repuesto.')
     } finally {
       setSaving(false)
     }
@@ -177,7 +145,7 @@ export function PartEditModal({
       <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl bg-white dark:bg-slate-900 my-auto">
         <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
           <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
-            Editar Repuesto / Insumo
+            Nuevo Repuesto / Insumo
           </DialogTitle>
           <Button variant="ghost" size="icon" onClick={onClose} type="button" className="h-8 w-8 rounded-full">
             <X className="h-4 w-4" />
@@ -217,6 +185,7 @@ export function PartEditModal({
                 className="w-full h-10 text-sm"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="Ej: Resistencia tipo banda 220V"
                 required
               />
             </div>
@@ -230,6 +199,7 @@ export function PartEditModal({
                 className="w-full h-10 text-sm font-mono"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
+                placeholder="Ej: RES-001"
                 required
               />
             </div>
@@ -245,6 +215,7 @@ export function PartEditModal({
                 className="w-full h-10 text-sm"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                placeholder="Ej: Eléctrico, Mecánico"
               />
             </div>
 
@@ -255,7 +226,7 @@ export function PartEditModal({
               <Input
                 id="unit"
                 className="w-full h-10 text-sm"
-                placeholder="Unidades, Litros, Metros"
+                placeholder="pieza, rollo, metro"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
               />
@@ -265,7 +236,7 @@ export function PartEditModal({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label htmlFor="stock" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Stock Actual *
+                Stock Inicial *
               </Label>
               <Input
                 id="stock"
@@ -414,6 +385,7 @@ export function PartEditModal({
               className="text-sm"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ej: Resistencia blindada para extrusora n°3..."
             />
           </div>
 
@@ -429,7 +401,7 @@ export function PartEditModal({
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" /> Guardar Cambios
+                  <Save className="w-4 h-4 mr-2" /> Crear Repuesto
                 </>
               )}
             </Button>
