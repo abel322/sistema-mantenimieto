@@ -8,10 +8,12 @@ export interface InventoryItemPayload {
   name: string
   code: string
   description?: string | null
-  stock: number
-  minStock: number
-  price: number
-  unit: string
+  stock: number | string
+  minStock: number | string
+  price?: number | string
+  unitPrice?: number | string
+  unit?: string | null
+  location?: string | null
   category?: string | null
   preferredSupplierId?: string | null
   assetIds?: string[]
@@ -19,7 +21,28 @@ export interface InventoryItemPayload {
 
 export async function createInventoryItem(payload: InventoryItemPayload) {
   try {
-    const {
+    const name = payload.name?.trim() || ''
+    const code = payload.code?.trim() || ''
+    const description = payload.description?.trim() || null
+    const stock = parseInt(String(payload.stock)) || 0
+    const minStock = parseInt(String(payload.minStock)) || 0
+    const price = parseFloat(String(payload.price ?? payload.unitPrice ?? 0)) || 0
+    const unit = payload.unit?.trim() || 'pieza'
+    const location = payload.location?.trim() || null
+    const category = payload.category?.trim() || null
+    const preferredSupplierId = payload.preferredSupplierId?.trim() || null
+    const validAssetIds = Array.isArray(payload.assetIds)
+      ? payload.assetIds.filter(Boolean)
+      : []
+
+    if (!name || !code) {
+      return {
+        success: false,
+        error: 'El nombre y el código del repuesto son obligatorios.',
+      }
+    }
+
+    const partData: any = {
       name,
       code,
       description,
@@ -27,26 +50,17 @@ export async function createInventoryItem(payload: InventoryItemPayload) {
       minStock,
       price,
       unit,
+      location,
       category,
       preferredSupplierId,
-      assetIds = [],
-    } = payload
+      assets:
+        validAssetIds.length > 0
+          ? { connect: validAssetIds.map((id) => ({ id })) }
+          : undefined,
+    }
 
     const part = await prisma.part.create({
-      data: {
-        name,
-        code,
-        description: description || null,
-        stock: Number(stock) || 0,
-        minStock: Number(minStock) || 0,
-        price: Number(price) || 0,
-        unit,
-        category: category || null,
-        preferredSupplierId: preferredSupplierId || null,
-        assets: assetIds.length > 0 ? {
-          connect: assetIds.map((id) => ({ id })),
-        } : undefined,
-      },
+      data: partData,
       include: {
         preferredSupplier: true,
         assets: {
@@ -64,40 +78,53 @@ export async function createInventoryItem(payload: InventoryItemPayload) {
     return { success: true, part }
   } catch (error: any) {
     console.error('Error in createInventoryItem action:', error)
-    return { success: false, error: error.message || 'Error al crear el repuesto' }
+    if (error.code === 'P2002') {
+      return {
+        success: false,
+        error: 'El Código SKU ya se encuentra registrado en el sistema.',
+      }
+    }
+    return {
+      success: false,
+      error: error.message || 'Error al crear el repuesto.',
+    }
   }
 }
 
-export async function updateInventoryItem(id: string, payload: Partial<InventoryItemPayload>) {
+export async function updateInventoryItem(
+  id: string,
+  payload: Partial<InventoryItemPayload>
+) {
   try {
-    const {
-      name,
-      code,
-      description,
-      stock,
-      minStock,
-      price,
-      unit,
-      category,
-      preferredSupplierId,
-      assetIds,
-    } = payload
-
     const updateData: any = {}
 
-    if (name !== undefined) updateData.name = name
-    if (code !== undefined) updateData.code = code
-    if (description !== undefined) updateData.description = description || null
-    if (stock !== undefined) updateData.stock = Number(stock) || 0
-    if (minStock !== undefined) updateData.minStock = Number(minStock) || 0
-    if (price !== undefined) updateData.price = Number(price) || 0
-    if (unit !== undefined) updateData.unit = unit
-    if (category !== undefined) updateData.category = category || null
-    if (preferredSupplierId !== undefined) updateData.preferredSupplierId = preferredSupplierId || null
+    if (payload.name !== undefined) updateData.name = payload.name.trim()
+    if (payload.code !== undefined) updateData.code = payload.code.trim()
+    if (payload.description !== undefined)
+      updateData.description = payload.description?.trim() || null
+    if (payload.stock !== undefined)
+      updateData.stock = parseInt(String(payload.stock)) || 0
+    if (payload.minStock !== undefined)
+      updateData.minStock = parseInt(String(payload.minStock)) || 0
+    if (payload.price !== undefined || payload.unitPrice !== undefined)
+      updateData.price =
+        parseFloat(String(payload.price ?? payload.unitPrice ?? 0)) || 0
+    if (payload.unit !== undefined)
+      updateData.unit = payload.unit?.trim() || 'pieza'
+    if (payload.location !== undefined)
+      updateData.location = payload.location?.trim() || null
+    if (payload.category !== undefined)
+      updateData.category = payload.category?.trim() || null
+    if (payload.preferredSupplierId !== undefined)
+      updateData.preferredSupplierId =
+        payload.preferredSupplierId?.trim() || null
 
-    if (assetIds !== undefined) {
+    if (payload.assetIds !== undefined) {
+      const validIds = Array.isArray(payload.assetIds)
+        ? payload.assetIds.filter(Boolean)
+        : []
       updateData.assets = {
-        set: assetIds.map((assetId) => ({ id: assetId })),
+        set: validIds.map((assetId) => ({ id: assetId })),
       }
     }
 
@@ -124,6 +151,15 @@ export async function updateInventoryItem(id: string, payload: Partial<Inventory
     return { success: true, part }
   } catch (error: any) {
     console.error('Error in updateInventoryItem action:', error)
-    return { success: false, error: error.message || 'Error al actualizar el repuesto' }
+    if (error.code === 'P2002') {
+      return {
+        success: false,
+        error: 'El Código SKU ya se encuentra registrado en el sistema.',
+      }
+    }
+    return {
+      success: false,
+      error: error.message || 'Error al actualizar el repuesto.',
+    }
   }
 }

@@ -126,14 +126,20 @@ export function NewItemModal({ isOpen, onClose, onSuccess }: NewItemModalProps) 
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Error al crear el repuesto')
+        let errorMessage = 'Error al crear el repuesto'
+        try {
+          const data = await res.json()
+          if (data && data.error) errorMessage = data.error
+        } catch (e) {
+          // ignore JSON parse error
+        }
+        throw new Error(errorMessage)
       }
 
       onSuccess()
       onClose()
     } catch (err: any) {
-      console.error(err)
+      console.error('Error creating item:', err)
       setError(err.message || 'Error al crear el repuesto.')
     } finally {
       setSaving(false)

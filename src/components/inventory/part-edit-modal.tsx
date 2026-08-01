@@ -158,8 +158,14 @@ export function PartEditModal({
       })
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Error al actualizar el repuesto')
+        let errorMessage = 'Error al actualizar el repuesto'
+        try {
+          const data = await res.json()
+          if (data && data.error) errorMessage = data.error
+        } catch (e) {
+          // ignore JSON parse error
+        }
+        throw new Error(errorMessage)
       }
 
       onSuccess()

@@ -4,22 +4,43 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, code, description, stock, minStock, price, unit, category, preferredSupplierId, assetIds } = body
+    const name = body.name?.trim() || ''
+    const code = body.code?.trim() || ''
+    const description = body.description?.trim() || null
+    const stock = parseInt(String(body.stock)) || 0
+    const minStock = parseInt(String(body.minStock)) || 0
+    const price = parseFloat(String(body.price ?? body.unitPrice ?? 0)) || 0
+    const unit = body.unit?.trim() || 'pieza'
+    const location = body.location?.trim() || null
+    const category = body.category?.trim() || null
+    const preferredSupplierId = body.preferredSupplierId?.trim() || null
+    const assetIds = Array.isArray(body.assetIds)
+      ? body.assetIds.filter(Boolean)
+      : []
+
+    if (!name || !code) {
+      return NextResponse.json(
+        { error: 'El nombre y el código del repuesto son obligatorios.' },
+        { status: 400 }
+      )
+    }
 
     const part = await prisma.part.create({
       data: {
         name,
         code,
-        description: description || null,
-        stock: Number(stock) || 0,
-        minStock: Number(minStock) || 0,
-        price: Number(price) || 0,
+        description,
+        stock,
+        minStock,
+        price,
         unit,
-        category: category || null,
-        preferredSupplierId: preferredSupplierId || null,
-        assets: Array.isArray(assetIds) && assetIds.length > 0 ? {
-          connect: assetIds.map((id: string) => ({ id })),
-        } : undefined,
+        location,
+        category,
+        preferredSupplierId,
+        assets:
+          assetIds.length > 0
+            ? { connect: assetIds.map((id: string) => ({ id })) }
+            : undefined,
       },
       include: {
         preferredSupplier: true,
@@ -34,10 +55,16 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(part, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating part:', error)
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'El Código SKU ya se encuentra registrado en el sistema.' },
+        { status: 409 }
+      )
+    }
     return NextResponse.json(
-      { error: 'Error al crear el repuesto' },
+      { error: error.message || 'Error al crear el repuesto' },
       { status: 500 }
     )
   }
