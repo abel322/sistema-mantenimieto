@@ -11,16 +11,16 @@ const config: Config = {
     extend: {
       colors: {
         obsidian: {
-          DEFAULT: '#08090D',
-          canvas: '#08090D',
-          deep: '#050608',
+          DEFAULT: 'var(--canvas-bg, #08090D)',
+          canvas: 'var(--canvas-bg, #08090D)',
+          deep: 'var(--obsidian-deep, #050608)',
         },
         surface: {
-          slate: '#0F111A',
-          card: '#161926',
-          muted: '#1E2235',
-          border: 'rgba(255, 255, 255, 0.08)',
-          hover: 'rgba(255, 255, 255, 0.12)',
+          slate: 'var(--surface-slate, #0F111A)',
+          card: 'var(--surface-card, #161926)',
+          muted: 'var(--surface-muted, #1E2235)',
+          border: 'var(--surface-border, rgba(255, 255, 255, 0.08))',
+          hover: 'var(--surface-hover, rgba(255, 255, 255, 0.12))',
         },
         synth: {
           violet: '#7C3AED',

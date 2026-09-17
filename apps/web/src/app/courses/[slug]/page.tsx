@@ -115,7 +115,7 @@ export default function CourseDetailPage() {
       <div>
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-xs font-mono text-gray-400 hover:text-synth-cyan transition-colors"
+          className="inline-flex items-center gap-2 text-xs font-mono text-slate-500 dark:text-gray-400 hover:text-synth-violet dark:hover:text-synth-cyan transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Dashboard</span>
@@ -123,34 +123,34 @@ export default function CourseDetailPage() {
       </div>
 
       {/* Course Hero Banner */}
-      <div className="relative rounded-3xl p-8 bg-surface-slate/90 border border-white/10 glass-panel shadow-2xl overflow-hidden">
+      <div className="relative rounded-3xl p-8 bg-white/85 dark:bg-surface-slate/90 border border-slate-200/80 dark:border-white/10 glass-panel shadow-xl dark:shadow-2xl overflow-hidden transition-colors">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-synth-violet/20 border border-synth-violet/40 text-synth-cyan font-mono font-bold">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-synth-violet/15 dark:bg-synth-violet/20 border border-synth-violet/30 dark:border-synth-violet/40 text-synth-violet dark:text-synth-cyan font-mono font-bold">
                 {course.category}
               </span>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/5 text-gray-400 font-mono">
+              <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-gray-400 font-mono">
                 {course.level}
               </span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
               {course.title}
             </h1>
-            <p className="text-sm text-gray-300 mt-2 max-w-3xl leading-relaxed font-light">
+            <p className="text-sm text-slate-600 dark:text-gray-300 mt-2 max-w-3xl leading-relaxed font-light">
               {course.description}
             </p>
 
             {/* Instructor Strip */}
-            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/5">
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-200/80 dark:border-white/5">
               <img
                 src={course.instructor.avatar}
                 alt={course.instructor.name}
-                className="w-10 h-10 rounded-xl object-cover border border-white/10"
+                className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10"
               />
               <div>
-                <div className="text-xs font-bold text-white">{course.instructor.name}</div>
-                <div className="text-[11px] text-gray-400">{course.instructor.role}</div>
+                <div className="text-xs font-bold text-slate-900 dark:text-white">{course.instructor.name}</div>
+                <div className="text-[11px] text-slate-500 dark:text-gray-400">{course.instructor.role}</div>
               </div>
             </div>
           </div>
@@ -161,15 +161,15 @@ export default function CourseDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left / Top: Module Syllabus Accordion */}
         <div className="lg:col-span-1 space-y-4">
-          <div className="p-5 rounded-2xl bg-surface-card border border-white/10">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center justify-between">
+          <div className="p-5 rounded-2xl bg-white dark:bg-surface-card border border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-none transition-colors">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-4 flex items-center justify-between">
               <span>Curriculum Syllabus</span>
-              <span className="text-xs font-mono text-synth-cyan">1 / 2 Completed</span>
+              <span className="text-xs font-mono text-synth-violet dark:text-synth-cyan">1 / 2 Completed</span>
             </h3>
 
             {course.modules.map((mod: any) => (
               <div key={mod.id} className="space-y-2">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider py-1 font-mono">
+                <div className="text-xs font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-wider py-1 font-mono">
                   {mod.title}
                 </div>
 
@@ -185,24 +185,24 @@ export default function CourseDetailPage() {
                         }}
                         className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 flex items-center justify-between gap-3 ${
                           isSelected
-                            ? 'bg-surface-slate border-synth-cyan shadow-glow-cyan/20'
-                            : 'bg-obsidian/40 border-white/5 hover:bg-surface-slate'
+                            ? 'bg-slate-100 dark:bg-surface-slate border-synth-violet dark:border-synth-cyan shadow-sm dark:shadow-glow-cyan/20'
+                            : 'bg-slate-50 dark:bg-obsidian/40 border-slate-200/80 dark:border-white/5 hover:bg-slate-100 dark:hover:bg-surface-slate'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
                           {les.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 flex-shrink-0" />
                           ) : (
-                            <Play className="w-4 h-4 text-synth-cyan flex-shrink-0" />
+                            <Play className="w-4 h-4 text-synth-violet dark:text-synth-cyan flex-shrink-0" />
                           )}
                           <div>
-                            <div className="text-xs font-semibold text-white leading-snug line-clamp-1">
+                            <div className="text-xs font-semibold text-slate-900 dark:text-white leading-snug line-clamp-1">
                               {les.title}
                             </div>
-                            <div className="text-[10px] text-gray-400 font-mono mt-0.5 flex items-center gap-1.5">
+                            <div className="text-[10px] text-slate-500 dark:text-gray-400 font-mono mt-0.5 flex items-center gap-1.5">
                               <span>{les.duration}</span>
                               <span>•</span>
-                              <span className="text-synth-cyan uppercase">
+                              <span className="text-synth-violet dark:text-synth-cyan uppercase">
                                 {les.type === 'KEYBOARD' ? 'Piano Lab' : 'A/B Waveform Lab'}
                               </span>
                             </div>
@@ -219,21 +219,21 @@ export default function CourseDetailPage() {
 
         {/* Right: Active Interactive Lesson Classroom */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="p-6 rounded-2xl bg-surface-card border border-white/10 glass-panel">
+          <div className="p-6 rounded-2xl bg-white dark:bg-surface-card border border-slate-200/80 dark:border-white/10 glass-panel shadow-sm dark:shadow-none transition-colors">
             {/* Lesson Title & Completion Action */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-white/10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-200/80 dark:border-white/10">
               <div>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-synth-cyan/20 text-synth-cyan font-mono font-bold uppercase">
+                <span className="text-[10px] px-2 py-0.5 rounded bg-synth-cyan/15 dark:bg-synth-cyan/20 text-synth-cyan font-mono font-bold uppercase">
                   ACTIVE LESSON
                 </span>
-                <h2 className="text-xl font-bold text-white mt-1">{activeLesson.title}</h2>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-1">{activeLesson.title}</h2>
               </div>
 
               <button
                 onClick={toggleLessonComplete}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
                   lessonCompleted
-                    ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-400 shadow-glow-cyan'
+                    ? 'bg-emerald-500/20 border border-emerald-500 text-emerald-500 dark:text-emerald-400 shadow-glow-cyan'
                     : 'bg-gradient-electric text-white shadow-glow-violet hover:scale-105'
                 }`}
               >
@@ -243,12 +243,12 @@ export default function CourseDetailPage() {
             </div>
 
             {/* Lesson Context Notes */}
-            <div className="py-4 text-sm text-gray-300 leading-relaxed font-light">
+            <div className="py-4 text-sm text-slate-700 dark:text-gray-300 leading-relaxed font-light">
               <p>{activeLesson.notes}</p>
             </div>
 
             {/* Interactive Component Embedded according to Lesson Type */}
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="mt-4 pt-4 border-t border-slate-200/80 dark:border-white/10">
               {activeLesson.type === 'KEYBOARD' ? (
                 <VirtualKeyboard
                   highlightedNotes={activeLesson.notesList}

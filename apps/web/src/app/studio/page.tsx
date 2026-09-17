@@ -23,35 +23,35 @@ export default function StudioPage() {
   return (
     <div className="min-h-screen py-8 px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       {/* Studio Header Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-white/10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-slate-200/80 dark:border-white/10 transition-colors">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="p-1.5 rounded-lg bg-gradient-electric text-white">
               <Headphones className="w-4 h-4" />
             </span>
-            <span className="text-xs font-mono uppercase tracking-widest text-synth-cyan font-bold">
+            <span className="text-xs font-mono uppercase tracking-widest text-synth-violet dark:text-synth-cyan font-bold">
               CREATIVE AUDIO WORKBENCH
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono font-semibold">
               Web Audio 2.0
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Sonora Interactive Sound Studio
           </h1>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-slate-600 dark:text-gray-400 mt-1">
             Experiment with polyphonic synthesis, chord voicings, and multi-track A/B mastering inspection in one environment.
           </p>
         </div>
 
         {/* Studio View Selector */}
-        <div className="flex items-center gap-2 bg-surface-card p-1.5 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-2 bg-slate-100/90 dark:bg-surface-card p-1.5 rounded-2xl border border-slate-200/80 dark:border-white/10 transition-colors">
           <button
             onClick={() => setActiveWorkspace('both')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeWorkspace === 'both'
                 ? 'bg-gradient-electric text-white shadow-glow-violet'
-                : 'text-gray-400 hover:text-white'
+                : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Combined Studio
@@ -61,7 +61,7 @@ export default function StudioPage() {
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeWorkspace === 'keyboard'
                 ? 'bg-gradient-electric text-white shadow-glow-violet'
-                : 'text-gray-400 hover:text-white'
+                : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Virtual Keyboard
@@ -71,7 +71,7 @@ export default function StudioPage() {
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
               activeWorkspace === 'ab'
                 ? 'bg-gradient-electric text-white shadow-glow-violet'
-                : 'text-gray-400 hover:text-white'
+                : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             A/B Waveform Lab
@@ -84,8 +84,8 @@ export default function StudioPage() {
         {/* Virtual Keyboard Section */}
         {(activeWorkspace === 'both' || activeWorkspace === 'keyboard') && (
           <section className="space-y-3">
-            <div className="flex items-center justify-between text-xs text-gray-400 px-2 font-mono">
-              <span className="flex items-center gap-1.5 text-synth-cyan">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400 px-2 font-mono">
+              <span className="flex items-center gap-1.5 text-synth-violet dark:text-synth-cyan">
                 <Music className="w-4 h-4" />
                 MODULE 1: HARMONIC SYNTHESIZER & INTERVAL ENGINE
               </span>
@@ -98,8 +98,8 @@ export default function StudioPage() {
         {/* A/B Waveform Inspector Section */}
         {(activeWorkspace === 'both' || activeWorkspace === 'ab') && (
           <section className="space-y-3">
-            <div className="flex items-center justify-between text-xs text-gray-400 px-2 font-mono">
-              <span className="flex items-center gap-1.5 text-rose-400">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-gray-400 px-2 font-mono">
+              <span className="flex items-center gap-1.5 text-rose-500 dark:text-rose-400">
                 <Activity className="w-4 h-4" />
                 MODULE 2: DUAL SYNCHRONIZED WAVEFORM INSPECTOR
               </span>
@@ -111,15 +111,15 @@ export default function StudioPage() {
       </div>
 
       {/* Hardware & Web Audio Specs Footer Banner */}
-      <div className="p-4 rounded-xl bg-surface-card/60 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+      <div className="p-4 rounded-xl bg-white/80 dark:bg-surface-card/60 border border-slate-200/80 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600 dark:text-gray-400 shadow-sm dark:shadow-none transition-colors">
         <div className="flex items-center gap-2">
-          <Info className="w-4 h-4 text-synth-cyan flex-shrink-0" />
+          <Info className="w-4 h-4 text-synth-violet dark:text-synth-cyan flex-shrink-0" />
           <span>
             Sonora Web Audio engine operates at 48kHz, 24-bit floating point internal resolution.
           </span>
         </div>
         <div className="flex items-center gap-4 font-mono text-[11px]">
-          <span className="text-emerald-400">STATUS: LOW-LATENCY RUNNING</span>
+          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">STATUS: LOW-LATENCY RUNNING</span>
           <span>BUFFER: 512 SAMPLES</span>
         </div>
       </div>
