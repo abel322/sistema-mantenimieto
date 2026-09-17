@@ -1,0 +1,19 @@
+{
+  "name": "sonora-academy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sonora Academy — Music Academy LMS & Interactive Sound Studio",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @sonora/web --filter @sonora/api dev",
+    "dev:web": "pnpm --filter @sonora/web dev",
+    "dev:api": "pnpm --filter @sonora/api dev",
+    "build": "pnpm --recursive run build",
+    "lint": "pnpm --recursive run lint",
+    "db:generate": "pnpm --filter @sonora/database db:generate",
+    "db:push": "pnpm --filter @sonora/database db:push",
+    "db:seed": "pnpm --filter @sonora/database db:seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

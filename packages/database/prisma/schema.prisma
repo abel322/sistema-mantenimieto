@@ -1,0 +1,164 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  INSTRUCTOR
+  ADMIN
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  MASTERCLASS
+}
+
+enum TrackCategory {
+  INSTRUMENTS
+  THEORY_HARMONY
+  PRODUCTION
+  MIXING_MASTERING
+  SOUND_DESIGN
+}
+
+enum LessonType {
+  VIDEO
+  INTERACTIVE_PRACTICE
+  AUDIO_COMPARISON_AB
+  PROJECT_SUBMISSION
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  role         Role             @default(STUDENT)
+  bio          String?          @db.Text
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  coursesCreated Course[]       @relation("InstructorCourses")
+  enrollments    Enrollment[]
+  lessonProgress LessonProgress[]
+
+  @@map("users")
+}
+
+model Course {
+  id              String         @id @default(cuid())
+  title           String
+  slug            String         @unique
+  description     String         @db.Text
+  coverImageUrl   String?
+  trailerVideoUrl String?
+  category        TrackCategory
+  level           CourseLevel    @default(BEGINNER)
+  published       Boolean        @default(false)
+  instructorId    String
+  instructor      User           @relation("InstructorCourses", fields: [instructorId], references: [id], onDelete: Cascade)
+  price           Decimal        @default(0.0) @db.Decimal(10, 2)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  modules         Module[]
+  enrollments     Enrollment[]
+
+  @@index([category, level])
+  @@index([instructorId])
+  @@map("courses")
+}
+
+model Module {
+  id         String   @id @default(cuid())
+  title      String
+  orderIndex Int
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lessons    Lesson[]
+
+  @@unique([courseId, orderIndex])
+  @@index([courseId])
+  @@map("modules")
+}
+
+model Lesson {
+  id              String           @id @default(cuid())
+  title           String
+  slug            String
+  orderIndex      Int
+  moduleId        String
+  module          Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  type            LessonType       @default(VIDEO)
+  contentMarkdown String           @db.Text
+  videoUrl        String?
+  interactiveData Json?            // JSON for piano chords, tabs, audio comparison configs or ear-training quizzes
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  audioStems      AudioStem[]
+  progressRecords LessonProgress[]
+
+  @@unique([moduleId, slug])
+  @@unique([moduleId, orderIndex])
+  @@index([moduleId])
+  @@map("lessons")
+}
+
+model AudioStem {
+  id           String   @id @default(cuid())
+  lessonId     String
+  lesson       Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  label        String   // e.g. "Pre-Mix Raw", "Mastered LUFS -14", "Drums Stem"
+  fileUrl      String
+  waveformJson Json?    // Precomputed waveform peaks data for zero-latency wave display
+  createdAt    DateTime @default(now())
+
+  @@index([lessonId])
+  @@map("audio_stems")
+}
+
+model Enrollment {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progressPercent Float    @default(0.0)
+  completed       Boolean  @default(false)
+  enrolledAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId           String
+  lesson             Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed          Boolean  @default(false)
+  lastWatchedSecond  Int      @default(0)
+  score              Int?
+  updatedAt          DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@map("lesson_progress")
+}
