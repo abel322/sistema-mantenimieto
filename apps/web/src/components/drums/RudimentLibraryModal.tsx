@@ -96,12 +96,20 @@ export default function RudimentLibraryModal({
       const matchesCategory =
         selectedCategory === 'all' || item.category === selectedCategory;
       const query = searchQuery.trim().toLowerCase();
+      if (!query) return matchesCategory;
+
+      const cleanQuery = query.replace(/[\s\-_]+/g, '');
+      const stickingSpaced = item.steps.map((s) => s.sticking).join(' ').toLowerCase();
+      const stickingJoined = item.steps.map((s) => s.sticking).join('').toLowerCase();
+
       const matchesQuery =
-        !query ||
         item.name.toLowerCase().includes(query) ||
         item.description.toLowerCase().includes(query) ||
         item.tags.some((t) => t.toLowerCase().includes(query)) ||
-        item.steps.map((s) => s.sticking).join('').toLowerCase().includes(query);
+        stickingSpaced.includes(query) ||
+        stickingJoined.includes(cleanQuery) ||
+        (item.sticking && item.sticking.join(' ').toLowerCase().includes(query)) ||
+        (item.sticking && item.sticking.join('').toLowerCase().includes(cleanQuery));
 
       return matchesCategory && matchesQuery;
     });
@@ -198,7 +206,11 @@ export default function RudimentLibraryModal({
           piece = step.kitPiece || (step.sticking === 'K' ? 'kick' : 'snare');
         }
 
-        if (step.flam) {
+        if (step.drag) {
+          onPlayHit('snare', false, true);
+          setTimeout(() => onPlayHit('snare', false, true), 18);
+          setTimeout(() => onPlayHit(piece, step.accent, false), 36);
+        } else if (step.flam) {
           onPlayHit('snare', false, true);
           setTimeout(() => {
             onPlayHit(piece, step.accent, false);
@@ -602,7 +614,7 @@ export default function RudimentLibraryModal({
                               className="flex flex-col items-center gap-0.5"
                               title={`${st.sticking} • ${pieceMeta?.name || 'Snare'}${
                                 st.accent ? ' (Acento)' : ''
-                              }${st.ghost ? ' (Ghost)' : ''}${st.flam ? ' (Flam)' : ''}`}
+                              }${st.ghost ? ' (Ghost)' : ''}${st.flam ? ' (Flam)' : ''}${st.drag ? ' (Drag)' : ''}`}
                             >
                               <div
                                 className={`w-6 h-6 rounded-lg text-[11px] font-mono font-bold flex items-center justify-center border relative select-none ${badgeColor} ${
@@ -612,8 +624,13 @@ export default function RudimentLibraryModal({
                                 } ${st.ghost ? 'opacity-60 scale-90' : ''}`}
                               >
                                 {st.flam && (
-                                  <span className="text-[8px] font-serif absolute -top-1.5 -left-1 text-amber-400">
+                                  <span className="text-[8px] font-serif absolute -top-1.5 -left-1 text-amber-400 font-bold">
                                     º
+                                  </span>
+                                )}
+                                {st.drag && (
+                                  <span className="text-[8px] font-serif absolute -top-1.5 -left-1 text-rose-400 font-bold">
+                                    ºº
                                   </span>
                                 )}
                                 <span>{st.ghost ? `(${st.sticking})` : st.sticking}</span>

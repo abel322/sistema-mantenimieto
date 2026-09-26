@@ -151,6 +151,7 @@ export interface DrumHit {
   ghost?: boolean;
   sticking?: 'R' | 'L' | 'K' | 'B' | string;
   flam?: boolean;
+  drag?: boolean;
 }
 
 export interface DrumStep {
@@ -159,18 +160,22 @@ export interface DrumStep {
   isRest?: boolean;
   sticking?: 'R' | 'L' | 'K' | 'B' | string;
   flam?: boolean;
+  drag?: boolean;
 }
 
 export type VoicingMode = 'snare' | 'kit';
 
-export type RudimentCategory = 'rolls' | 'diddles' | 'flams' | 'linear-chops';
+export type RudimentCategory = 'rolls' | 'diddles' | 'flams' | 'drags' | 'linear-chops';
 
 export interface RudimentStep {
   sticking: 'R' | 'L' | 'K' | 'B' | string; // Right hand, Left hand, Kick, Both
   accent?: boolean;
   ghost?: boolean;
   flam?: boolean;
+  drag?: boolean;
   kitPiece?: DrumPieceId; // Voicing assignment when in Kit/Chops mode
+  instrument?: DrumPieceId;
+  hand?: 'R' | 'L' | 'K' | 'B' | string;
 }
 
 export interface RudimentItem {
@@ -179,10 +184,12 @@ export interface RudimentItem {
   category: RudimentCategory;
   difficulty: 'Principiante' | 'Intermedio' | 'Avanzado';
   description: string;
-  subdivision: number; // 4 (16th), 3 (triplet 3:2), 6 (sextuplet 6:4), 2 (8th), 5 (quintuplet)
+  subdivision: number; // 4 (16th), 3 (triplet 3:2), 6 (sextuplet 6:4), 2 (8th), 5 (quintuplet 5:4), 8 (32nd)
   defaultBpm: number;
   steps: RudimentStep[];
   tags: string[];
+  sticking?: string[];
+  kitVoicing?: DrumPieceId[];
 }
 
 export interface DrumBeat {

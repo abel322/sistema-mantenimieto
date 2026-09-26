@@ -252,31 +252,51 @@ export default function DrumScoreRenderer({
                   } catch (_) {}
                 }
 
-                // Flam grace note (or fallback annotation)
+                // Flam or Drag grace notes (or fallback annotation)
                 const isFlam = step.flam || step.hits.some((h) => h.flam);
-                if (isFlam) {
-                  let flamAdded = false;
+                const isDrag = step.drag || step.hits.some((h) => h.drag);
+                if (isFlam || isDrag) {
+                  let graceAdded = false;
                   if (GraceNote && GraceNoteGroup) {
                     try {
                       const graceKey = DRUM_PIECES[sortedHits[0]?.pieceId]?.keyPos || 'c/5';
-                      const graceNote = new GraceNote({
-                        keys: [graceKey],
-                        duration: '16',
-                        slash: true,
-                        clef: 'percussion',
-                      });
-                      graceNote.setStyle({ fillStyle: '#94A3B8', strokeStyle: '#94A3B8' });
-                      const graceGroup = new GraceNoteGroup([graceNote], true);
+                      const graceNotes = isDrag
+                        ? [
+                            new GraceNote({
+                              keys: [graceKey],
+                              duration: '32',
+                              slash: false,
+                              clef: 'percussion',
+                            }),
+                            new GraceNote({
+                              keys: [graceKey],
+                              duration: '32',
+                              slash: false,
+                              clef: 'percussion',
+                            }),
+                          ]
+                        : [
+                            new GraceNote({
+                              keys: [graceKey],
+                              duration: '16',
+                              slash: true,
+                              clef: 'percussion',
+                            }),
+                          ];
+                      graceNotes.forEach((g: any) =>
+                        g.setStyle({ fillStyle: '#94A3B8', strokeStyle: '#94A3B8' })
+                      );
+                      const graceGroup = new GraceNoteGroup(graceNotes, true);
                       staveNote.addModifier(graceGroup, 0);
-                      flamAdded = true;
+                      graceAdded = true;
                     } catch (_) {}
                   }
-                  if (!flamAdded && Annotation) {
+                  if (!graceAdded && Annotation) {
                     try {
-                      const flamAnn = new Annotation('flam');
-                      flamAnn.setFont('sans-serif', 9, 'bold');
-                      flamAnn.setVerticalJustification(Annotation.VerticalJustify.TOP);
-                      staveNote.addModifier(flamAnn, 0);
+                      const graceAnn = new Annotation(isDrag ? 'drag' : 'flam');
+                      graceAnn.setFont('sans-serif', 9, 'bold');
+                      graceAnn.setVerticalJustification(Annotation.VerticalJustify.TOP);
+                      staveNote.addModifier(graceAnn, 0);
                     } catch (_) {}
                   }
                 }

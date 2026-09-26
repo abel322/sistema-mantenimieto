@@ -583,6 +583,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
       ghost: rudStep.ghost,
       sticking: rudStep.sticking,
       flam: rudStep.flam,
+      drag: rudStep.drag,
     };
 
     return {
@@ -591,6 +592,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
       isRest: false,
       sticking: rudStep.sticking,
       flam: rudStep.flam,
+      drag: rudStep.drag,
     };
   };
 
