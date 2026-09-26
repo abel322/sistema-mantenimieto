@@ -108,7 +108,7 @@ export default function DrumLegendModal({ isOpen, onClose }: DrumLegendModalProp
 
             <div className="p-3 rounded-xl bg-surface-slate border border-white/5 space-y-2">
               <div className="font-semibold text-gray-300 pb-1 border-b border-white/5">
-                Dinámicas & Subdivisiones
+                Dinámicas & Figuras
               </div>
               <div className="flex justify-between font-mono text-gray-400">
                 <span>Acento (&gt;):</span>
@@ -119,12 +119,20 @@ export default function DrumLegendModal({ isOpen, onClose }: DrumLegendModalProp
                 <span className="text-purple-400 font-bold">G o (</span>
               </div>
               <div className="flex justify-between font-mono text-gray-400">
-                <span>Subdivisión binaria:</span>
-                <span className="text-synth-cyan font-bold">1 (1/4), 2 (1/8), 4 (1/16)</span>
+                <span>Silencio percusivo:</span>
+                <span className="text-sky-400 font-bold">Z o 0</span>
+              </div>
+              <div className="flex justify-between font-mono text-gray-400">
+                <span>Redonda / Blanca:</span>
+                <span className="text-synth-cyan font-bold">W (1/1) / Y (1/2)</span>
+              </div>
+              <div className="flex justify-between font-mono text-gray-400">
+                <span>Subdivisión regular:</span>
+                <span className="text-synth-cyan font-bold">1 (1/4), 2 (1/8), 4 (1/16), 8 (1/32)</span>
               </div>
               <div className="flex justify-between font-mono text-gray-400">
                 <span>Tuplets irregulares:</span>
-                <span className="text-purple-300 font-bold">3 (3:2), 5 (5:4), 6 (6:4), 7 (7:4)</span>
+                <span className="text-purple-300 font-bold">3, 5, 6, 7 y 9 (Nonillo 9:8)</span>
               </div>
             </div>
           </div>

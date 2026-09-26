@@ -55,7 +55,7 @@ export default function DrumScoreRenderer({
         const vf = await import('vexflow');
         if (isCancelled || !containerRef.current) return;
 
-        const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Tuplet, Articulation, Annotation } = vf;
+        const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Tuplet, Articulation, Annotation, Parenthesis, Modifier } = vf;
         const Glyphs = (vf as any).Glyphs || {};
 
         // Initialize SVG Renderer
@@ -97,19 +97,22 @@ export default function DrumScoreRenderer({
             beat.steps.forEach((step, sIdx) => {
               const sub = beat.subdivision || 1;
               let vexDuration = '16';
-              if (sub === 1) vexDuration = '4';
+              if (sub === 0.25 || beat.noteDurationType === 'w') vexDuration = 'w';
+              else if (sub === 0.5 || beat.noteDurationType === 'h') vexDuration = 'h';
+              else if (sub === 1 || beat.noteDurationType === 'q') vexDuration = '4';
               else if (sub === 2 || sub === 3) vexDuration = '8';
               else if (sub === 4 || sub === 5 || sub === 6 || sub === 7) vexDuration = '16';
-              else if (sub === 8) vexDuration = '32';
+              else if (sub === 8 || sub === 9) vexDuration = '32';
 
               const hasHits = step.hits && step.hits.length > 0;
+              const isRest = step.isRest || !hasHits;
 
               let staveNote: any;
 
-              if (!hasHits) {
-                // Render as rest
+              if (isRest) {
+                // Render as rest centered on standard middle line (b/4)
                 staveNote = new StaveNote({
-                  keys: ['c/5'],
+                  keys: ['b/4'],
                   duration: `${vexDuration}r`,
                   clef: 'percussion',
                 });
@@ -165,16 +168,29 @@ export default function DrumScoreRenderer({
                   } catch (_) {}
                 }
 
-                // Ghost note annotation "( )"
-                const hasGhost = step.hits.some((h) => h.ghost);
-                if (hasGhost) {
-                  try {
-                    const ann = new Annotation('( )');
-                    ann.setFont('sans-serif', 10, 'normal');
-                    ann.setVerticalJustification(Annotation.VerticalJustify.BOTTOM);
-                    staveNote.addModifier(ann, 0);
-                  } catch (_) {}
-                }
+                // Ghost note: Enclose notehead directly in parentheses without displacing stems/beams
+                sortedHits.forEach((hit, keyIndex) => {
+                  if (hit.ghost) {
+                    let attached = false;
+                    if (Parenthesis && Modifier?.Position) {
+                      try {
+                        const leftParen = new Parenthesis(Modifier.Position.LEFT);
+                        const rightParen = new Parenthesis(Modifier.Position.RIGHT);
+                        staveNote.addModifier(leftParen, keyIndex);
+                        staveNote.addModifier(rightParen, keyIndex);
+                        attached = true;
+                      } catch (_) {}
+                    }
+                    if (!attached) {
+                      try {
+                        const ann = new Annotation('( )');
+                        ann.setFont('sans-serif', 11, 'bold');
+                        ann.setVerticalJustification(Annotation.VerticalJustify.CENTER);
+                        staveNote.addModifier(ann, keyIndex);
+                      } catch (_) {}
+                    }
+                  }
+                });
 
                 // Note styling (cyan/violet neon vibe)
                 staveNote.setStyle({ fillStyle: '#38BDF8', strokeStyle: '#38BDF8' });
@@ -185,10 +201,22 @@ export default function DrumScoreRenderer({
               stepMapping.push({ bIdx, sIdx, note: staveNote });
             });
 
-            // Handle Tuplets (3:2, 5:4, 6:4, 7:4)
+            // Handle Tuplets (3:2, 5:4, 6:4, 7:4, 9:8)
             if (beat.isTuplet && beatNotes.length > 1) {
               try {
-                const ratio = beat.tupletRatio || [beat.subdivision, beat.subdivision <= 3 ? 2 : 4];
+                const ratioMap: Record<number, [number, number]> = {
+                  3: [3, 2],
+                  5: [5, 4],
+                  6: [6, 4],
+                  7: [7, 4],
+                  9: [9, 8],
+                };
+                const ratio =
+                  beat.tupletRatio ||
+                  ratioMap[beat.subdivision] || [
+                    beat.subdivision,
+                    beat.subdivision <= 3 ? 2 : beat.subdivision === 9 ? 8 : 4,
+                  ];
                 const tuplet = new Tuplet(beatNotes, {
                   numNotes: ratio[0],
                   notesOccupied: ratio[1],
@@ -198,8 +226,8 @@ export default function DrumScoreRenderer({
               } catch (e) {
                 console.warn('Tuplet formatting skipped:', e);
               }
-            } else if (beatNotes.length >= 2) {
-              // Beaming for regular subdivisions (8ths, 16ths)
+            } else if (beatNotes.length >= 2 && beat.subdivision >= 2) {
+              // Beaming for regular subdivisions (8ths, 16ths, 32nds)
               try {
                 const beams = Beam.generateBeams(beatNotes);
                 beams.forEach((b: any) => measureBeams.push(b));

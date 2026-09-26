@@ -339,7 +339,12 @@ export function useDrumAudio() {
         measure.beats.forEach((beat, bIdx) => {
           const beatStartTime = measureStartTime + bIdx * beatDuration;
           const sub = beat.subdivision || 1;
-          const stepDuration = beatDuration / sub;
+          const stepDuration =
+            sub === 0.25
+              ? beatDuration * 4
+              : sub === 0.5
+              ? beatDuration * 2
+              : beatDuration / sub;
 
           // Schedule metronome click at beat start
           Tone.Transport.schedule((time: number) => {
@@ -350,10 +355,12 @@ export function useDrumAudio() {
             const stepTime = beatStartTime + sIdx * stepDuration;
 
             Tone.Transport.schedule((time: number) => {
-              // Trigger hits for this step
-              step.hits.forEach((hit) => {
-                playHit(hit.pieceId, hit.accent, hit.ghost, time);
-              });
+              // Trigger hits for this step only if NOT a rest
+              if (!step.isRest && step.hits && step.hits.length > 0) {
+                step.hits.forEach((hit) => {
+                  playHit(hit.pieceId, hit.accent, hit.ghost, time);
+                });
+              }
 
               // Update playhead visual position via Tone.Draw for UI sync
               Tone.Draw.schedule(() => {

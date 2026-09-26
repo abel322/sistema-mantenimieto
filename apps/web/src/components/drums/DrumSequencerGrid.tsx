@@ -72,8 +72,31 @@ export default function DrumSequencerGrid({
                   >
                     <div className="flex items-center justify-between w-full px-1 text-[10px]">
                       <span className="font-bold">TIEMPO {bIdx + 1}</span>
-                      <span className="text-[9px] opacity-75">
-                        {beat.subdivision} {beat.isTuplet ? 'Tup' : 'Sub'}
+                      <span className="text-[9px] opacity-75 font-mono">
+                        {beat.subdivision === 0.25
+                          ? '1/1'
+                          : beat.subdivision === 0.5
+                          ? '1/2'
+                          : beat.subdivision === 1
+                          ? '1/4'
+                          : beat.subdivision === 2
+                          ? '1/8'
+                          : beat.subdivision === 3
+                          ? '3:2'
+                          : beat.subdivision === 4
+                          ? '1/16'
+                          : beat.subdivision === 5
+                          ? '5:4'
+                          : beat.subdivision === 6
+                          ? '6:4'
+                          : beat.subdivision === 7
+                          ? '7:4'
+                          : beat.subdivision === 8
+                          ? '1/32'
+                          : beat.subdivision === 9
+                          ? '9:8'
+                          : beat.subdivision}{' '}
+                        {beat.isTuplet ? 'Tup' : ''}
                       </span>
                     </div>
 

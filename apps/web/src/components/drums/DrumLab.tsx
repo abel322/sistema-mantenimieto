@@ -175,6 +175,27 @@ export default function DrumLab() {
         return;
       }
 
+      // Rest (Silencio): Z or 0
+      if (key === 'Z' || key === '0') {
+        e.preventDefault();
+        score.toggleRest();
+        return;
+      }
+
+      // Whole note (Redonda 1/1): W
+      if (key === 'W') {
+        e.preventDefault();
+        score.changeBeatSubdivision(0.25);
+        return;
+      }
+
+      // Half note (Blanca 1/2): Y
+      if (key === 'Y') {
+        e.preventDefault();
+        score.changeBeatSubdivision(0.5);
+        return;
+      }
+
       // Delete / Backspace: Clear step
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
@@ -182,9 +203,9 @@ export default function DrumLab() {
         return;
       }
 
-      // Number keys 1-8: Quick subdivision changer
+      // Number keys 1-9: Quick subdivision changer (includes 9:8 Nonillo)
       const num = parseInt(e.key, 10);
-      if (num >= 1 && num <= 8) {
+      if (num >= 1 && num <= 9) {
         e.preventDefault();
         score.changeBeatSubdivision(num);
         return;
@@ -286,9 +307,13 @@ export default function DrumLab() {
         hasAccent={currentHasAccent}
         hasGhost={currentHasGhost}
         hasHits={currentStepHits.length > 0}
+        isAccentMode={score.isAccentMode}
+        isGhostMode={score.isGhostMode}
+        isRest={score.selectedStep?.isRest}
         onChangeSubdivision={(sub) => score.changeBeatSubdivision(sub)}
         onToggleAccent={score.toggleAccent}
         onToggleGhost={score.toggleGhost}
+        onToggleRest={score.toggleRest}
         onClearStep={score.clearStep}
         onClearMeasure={score.clearMeasure}
         onOpenLegend={() => setIsLegendOpen(true)}

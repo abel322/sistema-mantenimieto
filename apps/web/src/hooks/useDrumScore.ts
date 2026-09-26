@@ -11,20 +11,36 @@ import {
 } from '@/types/drum';
 import { DRUM_PRESETS } from '@/lib/drumPresets';
 
-function createEmptyBeat(measureId: string, beatIndex: number, subdivision: number = 4): DrumBeat {
-  const isTuplet = [3, 5, 6, 7].includes(subdivision);
+function createEmptyBeat(
+  measureId: string,
+  beatIndex: number,
+  subdivision: number = 4
+): DrumBeat {
+  const isTuplet = [3, 5, 6, 7, 9].includes(subdivision);
   const ratioMap: Record<number, [number, number]> = {
     3: [3, 2],
     5: [5, 4],
     6: [6, 4],
     7: [7, 4],
+    9: [9, 8],
   };
 
+  const stepsCount = subdivision < 1 ? 1 : subdivision;
+  const noteDurationType =
+    subdivision === 0.25
+      ? 'w'
+      : subdivision === 0.5
+      ? 'h'
+      : subdivision === 1
+      ? 'q'
+      : undefined;
+
   const steps: DrumStep[] = [];
-  for (let s = 0; s < subdivision; s++) {
+  for (let s = 0; s < stepsCount; s++) {
     steps.push({
       id: `${measureId}-b${beatIndex}-s${s}`,
       hits: [],
+      isRest: false,
     });
   }
 
@@ -32,6 +48,7 @@ function createEmptyBeat(measureId: string, beatIndex: number, subdivision: numb
     id: `${measureId}-b${beatIndex}`,
     beatIndex,
     subdivision,
+    noteDurationType,
     isTuplet,
     tupletRatio: isTuplet ? ratioMap[subdivision] : undefined,
     steps,
@@ -55,6 +72,10 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
   );
   const [timeSignature, setTimeSignatureState] = useState<[number, number]>(defaultPreset.timeSignature);
   const [activePresetId, setActivePresetId] = useState<string | null>(defaultPreset.id);
+
+  // Active insertion modes (for clicking Acento [A] or Ghost [G] on empty or future notes)
+  const [isAccentMode, setIsAccentMode] = useState(false);
+  const [isGhostMode, setIsGhostMode] = useState(false);
 
   // Selection cursor
   const [selectedMeasureIndex, setSelectedMeasureIndex] = useState(0);
@@ -144,7 +165,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     [measures, selectedMeasure, selectedBeat, selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]
   );
 
-  // Change subdivision of a beat (supports regular & tuplets 3:2, 5:4, 6:4, 7:4)
+  // Change subdivision of a beat (supports Redonda 0.25, Blanca 0.5, regular & tuplets 3:2, 5:4, 6:4, 7:4, 9:8)
   const changeBeatSubdivision = useCallback(
     (newSubdivision: number, mIdx: number = selectedMeasureIndex, bIdx: number = selectedBeatIndex) => {
       setMeasures((prev) => {
@@ -154,27 +175,39 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
         const targetBeat = targetMeasure.beats[bIdx];
         if (!targetBeat) return prev;
 
-        const isTuplet = [3, 5, 6, 7].includes(newSubdivision);
+        const isTuplet = [3, 5, 6, 7, 9].includes(newSubdivision);
         const ratioMap: Record<number, [number, number]> = {
           3: [3, 2],
           5: [5, 4],
           6: [6, 4],
           7: [7, 4],
+          9: [9, 8],
         };
 
+        const noteDurationType =
+          newSubdivision === 0.25
+            ? 'w'
+            : newSubdivision === 0.5
+            ? 'h'
+            : newSubdivision === 1
+            ? 'q'
+            : undefined;
+
+        const stepsCount = newSubdivision < 1 ? 1 : newSubdivision;
         const oldSteps = targetBeat.steps;
         const newSteps: DrumStep[] = [];
 
-        for (let s = 0; s < newSubdivision; s++) {
-          // Preserve previous hits if existing at same index
+        for (let s = 0; s < stepsCount; s++) {
           const prevHits = oldSteps[s]?.hits ? [...oldSteps[s].hits] : [];
           newSteps.push({
             id: `${targetMeasure.id}-b${bIdx}-s${s}`,
             hits: prevHits,
+            isRest: prevHits.length === 0,
           });
         }
 
         targetBeat.subdivision = newSubdivision;
+        targetBeat.noteDurationType = noteDurationType;
         targetBeat.isTuplet = isTuplet;
         targetBeat.tupletRatio = isTuplet ? ratioMap[newSubdivision] : undefined;
         targetBeat.steps = newSteps;
@@ -182,8 +215,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
         return next;
       });
 
-      // Clamp step cursor if previous step was out of bounds
-      setSelectedStepIndex((prev) => Math.min(prev, newSubdivision - 1));
+      setSelectedStepIndex((prev) => Math.min(prev, (newSubdivision < 1 ? 1 : newSubdivision) - 1));
       setActivePresetId(null);
     },
     [selectedMeasureIndex, selectedBeatIndex]
@@ -206,21 +238,29 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
         const targetStep = targetBeat.steps[sIdx];
         if (!targetStep) return prev;
 
+        // Reset rest flag when adding a note
+        targetStep.isRest = false;
+
         const existingIdx = targetStep.hits.findIndex((h) => h.pieceId === pieceId);
 
         // Hi-Hat special cycling: closed -> open -> none
         if (pieceId === 'hihatClosed') {
           const openIdx = targetStep.hits.findIndex((h) => h.pieceId === 'hihatOpen');
           if (existingIdx >= 0) {
-            // Switch closed to open
             targetStep.hits.splice(existingIdx, 1);
-            targetStep.hits.push({ pieceId: 'hihatOpen' });
+            targetStep.hits.push({
+              pieceId: 'hihatOpen',
+              accent: isAccentMode,
+              ghost: isGhostMode,
+            });
           } else if (openIdx >= 0) {
-            // Remove hihat completely
             targetStep.hits.splice(openIdx, 1);
           } else {
-            // Add closed hihat
-            targetStep.hits.push({ pieceId: 'hihatClosed' });
+            targetStep.hits.push({
+              pieceId: 'hihatClosed',
+              accent: isAccentMode,
+              ghost: isGhostMode,
+            });
           }
         } else if (pieceId === 'hihatOpen') {
           const closedIdx = targetStep.hits.findIndex((h) => h.pieceId === 'hihatClosed');
@@ -230,14 +270,22 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
           if (existingIdx >= 0) {
             targetStep.hits.splice(existingIdx, 1);
           } else {
-            targetStep.hits.push({ pieceId: 'hihatOpen' });
+            targetStep.hits.push({
+              pieceId: 'hihatOpen',
+              accent: isAccentMode,
+              ghost: isGhostMode,
+            });
           }
         } else {
           // Standard toggle
           if (existingIdx >= 0) {
             targetStep.hits.splice(existingIdx, 1);
           } else {
-            targetStep.hits.push({ pieceId });
+            targetStep.hits.push({
+              pieceId,
+              accent: isAccentMode,
+              ghost: isGhostMode,
+            });
           }
         }
 
@@ -245,35 +293,75 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
       });
       setActivePresetId(null);
     },
-    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]
+    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex, isAccentMode, isGhostMode]
   );
 
-  // Toggle accent on selected step hits
+  // Toggle accent: works on both existing hits AND insertion mode
   const toggleAccent = useCallback(
     (
       mIdx: number = selectedMeasureIndex,
       bIdx: number = selectedBeatIndex,
       sIdx: number = selectedStepIndex
     ) => {
+      let nextAccentState = !isAccentMode;
+
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
         const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
-        if (!targetStep || targetStep.hits.length === 0) return prev;
+        if (!targetStep) return prev;
 
-        const currentlyAccented = targetStep.hits.some((h) => h.accent);
-        targetStep.hits.forEach((h) => {
-          h.accent = !currentlyAccented;
-          if (h.accent) h.ghost = false; // mutually exclusive
-        });
+        if (targetStep.hits.length > 0) {
+          const currentlyAccented = targetStep.hits.some((h) => h.accent);
+          nextAccentState = !currentlyAccented;
+          targetStep.hits.forEach((h) => {
+            h.accent = nextAccentState;
+            if (nextAccentState) h.ghost = false;
+          });
+        }
 
         return next;
       });
+
+      setIsAccentMode(nextAccentState);
+      if (nextAccentState) setIsGhostMode(false);
     },
-    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]
+    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex, isAccentMode]
   );
 
-  // Toggle ghost note on selected step hits
+  // Toggle ghost note: works on both existing hits AND insertion mode
   const toggleGhost = useCallback(
+    (
+      mIdx: number = selectedMeasureIndex,
+      bIdx: number = selectedBeatIndex,
+      sIdx: number = selectedStepIndex
+    ) => {
+      let nextGhostState = !isGhostMode;
+
+      setMeasures((prev) => {
+        const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
+        const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
+        if (!targetStep) return prev;
+
+        if (targetStep.hits.length > 0) {
+          const currentlyGhost = targetStep.hits.some((h) => h.ghost);
+          nextGhostState = !currentlyGhost;
+          targetStep.hits.forEach((h) => {
+            h.ghost = nextGhostState;
+            if (nextGhostState) h.accent = false;
+          });
+        }
+
+        return next;
+      });
+
+      setIsGhostMode(nextGhostState);
+      if (nextGhostState) setIsAccentMode(false);
+    },
+    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex, isGhostMode]
+  );
+
+  // Toggle Rest (Silencio): converts active step into a percussion rest
+  const toggleRest = useCallback(
     (
       mIdx: number = selectedMeasureIndex,
       bIdx: number = selectedBeatIndex,
@@ -282,16 +370,14 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
         const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
-        if (!targetStep || targetStep.hits.length === 0) return prev;
+        if (!targetStep) return prev;
 
-        const currentlyGhost = targetStep.hits.some((h) => h.ghost);
-        targetStep.hits.forEach((h) => {
-          h.ghost = !currentlyGhost;
-          if (h.ghost) h.accent = false; // mutually exclusive
-        });
+        targetStep.hits = [];
+        targetStep.isRest = true;
 
         return next;
       });
+      setActivePresetId(null);
     },
     [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]
   );
@@ -308,6 +394,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
         const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
         if (!targetStep) return prev;
         targetStep.hits = [];
+        targetStep.isRest = true;
         return next;
       });
       setActivePresetId(null);
@@ -326,6 +413,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
         targetMeasure.beats.forEach((b) => {
           b.steps.forEach((s) => {
             s.hits = [];
+            s.isRest = true;
           });
         });
 
@@ -349,9 +437,8 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
   // Remove measure
   const removeMeasure = useCallback((mIdx: number) => {
     setMeasures((prev) => {
-      if (prev.length <= 1) return prev; // keep at least 1 measure
-      const next = prev.filter((_, idx) => idx !== mIdx);
-      return next;
+      if (prev.length <= 1) return prev;
+      return prev.filter((_, idx) => idx !== mIdx);
     });
     setSelectedMeasureIndex((prev) => Math.max(0, prev - 1));
     setActivePresetId(null);
@@ -389,12 +476,15 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     selectedMeasure,
     selectedBeat,
     selectedStep,
+    isAccentMode,
+    isGhostMode,
     selectStep,
     navigateStep,
     changeBeatSubdivision,
     toggleDrumPiece,
     toggleAccent,
     toggleGhost,
+    toggleRest,
     clearStep,
     clearMeasure,
     addMeasure,

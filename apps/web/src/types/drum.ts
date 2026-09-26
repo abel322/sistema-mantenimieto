@@ -154,12 +154,14 @@ export interface DrumHit {
 export interface DrumStep {
   id: string;
   hits: DrumHit[];
+  isRest?: boolean;
 }
 
 export interface DrumBeat {
   id: string;
   beatIndex: number;
-  subdivision: number; // 1 (quarter), 2 (8th), 3 (triplet 3:2), 4 (16th), 5 (quintuplet 5:4), 6 (sextuplet 6:4), 7 (septuplet 7:4), 8 (32nd)
+  subdivision: number; // 0.25 (whole), 0.5 (half), 1 (quarter), 2 (8th), 3 (triplet 3:2), 4 (16th), 5 (quintuplet 5:4), 6 (sextuplet 6:4), 7 (septuplet 7:4), 8 (32nd), 9 (nonuplet 9:8)
+  noteDurationType?: 'w' | 'h' | 'q' | '8' | '16' | '32';
   isTuplet?: boolean;
   tupletRatio?: [number, number];
   steps: DrumStep[];
@@ -192,12 +194,16 @@ export interface SubdivisionOption {
 }
 
 export const SUBDIVISION_OPTIONS: SubdivisionOption[] = [
+  { value: 0.25, label: '1/1', nameEs: 'Redonda', shortcut: 'W', isTuplet: false, vexDuration: 'w' },
+  { value: 0.5, label: '1/2', nameEs: 'Blanca', shortcut: 'Y', isTuplet: false, vexDuration: 'h' },
   { value: 1, label: '1/4', nameEs: 'Negra', shortcut: '1', isTuplet: false, vexDuration: '4' },
   { value: 2, label: '1/8', nameEs: 'Corchea', shortcut: '2', isTuplet: false, vexDuration: '8' },
-  { value: 3, label: '3:2', nameEs: 'Tresillo', shortcut: '3', isTuplet: true, ratio: [3, 2], vexDuration: '8' },
   { value: 4, label: '1/16', nameEs: 'Semicorchea', shortcut: '4', isTuplet: false, vexDuration: '16' },
+  { value: 8, label: '1/32', nameEs: 'Fusa', shortcut: '8', isTuplet: false, vexDuration: '32' },
+  // Tuplets
+  { value: 3, label: '3:2', nameEs: 'Tresillo', shortcut: '3', isTuplet: true, ratio: [3, 2], vexDuration: '8' },
   { value: 5, label: '5:4', nameEs: 'Quintillo', shortcut: '5', isTuplet: true, ratio: [5, 4], vexDuration: '16' },
   { value: 6, label: '6:4', nameEs: 'Seisillo', shortcut: '6', isTuplet: true, ratio: [6, 4], vexDuration: '16' },
   { value: 7, label: '7:4', nameEs: 'Septillo', shortcut: '7', isTuplet: true, ratio: [7, 4], vexDuration: '16' },
-  { value: 8, label: '1/32', nameEs: 'Fusa', shortcut: '8', isTuplet: false, vexDuration: '32' },
+  { value: 9, label: '9:8', nameEs: 'Nonillo', shortcut: '9', isTuplet: true, ratio: [9, 8], vexDuration: '32' },
 ];
