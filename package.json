@@ -7,7 +7,7 @@
     "dev": "pnpm --parallel --filter @sonora/web --filter @sonora/api dev",
     "dev:web": "pnpm --filter @sonora/web dev",
     "dev:api": "pnpm --filter @sonora/api dev",
-    "build": "pnpm --recursive run build",
+    "build": "pnpm --filter @sonora/database build && pnpm --filter @sonora/web build",
     "build:api": "pnpm --filter @sonora/database build && pnpm --filter @sonora/api build",
     "build:web": "pnpm --filter @sonora/database build && pnpm --filter @sonora/web build",
     "postinstall": "pnpm --filter @sonora/database build",
@@ -17,6 +17,7 @@
     "db:seed": "pnpm --filter @sonora/database db:seed"
   },
   "devDependencies": {
+    "next": "^15.1.7",
     "typescript": "^5.7.3"
   }
 }
