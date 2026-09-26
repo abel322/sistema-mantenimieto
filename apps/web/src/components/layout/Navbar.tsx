@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, BookOpen, Compass, Headphones, Sparkles } from 'lucide-react';
+import { Activity, BookOpen, Compass, Headphones, Sparkles, Disc } from 'lucide-react';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
 export default function Navbar() {
@@ -12,6 +12,7 @@ export default function Navbar() {
   const navLinks = [
     { label: 'Explore Tracks', href: '/#tracks', icon: Compass },
     { label: 'Sound Studio', href: '/studio', icon: Headphones },
+    { label: 'Drum Lab', href: '/studio/drums', icon: Disc },
     { label: 'My Dashboard', href: '/dashboard', icon: BookOpen },
   ];
 

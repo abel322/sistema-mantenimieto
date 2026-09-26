@@ -1,0 +1,203 @@
+export type DrumPieceId =
+  | 'crash'
+  | 'ride'
+  | 'hihatOpen'
+  | 'hihatClosed'
+  | 'tom1'
+  | 'snare'
+  | 'tom2'
+  | 'floorTom'
+  | 'kick';
+
+export interface DrumPieceInfo {
+  id: DrumPieceId;
+  name: string;
+  shortName: string;
+  shortcut: string;
+  keyPos: string; // Vexflow notation position (e.g. 'g/5', 'c/5', 'f/4')
+  notehead: 'normal' | 'x' | 'circle-x';
+  staffPositionDesc: string;
+  color: string;
+  badgeBg: string;
+  badgeBorder: string;
+}
+
+export const DRUM_PIECES: Record<DrumPieceId, DrumPieceInfo> = {
+  crash: {
+    id: 'crash',
+    name: 'Crash Cymbal',
+    shortName: 'Crash',
+    shortcut: 'C',
+    keyPos: 'a/5',
+    notehead: 'x',
+    staffPositionDesc: 'Línea flotante superior (A5) con "x"',
+    color: '#38BDF8', // Sky 400
+    badgeBg: 'bg-sky-500/20',
+    badgeBorder: 'border-sky-500/40',
+  },
+  ride: {
+    id: 'ride',
+    name: 'Ride Cymbal',
+    shortName: 'Ride',
+    shortcut: 'R',
+    keyPos: 'f/5',
+    notehead: 'x',
+    staffPositionDesc: 'Línea superior pentagrama (F5) con "x"',
+    color: '#22D3EE', // Cyan 400
+    badgeBg: 'bg-cyan-500/20',
+    badgeBorder: 'border-cyan-500/40',
+  },
+  hihatOpen: {
+    id: 'hihatOpen',
+    name: 'Hi-Hat (Open)',
+    shortName: 'H.H. Open',
+    shortcut: 'O',
+    keyPos: 'g/5',
+    notehead: 'circle-x',
+    staffPositionDesc: 'Espacio sobre pentagrama (G5) con "x" circulada',
+    color: '#A78BFA', // Violet 400
+    badgeBg: 'bg-violet-500/20',
+    badgeBorder: 'border-violet-500/40',
+  },
+  hihatClosed: {
+    id: 'hihatClosed',
+    name: 'Hi-Hat (Closed)',
+    shortName: 'H.H. Closed',
+    shortcut: 'H',
+    keyPos: 'g/5',
+    notehead: 'x',
+    staffPositionDesc: 'Espacio sobre pentagrama (G5) con cruz "x"',
+    color: '#818CF8', // Indigo 400
+    badgeBg: 'bg-indigo-500/20',
+    badgeBorder: 'border-indigo-500/40',
+  },
+  tom1: {
+    id: 'tom1',
+    name: 'Rack Tom 1 (High)',
+    shortName: 'Hi-Tom',
+    shortcut: 'T',
+    keyPos: 'd/5',
+    notehead: 'normal',
+    staffPositionDesc: 'Cuarto espacio (D5)',
+    color: '#F472B6', // Pink 400
+    badgeBg: 'bg-pink-500/20',
+    badgeBorder: 'border-pink-500/40',
+  },
+  snare: {
+    id: 'snare',
+    name: 'Snare Drum',
+    shortName: 'Snare',
+    shortcut: 'S',
+    keyPos: 'c/5',
+    notehead: 'normal',
+    staffPositionDesc: 'Tercer espacio (C5)',
+    color: '#F59E0B', // Amber 500
+    badgeBg: 'bg-amber-500/20',
+    badgeBorder: 'border-amber-500/40',
+  },
+  tom2: {
+    id: 'tom2',
+    name: 'Rack Tom 2 (Mid)',
+    shortName: 'Mid-Tom',
+    shortcut: 'M',
+    keyPos: 'b/4',
+    notehead: 'normal',
+    staffPositionDesc: 'Tercera línea (B4)',
+    color: '#FB7185', // Rose 400
+    badgeBg: 'bg-rose-500/20',
+    badgeBorder: 'border-rose-500/40',
+  },
+  floorTom: {
+    id: 'floorTom',
+    name: 'Floor Tom (Low)',
+    shortName: 'Floor Tom',
+    shortcut: 'F',
+    keyPos: 'a/4',
+    notehead: 'normal',
+    staffPositionDesc: 'Segundo espacio (A4)',
+    color: '#C084FC', // Purple 400
+    badgeBg: 'bg-purple-500/20',
+    badgeBorder: 'border-purple-500/40',
+  },
+  kick: {
+    id: 'kick',
+    name: 'Bass Drum (Kick)',
+    shortName: 'Kick',
+    shortcut: 'K',
+    keyPos: 'f/4',
+    notehead: 'normal',
+    staffPositionDesc: 'Primer espacio inferior (F4)',
+    color: '#10B981', // Emerald 500
+    badgeBg: 'bg-emerald-500/20',
+    badgeBorder: 'border-emerald-500/40',
+  },
+};
+
+export const DRUM_ORDER: DrumPieceId[] = [
+  'crash',
+  'ride',
+  'hihatOpen',
+  'hihatClosed',
+  'tom1',
+  'snare',
+  'tom2',
+  'floorTom',
+  'kick',
+];
+
+export interface DrumHit {
+  pieceId: DrumPieceId;
+  accent?: boolean;
+  ghost?: boolean;
+}
+
+export interface DrumStep {
+  id: string;
+  hits: DrumHit[];
+}
+
+export interface DrumBeat {
+  id: string;
+  beatIndex: number;
+  subdivision: number; // 1 (quarter), 2 (8th), 3 (triplet 3:2), 4 (16th), 5 (quintuplet 5:4), 6 (sextuplet 6:4), 7 (septuplet 7:4), 8 (32nd)
+  isTuplet?: boolean;
+  tupletRatio?: [number, number];
+  steps: DrumStep[];
+}
+
+export interface DrumMeasure {
+  id: string;
+  timeSignature: [number, number]; // [beats, beatValue], e.g. [4, 4] or [7, 8]
+  beats: DrumBeat[];
+}
+
+export interface DrumPreset {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  bpm: number;
+  timeSignature: [number, number];
+  measures: DrumMeasure[];
+}
+
+export interface SubdivisionOption {
+  value: number;
+  label: string;
+  nameEs: string;
+  shortcut: string;
+  isTuplet: boolean;
+  ratio?: [number, number];
+  vexDuration: string;
+}
+
+export const SUBDIVISION_OPTIONS: SubdivisionOption[] = [
+  { value: 1, label: '1/4', nameEs: 'Negra', shortcut: '1', isTuplet: false, vexDuration: '4' },
+  { value: 2, label: '1/8', nameEs: 'Corchea', shortcut: '2', isTuplet: false, vexDuration: '8' },
+  { value: 3, label: '3:2', nameEs: 'Tresillo', shortcut: '3', isTuplet: true, ratio: [3, 2], vexDuration: '8' },
+  { value: 4, label: '1/16', nameEs: 'Semicorchea', shortcut: '4', isTuplet: false, vexDuration: '16' },
+  { value: 5, label: '5:4', nameEs: 'Quintillo', shortcut: '5', isTuplet: true, ratio: [5, 4], vexDuration: '16' },
+  { value: 6, label: '6:4', nameEs: 'Seisillo', shortcut: '6', isTuplet: true, ratio: [6, 4], vexDuration: '16' },
+  { value: 7, label: '7:4', nameEs: 'Septillo', shortcut: '7', isTuplet: true, ratio: [7, 4], vexDuration: '16' },
+  { value: 8, label: '1/32', nameEs: 'Fusa', shortcut: '8', isTuplet: false, vexDuration: '32' },
+];

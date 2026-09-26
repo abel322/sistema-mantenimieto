@@ -76,6 +76,13 @@ export default function StudioPage() {
           >
             A/B Waveform Lab
           </button>
+          <Link
+            href="/studio/drums"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold text-synth-cyan hover:bg-synth-cyan/10 border border-synth-cyan/30 transition-all flex items-center gap-1.5 shadow-sm"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-synth-cyan animate-pulse" />
+            <span>Drum Lab</span>
+          </Link>
         </div>
       </div>
 

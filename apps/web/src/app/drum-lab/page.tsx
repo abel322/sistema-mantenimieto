@@ -1,0 +1,17 @@
+import React from 'react';
+import type { Metadata } from 'next';
+import DrumLab from '@/components/drums/DrumLab';
+
+export const metadata: Metadata = {
+  title: 'Sonora Drum Lab | Interactive Percussion Studio & Polyrhythmic Sequencer',
+  description:
+    'Advanced drum score editor and polyrhythmic sequencer powered by VexFlow and Tone.js. Edit standard 5-line percussion sheet music with irregular tuplets, ghost notes, and low-latency audio synthesis.',
+};
+
+export default function DrumLabDirectPage() {
+  return (
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+      <DrumLab />
+    </div>
+  );
+}
