@@ -9,6 +9,8 @@ import {
   Volume2,
   Bell,
   Plus,
+  Minus,
+  X,
   RotateCcw,
   Sparkles,
   Music,
@@ -36,6 +38,7 @@ interface DrumTransportProps {
   onSelectPreset: (preset: DrumPreset) => void;
   onSetTimeSignature: (ts: [number, number]) => void;
   onAddMeasure: () => void;
+  onRemoveMeasure?: (index?: number) => void;
   onClearMeasure: () => void;
   onSelectMeasureIndex?: (index: number) => void;
   onOpenRudiments?: () => void;
@@ -61,6 +64,7 @@ export default function DrumTransport({
   onSelectPreset,
   onSetTimeSignature,
   onAddMeasure,
+  onRemoveMeasure,
   onClearMeasure,
   onSelectMeasureIndex,
   onOpenRudiments,
@@ -222,19 +226,33 @@ export default function DrumTransport({
               {Array.from({ length: measuresCount }).map((_, idx) => {
                 const isCurrent = selectedMeasureIndex === idx;
                 return (
-                  <button
-                    key={`m-btn-${idx}`}
-                    type="button"
-                    onClick={() => onSelectMeasureIndex?.(idx)}
-                    className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                      isCurrent
-                        ? 'bg-synth-cyan text-black shadow-glow-cyan'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                    title={`Seleccionar Compás ${idx + 1}`}
-                  >
-                    C{idx + 1}
-                  </button>
+                  <div key={`m-btn-${idx}`} className="group/pill relative flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => onSelectMeasureIndex?.(idx)}
+                      className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        isCurrent
+                          ? 'bg-synth-cyan text-black shadow-glow-cyan'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                      title={`Seleccionar Compás ${idx + 1}`}
+                    >
+                      <span>C{idx + 1}</span>
+                    </button>
+                    {measuresCount > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveMeasure?.(idx);
+                        }}
+                        className="opacity-0 group-hover/pill:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-rose-500/20 text-gray-500 hover:text-rose-400 transition-all cursor-pointer -ml-1 mr-0.5"
+                        title={`Eliminar Compás C${idx + 1}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -242,6 +260,7 @@ export default function DrumTransport({
 
           {/* Add Measure */}
           <button
+            type="button"
             onClick={onAddMeasure}
             className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-300 hover:text-synth-cyan hover:border-synth-cyan/40 transition-all cursor-pointer"
             title="Añadir Compás"
@@ -249,8 +268,24 @@ export default function DrumTransport({
             <Plus className="w-4 h-4" />
           </button>
 
+          {/* Remove Measure */}
+          <button
+            type="button"
+            onClick={() => onRemoveMeasure?.(measuresCount - 1)}
+            disabled={measuresCount <= 1}
+            className={`p-2 rounded-xl border transition-all select-none ${
+              measuresCount <= 1
+                ? 'bg-surface-slate/30 border-white/5 text-gray-600 cursor-not-allowed opacity-40'
+                : 'bg-surface-slate border-white/10 text-gray-300 hover:text-rose-400 hover:border-rose-500/40 cursor-pointer'
+            }`}
+            title={measuresCount <= 1 ? 'Mínimo 1 compás requerido' : 'Eliminar Último Compás'}
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+
           {/* Clear Measure */}
           <button
+            type="button"
             onClick={onClearMeasure}
             className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-rose-400 hover:border-rose-500/40 transition-all cursor-pointer"
             title="Limpiar Compás Activo"

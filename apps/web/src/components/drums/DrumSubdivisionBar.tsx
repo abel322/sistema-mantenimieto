@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SUBDIVISION_OPTIONS } from '@/types/drum';
-import { Sparkles, Zap, Trash2, HelpCircle } from 'lucide-react';
+import { Sparkles, Zap, Trash2, HelpCircle, RotateCcw, X } from 'lucide-react';
 
 interface DrumSubdivisionBarProps {
   selectedBeatIndex: number;
+  selectedMeasureIndex?: number;
+  measuresCount?: number;
   currentSubdivision: number;
   isTuplet?: boolean;
   hasAccent?: boolean;
@@ -20,11 +22,14 @@ interface DrumSubdivisionBarProps {
   onToggleRest: () => void;
   onClearStep: () => void;
   onClearMeasure: () => void;
+  onRemoveMeasure?: () => void;
   onOpenLegend: () => void;
 }
 
 export default function DrumSubdivisionBar({
   selectedBeatIndex,
+  selectedMeasureIndex = 0,
+  measuresCount = 1,
   currentSubdivision,
   isTuplet,
   hasAccent,
@@ -39,8 +44,24 @@ export default function DrumSubdivisionBar({
   onToggleRest,
   onClearStep,
   onClearMeasure,
+  onRemoveMeasure,
   onOpenLegend,
 }: DrumSubdivisionBarProps) {
+  const [isTrashMenuOpen, setIsTrashMenuOpen] = useState(false);
+  const trashMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (trashMenuRef.current && !trashMenuRef.current.contains(e.target as Node)) {
+        setIsTrashMenuOpen(false);
+      }
+    };
+    if (isTrashMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isTrashMenuOpen]);
+
   const regularOptions = SUBDIVISION_OPTIONS.filter((o) => !o.isTuplet);
   const tupletOptions = SUBDIVISION_OPTIONS.filter((o) => o.isTuplet);
 
@@ -169,16 +190,86 @@ export default function DrumSubdivisionBar({
           {isRest && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse ml-0.5" />}
         </button>
 
-        {/* Clear Step Button */}
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onClearStep}
-          className="p-1.5 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-rose-400 hover:border-rose-500/40 transition-all cursor-pointer"
-          title="Borrar Nota Actual [Del / Backspace]"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        {/* Clear & Delete Options Popover Menu */}
+        <div className="relative" ref={trashMenuRef}>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setIsTrashMenuOpen((prev) => !prev)}
+            className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center gap-1 ${
+              isTrashMenuOpen
+                ? 'bg-rose-500/20 border-rose-500/60 text-rose-300 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
+                : 'bg-surface-slate border-white/10 text-gray-400 hover:text-rose-400 hover:border-rose-500/40'
+            }`}
+            title="Opciones de borrado y eliminación de compás"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+
+          {isTrashMenuOpen && (
+            <div className="absolute right-0 bottom-full mb-2 w-64 rounded-2xl bg-surface-dark/95 border border-white/15 p-2 shadow-2xl backdrop-blur-xl z-50 animate-fade-in flex flex-col gap-1 text-xs font-mono">
+              <div className="px-2.5 py-1 text-[10px] text-gray-500 uppercase tracking-wider font-bold border-b border-white/5 mb-1">
+                Opciones de Borrado
+              </div>
+
+              {/* Opción 1: Vaciar compás (convertir a silencios) */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClearMeasure();
+                  setIsTrashMenuOpen(false);
+                }}
+                className="w-full px-2.5 py-2 rounded-xl text-left hover:bg-amber-500/15 hover:text-amber-300 text-gray-300 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-bold">Vaciar compás C{selectedMeasureIndex + 1}</span>
+                  <span className="text-[10px] text-gray-500">Convierte todas las notas en silencios</span>
+                </div>
+              </button>
+
+              {/* Opción 2: Eliminar compás por completo */}
+              <button
+                type="button"
+                disabled={measuresCount <= 1}
+                onClick={() => {
+                  if (onRemoveMeasure) {
+                    onRemoveMeasure();
+                  }
+                  setIsTrashMenuOpen(false);
+                }}
+                className={`w-full px-2.5 py-2 rounded-xl text-left transition-all flex items-center gap-2 ${
+                  measuresCount <= 1
+                    ? 'opacity-40 cursor-not-allowed text-gray-600'
+                    : 'hover:bg-rose-500/15 hover:text-rose-300 text-gray-300 cursor-pointer'
+                }`}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
+                <div className="flex flex-col">
+                  <span className="font-bold">Eliminar compás por completo</span>
+                  <span className="text-[10px] text-gray-500">
+                    {measuresCount <= 1
+                      ? 'No permitido (mínimo 1 compás)'
+                      : `Remueve el Compás C${selectedMeasureIndex + 1}`}
+                  </span>
+                </div>
+              </button>
+
+              {/* Opción 3: Borrar nota activa */}
+              <button
+                type="button"
+                onClick={() => {
+                  onClearStep();
+                  setIsTrashMenuOpen(false);
+                }}
+                className="w-full px-2.5 py-1.5 rounded-xl text-left hover:bg-white/5 hover:text-white text-gray-400 transition-all flex items-center gap-2 cursor-pointer border-t border-white/5 mt-1"
+              >
+                <X className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                <span>Borrar solo nota actual [Del]</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Legend / Shortcut Help Modal Button */}
         <button

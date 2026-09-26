@@ -137,6 +137,13 @@ export default function DrumLab() {
     audio.togglePlay(score.measures);
   }, [audio, score.measures]);
 
+  // Keep Tone.js playback schedule and loop boundaries synced when measures change during playback
+  useEffect(() => {
+    if (audio.isPlaying) {
+      audio.scheduleScore(score.measures);
+    }
+  }, [score.measures, audio.isPlaying, audio.scheduleScore]);
+
   // Load Preset
   const handleSelectPreset = useCallback(
     (preset: DrumPreset) => {
@@ -426,6 +433,7 @@ export default function DrumLab() {
         onSelectPreset={handleSelectPreset}
         onSetTimeSignature={score.setTimeSignature}
         onAddMeasure={score.addMeasure}
+        onRemoveMeasure={score.removeMeasure}
         onClearMeasure={score.clearMeasure}
         onSelectMeasureIndex={(idx) => score.selectStep(idx, 0, 0)}
         onOpenRudiments={() => setIsRudimentsOpen(true)}
@@ -436,6 +444,8 @@ export default function DrumLab() {
       {/* 2. Rapid Subdivision & Dynamics Bar */}
       <DrumSubdivisionBar
         selectedBeatIndex={score.selectedBeatIndex}
+        selectedMeasureIndex={score.selectedMeasureIndex}
+        measuresCount={score.measures.length}
         currentSubdivision={score.selectedBeat?.subdivision || 4}
         isTuplet={score.selectedBeat?.isTuplet}
         hasAccent={currentHasAccent}
@@ -450,6 +460,7 @@ export default function DrumLab() {
         onToggleRest={handleToggleRest}
         onClearStep={handleClearStep}
         onClearMeasure={score.clearMeasure}
+        onRemoveMeasure={() => score.removeMeasure(score.selectedMeasureIndex)}
         onOpenLegend={() => setIsLegendOpen(true)}
       />
 
@@ -473,6 +484,7 @@ export default function DrumLab() {
             isPlaying={audio.isPlaying}
             onSelectStep={score.selectStep}
             onTogglePiece={handleTogglePiece}
+            onRemoveMeasure={score.removeMeasure}
           />
         </section>
       )}

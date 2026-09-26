@@ -472,13 +472,35 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     setActivePresetId(null);
   }, [timeSignature]);
 
-  // Remove measure
-  const removeMeasure = useCallback((mIdx: number) => {
+  // Remove measure (by index or last measure if not specified)
+  const removeMeasure = useCallback((mIdx?: number) => {
     setMeasures((prev) => {
       if (prev.length <= 1) return prev;
-      return prev.filter((_, idx) => idx !== mIdx);
+      const targetIdx =
+        typeof mIdx === 'number' && mIdx >= 0 && mIdx < prev.length
+          ? mIdx
+          : prev.length - 1;
+
+      const filtered = prev.filter((_, idx) => idx !== targetIdx);
+      return filtered.map((measure, idx) => ({
+        ...measure,
+        id: `m${idx + 1}`,
+      }));
     });
-    setSelectedMeasureIndex((prev) => Math.max(0, prev - 1));
+
+    setSelectedMeasureIndex((prevIdx) => {
+      if (prevIdx <= 0) return 0;
+      const targetIdx = typeof mIdx === 'number' ? mIdx : -1;
+      if (targetIdx >= 0 && targetIdx < prevIdx) {
+        return prevIdx - 1;
+      }
+      if (targetIdx === prevIdx) {
+        return Math.max(0, prevIdx - 1);
+      }
+      return prevIdx;
+    });
+    setSelectedBeatIndex(0);
+    setSelectedStepIndex(0);
     setActivePresetId(null);
   }, []);
 

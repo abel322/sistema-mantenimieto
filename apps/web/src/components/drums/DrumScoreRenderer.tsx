@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { X } from 'lucide-react';
 import { DrumMeasure, DrumPieceId, DRUM_PIECES } from '@/types/drum';
 import { PlayheadPosition } from '@/hooks/useDrumAudio';
 
@@ -13,6 +14,7 @@ interface DrumScoreRendererProps {
   isPlaying: boolean;
   onSelectStep: (mIdx: number, bIdx: number, sIdx: number) => void;
   onTogglePiece?: (pieceId: DrumPieceId) => void;
+  onRemoveMeasure?: (index: number) => void;
 }
 
 interface NoteXPosition {
@@ -32,6 +34,7 @@ export default function DrumScoreRenderer({
   playhead,
   isPlaying,
   onSelectStep,
+  onRemoveMeasure,
 }: DrumScoreRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(880);
@@ -473,6 +476,53 @@ export default function DrumScoreRenderer({
         >
           {/* VexFlow Render Canvas Container */}
           <div ref={containerRef} className="w-full h-full pointer-events-none" />
+
+          {/* Measure Section Badges with Contextual Delete Action */}
+          {measures.map((_, mIdx) => {
+            const rowIndex = Math.floor(mIdx / measuresPerRow);
+            const colIndex = mIdx % measuresPerRow;
+            const measureX = 20 + colIndex * currentMeasureWidth;
+            const measureY = 25 + rowIndex * rowHeight;
+            const isMeasureSelected = selectedMeasureIndex === mIdx;
+
+            return (
+              <div
+                key={`measure-badge-${mIdx}`}
+                className="group/stave-hdr absolute z-25 flex items-center gap-1 transition-all"
+                style={{
+                  left: `${measureX + (colIndex === 0 ? 32 : 12)}px`,
+                  top: `${measureY - 14}px`,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelectStep(mIdx, 0, 0)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 border select-none ${
+                    isMeasureSelected
+                      ? 'bg-synth-cyan/20 border-synth-cyan/60 text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
+                      : 'bg-surface-dark/90 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                  }`}
+                  title={`Compás ${mIdx + 1} (Clic para enfocar)`}
+                >
+                  <span>Compás {mIdx + 1}</span>
+                </button>
+
+                {measures.length > 1 && onRemoveMeasure && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveMeasure(mIdx);
+                    }}
+                    className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-surface-dark/95 hover:bg-rose-500/25 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
+                    title={`Eliminar Compás C${mIdx + 1}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
 
           {/* Interactive Step Click Zones & Selection Highlights */}
           {notePositions.map((pos) => {
