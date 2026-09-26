@@ -93,18 +93,27 @@ importers:
 
   apps/web:
     dependencies:
+      '@prisma/client':
+        specifier: ^6.4.1
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
       '@sonora/database':
         specifier: workspace:*
         version: link:../../packages/database
       '@tanstack/react-query':
         specifier: ^5.66.9
         version: 5.102.8(react@19.3.0)
+      bcryptjs:
+        specifier: ^3.0.2
+        version: 3.0.3
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
       framer-motion:
         specifier: ^12.4.7
         version: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.3
       lucide-react:
         specifier: ^0.475.0
         version: 0.475.0(react@19.3.0)
@@ -133,6 +142,12 @@ importers:
         specifier: ^5.0.3
         version: 5.0.15(@types/react@19.3.0)(react@19.3.0)
     devDependencies:
+      '@types/bcryptjs':
+        specifier: ^2.4.6
+        version: 2.4.6
+      '@types/jsonwebtoken':
+        specifier: ^9.0.9
+        version: 9.0.10
       '@types/node':
         specifier: ^22.13.4
         version: 22.20.3
