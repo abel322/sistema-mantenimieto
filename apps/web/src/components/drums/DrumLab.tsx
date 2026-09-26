@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useDrumAudio } from '@/hooks/useDrumAudio';
 import { useDrumScore } from '@/hooks/useDrumScore';
+import { useDrumStorage } from '@/hooks/useDrumStorage';
 import DrumScoreRenderer from './DrumScoreRenderer';
 import DrumSequencerGrid from './DrumSequencerGrid';
 import DrumTransport from './DrumTransport';
 import DrumSubdivisionBar from './DrumSubdivisionBar';
 import DrumLegendModal from './DrumLegendModal';
 import RudimentLibraryModal from './RudimentLibraryModal';
+import SaveExerciseModal from './SaveExerciseModal';
+import ExerciseLibraryModal from './ExerciseLibraryModal';
 import { DrumPieceId, DrumPreset, DRUM_PIECES } from '@/types/drum';
 import {
   Layers,
@@ -19,15 +22,65 @@ import {
   Info,
   Activity,
   Maximize2,
+  Save,
+  FolderOpen,
 } from 'lucide-react';
 
 export default function DrumLab() {
   const [viewMode, setViewMode] = useState<'both' | 'score' | 'grid'>('both');
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isRudimentsOpen, setIsRudimentsOpen] = useState(false);
+  const [isSaveExerciseOpen, setIsSaveExerciseOpen] = useState(false);
+  const [isExerciseLibraryOpen, setIsExerciseLibraryOpen] = useState(false);
 
   const audio = useDrumAudio();
   const score = useDrumScore('classic-rock');
+  const storage = useDrumStorage();
+
+  const hasRestoredSessionRef = useRef(false);
+
+  // Restore draft session on mount
+  useEffect(() => {
+    if (hasRestoredSessionRef.current) return;
+    const draft = storage.loadDraftSession();
+    if (draft && Array.isArray(draft.measures) && draft.measures.length > 0) {
+      score.loadScoreData(
+        draft.measures,
+        draft.timeSignature,
+        draft.activePresetId,
+        draft.selectedMeasureIndex ?? 0,
+        draft.selectedBeatIndex ?? 0,
+        draft.selectedStepIndex ?? 0
+      );
+      if (draft.bpm) {
+        audio.setBpm(draft.bpm);
+      }
+    }
+    hasRestoredSessionRef.current = true;
+  }, [storage, score, audio]);
+
+  // Auto-save draft session on changes (debounced in storage hook)
+  useEffect(() => {
+    if (!hasRestoredSessionRef.current) return;
+    storage.saveDraftSession({
+      measures: score.measures,
+      bpm: audio.bpm,
+      timeSignature: score.timeSignature,
+      activePresetId: score.activePresetId,
+      selectedMeasureIndex: score.selectedMeasureIndex,
+      selectedBeatIndex: score.selectedBeatIndex,
+      selectedStepIndex: score.selectedStepIndex,
+    });
+  }, [
+    score.measures,
+    audio.bpm,
+    score.timeSignature,
+    score.activePresetId,
+    score.selectedMeasureIndex,
+    score.selectedBeatIndex,
+    score.selectedStepIndex,
+    storage,
+  ]);
 
   // Keep audio transport scheduled with updated score measures
   useEffect(() => {
@@ -277,8 +330,33 @@ export default function DrumLab() {
           </p>
         </div>
 
-        {/* Header Actions: Rudiments Vault & View Mode Selector */}
-        <div className="flex items-center gap-3 flex-wrap">
+        {/* Header Actions: Routines, Rudiments Vault & View Mode Selector */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Save Exercise Button */}
+          <button
+            type="button"
+            onClick={() => setIsSaveExerciseOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-500/40 text-gray-300 hover:text-emerald-300 text-xs font-bold font-mono transition-all cursor-pointer shadow-sm"
+            title="Guardar el ejercicio actual como rutina de práctica"
+          >
+            <Save className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Guardar Ejercicio</span>
+          </button>
+
+          {/* Exercise Library (Mis Rutinas) Button */}
+          <button
+            type="button"
+            onClick={() => setIsExerciseLibraryOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-200 text-xs font-bold font-mono transition-all cursor-pointer shadow-sm"
+            title="Ver mis rutinas de práctica guardadas"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-purple-400" />
+            <span>Mis Rutinas</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-purple-500/40 text-purple-200 font-bold">
+              {storage.exercises.length}
+            </span>
+          </button>
+
           {/* Rudiments & Fills Vault Button */}
           <button
             type="button"
@@ -337,6 +415,9 @@ export default function DrumLab() {
         isLooping={audio.isLooping}
         timeSignature={score.timeSignature}
         activePresetId={score.activePresetId}
+        measuresCount={score.measures.length}
+        selectedMeasureIndex={score.selectedMeasureIndex}
+        savedExercisesCount={storage.exercises.length}
         onTogglePlay={handleTogglePlay}
         onStop={audio.stop}
         onSetBpm={audio.setBpm}
@@ -346,7 +427,10 @@ export default function DrumLab() {
         onSetTimeSignature={score.setTimeSignature}
         onAddMeasure={score.addMeasure}
         onClearMeasure={score.clearMeasure}
+        onSelectMeasureIndex={(idx) => score.selectStep(idx, 0, 0)}
         onOpenRudiments={() => setIsRudimentsOpen(true)}
+        onOpenSaveExercise={() => setIsSaveExerciseOpen(true)}
+        onOpenExerciseLibrary={() => setIsExerciseLibraryOpen(true)}
       />
 
       {/* 2. Rapid Subdivision & Dynamics Bar */}
@@ -447,6 +531,41 @@ export default function DrumLab() {
         onInsertInBeat={score.insertRudimentAtBeat}
         onFillMeasure={score.fillMeasureWithRudiment}
         onPlayHit={audio.playHit}
+      />
+
+      {/* Save Exercise Modal */}
+      <SaveExerciseModal
+        isOpen={isSaveExerciseOpen}
+        onClose={() => setIsSaveExerciseOpen(false)}
+        bpm={audio.bpm}
+        timeSignature={score.timeSignature}
+        measures={score.measures}
+        onSave={(title, tags) => {
+          storage.saveExercise({
+            title,
+            tags,
+            bpm: audio.bpm,
+            timeSignature: score.timeSignature,
+            measures: score.measures,
+          });
+        }}
+      />
+
+      {/* Exercise Library Modal ("Mis Rutinas") */}
+      <ExerciseLibraryModal
+        isOpen={isExerciseLibraryOpen}
+        onClose={() => setIsExerciseLibraryOpen(false)}
+        exercises={storage.exercises}
+        onLoadExercise={(exercise) => {
+          audio.stop();
+          score.loadScoreData(exercise.measures, exercise.timeSignature, null, 0, 0, 0);
+          audio.setBpm(exercise.bpm);
+        }}
+        onDeleteExercise={storage.deleteExercise}
+        onExportExercise={storage.exportExerciseToJson}
+        onExportAll={storage.exportAllExercisesToJson}
+        onImportJson={storage.importExercisesFromJson}
+        onOpenSaveCurrent={() => setIsSaveExerciseOpen(true)}
       />
     </div>
   );

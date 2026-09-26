@@ -504,6 +504,32 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     setSelectedStepIndex(0);
   }, []);
 
+  // Restore / Load full score session or exercise
+  const loadScoreData = useCallback(
+    (
+      newMeasures: DrumMeasure[],
+      newTimeSignature?: [number, number],
+      presetId: string | null = null,
+      mIdx: number = 0,
+      bIdx: number = 0,
+      sIdx: number = 0
+    ) => {
+      if (!Array.isArray(newMeasures) || newMeasures.length === 0) return;
+      const cleanMeasures = JSON.parse(JSON.stringify(newMeasures)) as DrumMeasure[];
+      setMeasures(cleanMeasures);
+      if (newTimeSignature) {
+        setTimeSignatureState(newTimeSignature);
+      } else if (cleanMeasures[0]?.timeSignature) {
+        setTimeSignatureState(cleanMeasures[0].timeSignature);
+      }
+      setActivePresetId(presetId);
+      setSelectedMeasureIndex(Math.max(0, Math.min(cleanMeasures.length - 1, mIdx)));
+      setSelectedBeatIndex(Math.max(0, Math.min((cleanMeasures[mIdx]?.beats.length || 1) - 1, bIdx)));
+      setSelectedStepIndex(Math.max(0, sIdx));
+    },
+    []
+  );
+
   // Helper to construct a step from a RudimentStep
   const createStepFromRudiment = (
     rudStep: RudimentStep,
@@ -657,6 +683,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     removeMeasure,
     setTimeSignature,
     loadPreset,
+    loadScoreData,
     insertRudimentAtBeat,
     fillMeasureWithRudiment,
   };

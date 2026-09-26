@@ -20,6 +20,7 @@ interface NoteXPosition {
   beatIndex: number;
   stepIndex: number;
   x: number;
+  y: number;
   width: number;
 }
 
@@ -33,14 +34,33 @@ export default function DrumScoreRenderer({
   onSelectStep,
 }: DrumScoreRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(880);
   const [notePositions, setNotePositions] = useState<NoteXPosition[]>([]);
   const [renderError, setRenderError] = useState<string | null>(null);
 
-  // Calculate layout dimensions
-  const measureWidth = 420;
-  const staveHeight = 150;
-  const totalWidth = Math.max(860, measures.length * measureWidth + 40);
-  const totalHeight = 200;
+  // Responsive container width tracking
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current?.parentElement) {
+        setContainerWidth(Math.max(820, containerRef.current.parentElement.clientWidth));
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
+  // Calculate layout dimensions with responsive stave line-wrapping
+  const minMeasureWidth = 400;
+  const measuresPerRow = Math.max(
+    1,
+    Math.min(measures.length, Math.floor((containerWidth - 40) / minMeasureWidth))
+  );
+  const currentMeasureWidth = Math.floor((containerWidth - 40) / measuresPerRow);
+  const rowHeight = 170;
+  const numRows = Math.ceil(measures.length / measuresPerRow);
+  const totalWidth = containerWidth;
+  const totalHeight = Math.max(200, numRows * rowHeight + 35);
 
   // Render VexFlow score onto container
   useEffect(() => {
@@ -82,20 +102,32 @@ export default function DrumScoreRenderer({
         context.setStrokeStyle('#94A3B8'); // Slate 400
 
         const recordedPositions: NoteXPosition[] = [];
-        let currentX = 20;
 
         measures.forEach((measure, mIdx) => {
           const [beatsCount, beatValue] = measure.timeSignature;
-          const currentMeasureWidth = measureWidth;
+          const rowIndex = Math.floor(mIdx / measuresPerRow);
+          const colIndex = mIdx % measuresPerRow;
+          const measureX = 20 + colIndex * currentMeasureWidth;
+          const measureY = 25 + rowIndex * rowHeight;
 
           // Create percussion stave
-          const stave = new Stave(currentX, 25, currentMeasureWidth);
+          const stave = new Stave(measureX, measureY, currentMeasureWidth);
           stave.setStyle({ fillStyle: '#94A3B8', strokeStyle: '#64748B' });
 
-          if (mIdx === 0) {
+          // Clef at the start of each line
+          if (colIndex === 0) {
             stave.addClef('percussion');
+          }
+
+          // Meter signature at the start of the score
+          if (mIdx === 0) {
             stave.addTimeSignature(`${beatsCount}/${beatValue}`);
           }
+
+          // Measure section badge (e.g., C1, C2...)
+          try {
+            stave.setSection(`C${mIdx + 1}`, 0);
+          } catch (_) {}
 
           stave.setContext(context).draw();
 
@@ -298,9 +330,10 @@ export default function DrumScoreRenderer({
 
             voice.addTickables(measureNotes);
 
+            const formatPadding = colIndex === 0 && mIdx === 0 ? 85 : colIndex === 0 ? 65 : 40;
             new Formatter()
               .joinVoices([voice])
-              .format([voice], currentMeasureWidth - (mIdx === 0 ? 80 : 35));
+              .format([voice], Math.max(100, currentMeasureWidth - formatPadding));
 
             voice.draw(context, stave);
 
@@ -318,7 +351,7 @@ export default function DrumScoreRenderer({
               } catch (_) {}
             });
 
-            // Record exact X coordinates for playhead and click interaction
+            // Record exact X and Y coordinates for playhead and click interaction
             stepMapping.forEach(({ bIdx, sIdx, note }) => {
               try {
                 const x = note.getAbsoluteX();
@@ -326,7 +359,8 @@ export default function DrumScoreRenderer({
                   measureIndex: mIdx,
                   beatIndex: bIdx,
                   stepIndex: sIdx,
-                  x: typeof x === 'number' ? x : currentX + 50,
+                  x: typeof x === 'number' ? x : measureX + 50,
+                  y: measureY,
                   width: currentMeasureWidth / (beatsCount * 2),
                 });
               } catch (_) {}
@@ -334,8 +368,6 @@ export default function DrumScoreRenderer({
           } catch (formatErr) {
             console.warn('VexFlow measure voice formatting warning:', formatErr);
           }
-
-          currentX += currentMeasureWidth;
         });
 
         if (!isCancelled) {
@@ -354,26 +386,33 @@ export default function DrumScoreRenderer({
     return () => {
       isCancelled = true;
     };
-  }, [measures, totalWidth, totalHeight]);
+  }, [measures, totalWidth, totalHeight, measuresPerRow, currentMeasureWidth, rowHeight]);
 
-  // Calculate current playhead X position smoothly
-  const currentPlayheadX = useMemo(() => {
-    if (notePositions.length === 0) return 0;
+  // Find position of active playhead step
+  const activePlayheadPos = useMemo(() => {
+    if (notePositions.length === 0) return null;
 
-    const currentPos = notePositions.find(
+    const matchedPos = notePositions.find(
       (p) =>
         p.measureIndex === playhead.measureIndex &&
         p.beatIndex === playhead.beatIndex &&
         p.stepIndex === playhead.stepIndex
     );
 
-    if (currentPos) {
-      return currentPos.x;
+    if (matchedPos) return matchedPos;
+
+    // Fallback: look for positions in the current measure
+    const measurePositions = notePositions.filter((p) => p.measureIndex === playhead.measureIndex);
+    if (measurePositions.length > 0) {
+      const stepIdx = Math.min(
+        measurePositions.length - 1,
+        Math.floor((playhead.beatIndex * 4 + playhead.stepIndex) % measurePositions.length)
+      );
+      return measurePositions[stepIdx] || measurePositions[0];
     }
 
-    // Fallback: estimate from progress
-    return 30 + playhead.progress * (totalWidth - 60);
-  }, [notePositions, playhead, totalWidth]);
+    return null;
+  }, [notePositions, playhead]);
 
   // Find position of the currently selected step (cursor)
   const selectedStepPos = useMemo(() => {
@@ -456,7 +495,7 @@ export default function DrumScoreRenderer({
               <div
                 key={`step-hitbox-${pos.measureIndex}-${pos.beatIndex}-${pos.stepIndex}`}
                 onClick={() => onSelectStep(pos.measureIndex, pos.beatIndex, pos.stepIndex)}
-                className={`group absolute top-6 bottom-8 -translate-x-1/2 cursor-pointer transition-all flex flex-col items-center justify-between ${
+                className={`group absolute -translate-x-1/2 cursor-pointer transition-all flex flex-col items-center justify-between ${
                   isSelected
                     ? 'z-20'
                     : isPlayheadHere
@@ -465,6 +504,8 @@ export default function DrumScoreRenderer({
                 }`}
                 style={{
                   left: `${pos.x}px`,
+                  top: `${pos.y + 4}px`,
+                  height: '135px',
                   width: `${Math.max(26, pos.width * 0.9)}px`,
                 }}
               >
@@ -497,10 +538,14 @@ export default function DrumScoreRenderer({
           })}
 
           {/* Real-time Laser Playhead */}
-          {isPlaying && (
+          {isPlaying && activePlayheadPos && (
             <div
-              className="absolute top-4 bottom-6 -translate-x-1/2 pointer-events-none z-30 transition-all duration-75 ease-linear"
-              style={{ left: `${currentPlayheadX}px` }}
+              className="absolute -translate-x-1/2 pointer-events-none z-30 transition-all duration-75 ease-linear"
+              style={{
+                left: `${activePlayheadPos.x}px`,
+                top: `${activePlayheadPos.y + 8}px`,
+                height: '115px',
+              }}
             >
               {/* Laser Core Beam */}
               <div className="w-[2px] h-full bg-synth-cyan shadow-[0_0_12px_#22d3ee,0_0_24px_#38bdf8]" />

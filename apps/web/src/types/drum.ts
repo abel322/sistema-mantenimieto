@@ -211,6 +211,30 @@ export interface DrumPreset {
   measures: DrumMeasure[];
 }
 
+export interface SavedDrumExercise {
+  id: string;
+  title: string;
+  tags?: string[];
+  createdAt: string; // ISO string
+  updatedAt?: string;
+  bpm: number;
+  timeSignature: [number, number];
+  totalMeasures: number;
+  measures: DrumMeasure[];
+  notes?: string;
+}
+
+export interface DrumDraftSession {
+  measures: DrumMeasure[];
+  bpm: number;
+  timeSignature: [number, number];
+  activePresetId: string | null;
+  selectedMeasureIndex?: number;
+  selectedBeatIndex?: number;
+  selectedStepIndex?: number;
+  savedAt: number;
+}
+
 export interface SubdivisionOption {
   value: number;
   label: string;

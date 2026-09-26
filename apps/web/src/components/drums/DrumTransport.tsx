@@ -25,6 +25,9 @@ interface DrumTransportProps {
   isLooping: boolean;
   timeSignature: [number, number];
   activePresetId: string | null;
+  measuresCount?: number;
+  selectedMeasureIndex?: number;
+  savedExercisesCount?: number;
   onTogglePlay: () => void;
   onStop: () => void;
   onSetBpm: (bpm: number) => void;
@@ -34,7 +37,10 @@ interface DrumTransportProps {
   onSetTimeSignature: (ts: [number, number]) => void;
   onAddMeasure: () => void;
   onClearMeasure: () => void;
+  onSelectMeasureIndex?: (index: number) => void;
   onOpenRudiments?: () => void;
+  onOpenSaveExercise?: () => void;
+  onOpenExerciseLibrary?: () => void;
 }
 
 export default function DrumTransport({
@@ -44,6 +50,9 @@ export default function DrumTransport({
   isLooping,
   timeSignature,
   activePresetId,
+  measuresCount = 1,
+  selectedMeasureIndex = 0,
+  savedExercisesCount = 0,
   onTogglePlay,
   onStop,
   onSetBpm,
@@ -53,7 +62,10 @@ export default function DrumTransport({
   onSetTimeSignature,
   onAddMeasure,
   onClearMeasure,
+  onSelectMeasureIndex,
   onOpenRudiments,
+  onOpenSaveExercise,
+  onOpenExerciseLibrary,
 }: DrumTransportProps) {
   // Tap tempo logic
   const tapTimesRef = useRef<number[]>([]);
@@ -203,10 +215,35 @@ export default function DrumTransport({
             })}
           </div>
 
+          {/* Measure Switcher if multiple measures exist */}
+          {measuresCount > 1 && (
+            <div className="flex items-center gap-1 bg-surface-slate p-1 rounded-xl border border-white/5">
+              <span className="text-[10px] font-mono text-gray-500 px-1 font-semibold">IR A:</span>
+              {Array.from({ length: measuresCount }).map((_, idx) => {
+                const isCurrent = selectedMeasureIndex === idx;
+                return (
+                  <button
+                    key={`m-btn-${idx}`}
+                    type="button"
+                    onClick={() => onSelectMeasureIndex?.(idx)}
+                    className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'bg-synth-cyan text-black shadow-glow-cyan'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                    title={`Seleccionar Compás ${idx + 1}`}
+                  >
+                    C{idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Add Measure */}
           <button
             onClick={onAddMeasure}
-            className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-300 hover:text-synth-cyan hover:border-synth-cyan/40 transition-all"
+            className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-300 hover:text-synth-cyan hover:border-synth-cyan/40 transition-all cursor-pointer"
             title="Añadir Compás"
           >
             <Plus className="w-4 h-4" />
@@ -215,7 +252,7 @@ export default function DrumTransport({
           {/* Clear Measure */}
           <button
             onClick={onClearMeasure}
-            className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-rose-400 hover:border-rose-500/40 transition-all"
+            className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-rose-400 hover:border-rose-500/40 transition-all cursor-pointer"
             title="Limpiar Compás Activo"
           >
             <RotateCcw className="w-4 h-4" />
@@ -228,7 +265,7 @@ export default function DrumTransport({
         <div className="flex items-center gap-2 text-gray-400 flex-shrink-0">
           <Sparkles className="w-3.5 h-3.5 text-synth-cyan" />
           <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-gray-300">
-            Presets de Estudio:
+            Presets & Vault:
           </span>
         </div>
 
@@ -237,12 +274,39 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenRudiments}
-              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-synth-cyan/50 bg-gradient-to-r from-purple-500/20 to-cyan-500/20 hover:from-purple-500/30 hover:to-cyan-500/30 text-synth-cyan hover:text-white transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(34,211,238,0.2)]"
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-synth-cyan/50 bg-gradient-to-r from-purple-500/20 to-cyan-500/20 hover:from-purple-500/30 hover:to-cyan-500/30 text-synth-cyan hover:text-white transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(34,211,238,0.2)] cursor-pointer"
               title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
             >
               <span className="text-sm">🥁</span>
               <span>Rudimentos & Fills</span>
               <span className="text-[9px] px-1 rounded bg-synth-cyan/30 text-cyan-200">Vault</span>
+            </button>
+          )}
+
+          {onOpenExerciseLibrary && (
+            <button
+              type="button"
+              onClick={onOpenExerciseLibrary}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-purple-500/40 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 hover:text-white transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Ver mis rutinas de práctica guardadas"
+            >
+              <span>📁</span>
+              <span>Mis Rutinas</span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-purple-500/30 text-purple-200 font-bold">
+                {savedExercisesCount}
+              </span>
+            </button>
+          )}
+
+          {onOpenSaveExercise && (
+            <button
+              type="button"
+              onClick={onOpenSaveExercise}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-white/10 hover:border-emerald-500/40 bg-white/5 hover:bg-emerald-500/15 text-gray-300 hover:text-emerald-300 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Guardar el ejercicio actual"
+            >
+              <span>💾</span>
+              <span>Guardar</span>
             </button>
           )}
 
