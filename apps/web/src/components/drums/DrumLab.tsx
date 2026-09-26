@@ -10,9 +10,11 @@ import DrumTransport from './DrumTransport';
 import DrumSubdivisionBar from './DrumSubdivisionBar';
 import DrumLegendModal from './DrumLegendModal';
 import RudimentLibraryModal from './RudimentLibraryModal';
+import GrooveLibraryModal from './GrooveLibraryModal';
 import SaveExerciseModal from './SaveExerciseModal';
 import ExerciseLibraryModal from './ExerciseLibraryModal';
-import { DrumPieceId, DrumPreset, DRUM_PIECES } from '@/types/drum';
+import { DrumPieceId, DrumPreset, DRUM_PIECES, GroovePattern } from '@/types/drum';
+import { convertGrooveToDrumMeasures } from '@/lib/groovesData';
 import {
   Layers,
   Music,
@@ -30,6 +32,7 @@ export default function DrumLab() {
   const [viewMode, setViewMode] = useState<'both' | 'score' | 'grid'>('both');
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isRudimentsOpen, setIsRudimentsOpen] = useState(false);
+  const [isGroovesOpen, setIsGroovesOpen] = useState(false);
   const [isSaveExerciseOpen, setIsSaveExerciseOpen] = useState(false);
   const [isExerciseLibraryOpen, setIsExerciseLibraryOpen] = useState(false);
 
@@ -150,6 +153,48 @@ export default function DrumLab() {
       audio.stop();
       score.loadPreset(preset);
       audio.setBpm(preset.bpm);
+    },
+    [audio, score]
+  );
+
+  // Apply Groove from Groove Vault (Multi-measure sync, BPM, Swing feel)
+  const handleApplyGroove = useCallback(
+    (
+      groove: GroovePattern,
+      targetMeasures: number[],
+      options: { setBpm?: boolean; setSwing?: boolean; setTimeSig?: boolean }
+    ) => {
+      audio.stop();
+
+      // Convert groove pattern to Sonora DrumMeasure[]
+      const converted = convertGrooveToDrumMeasures(
+        groove,
+        targetMeasures,
+        score.measures.length
+      );
+
+      // Determine time signature
+      const [numStr, denStr] = groove.timeSignature.split('/');
+      const beatsCount = parseInt(numStr, 10) || 4;
+      const beatValue = parseInt(denStr, 10) || 4;
+      const newTimeSig: [number, number] = [beatsCount, beatValue];
+
+      score.loadScoreData(
+        converted,
+        options.setTimeSig ? newTimeSig : undefined,
+        groove.id,
+        targetMeasures[0] || 0,
+        0,
+        0
+      );
+
+      if (options.setBpm && groove.suggestedBpm) {
+        audio.setBpm(groove.suggestedBpm);
+      }
+
+      if (options.setSwing) {
+        audio.setSwing(groove.swingRatio ?? 0);
+      }
     },
     [audio, score]
   );
@@ -378,6 +423,20 @@ export default function DrumLab() {
             </span>
           </button>
 
+          {/* Groove Vault Button */}
+          <button
+            type="button"
+            onClick={() => setIsGroovesOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500/25 via-orange-500/25 to-pink-500/25 hover:from-amber-500/40 hover:to-orange-500/40 border border-amber-500/50 hover:border-amber-400 text-white text-xs font-bold font-mono transition-all shadow-[0_0_15px_rgba(245,158,11,0.25)] hover:shadow-[0_0_20px_rgba(245,158,11,0.45)] cursor-pointer"
+            title="Abrir Groove Vault (85+ patrones listos para tocar)"
+          >
+            <span className="text-base">⚡</span>
+            <span>Groove Vault</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/30 text-amber-200 uppercase font-mono font-bold">
+              85+
+            </span>
+          </button>
+
           {/* View Layout Mode Selector */}
           <div className="flex items-center gap-1.5 bg-surface-card p-1.5 rounded-2xl border border-white/10">
             <button
@@ -437,6 +496,7 @@ export default function DrumLab() {
         onClearMeasure={score.clearMeasure}
         onSelectMeasureIndex={(idx) => score.selectStep(idx, 0, 0)}
         onOpenRudiments={() => setIsRudimentsOpen(true)}
+        onOpenGrooves={() => setIsGroovesOpen(true)}
         onOpenSaveExercise={() => setIsSaveExerciseOpen(true)}
         onOpenExerciseLibrary={() => setIsExerciseLibraryOpen(true)}
       />
@@ -546,6 +606,16 @@ export default function DrumLab() {
         onFillMeasuresBatch={score.fillMeasuresWithRudiment}
         onInsertInBeat={score.insertRudimentAtBeat}
         onFillMeasure={score.fillMeasureWithRudiment}
+        onPlayHit={audio.playHit}
+      />
+
+      {/* Groove Vault Modal */}
+      <GrooveLibraryModal
+        isOpen={isGroovesOpen}
+        onClose={() => setIsGroovesOpen(false)}
+        measuresCount={score.measures.length}
+        selectedMeasureIndex={score.selectedMeasureIndex}
+        onApplyGroove={handleApplyGroove}
         onPlayHit={audio.playHit}
       />
 

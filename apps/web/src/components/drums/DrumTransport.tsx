@@ -42,6 +42,7 @@ interface DrumTransportProps {
   onClearMeasure: () => void;
   onSelectMeasureIndex?: (index: number) => void;
   onOpenRudiments?: () => void;
+  onOpenGrooves?: () => void;
   onOpenSaveExercise?: () => void;
   onOpenExerciseLibrary?: () => void;
 }
@@ -68,6 +69,7 @@ export default function DrumTransport({
   onClearMeasure,
   onSelectMeasureIndex,
   onOpenRudiments,
+  onOpenGrooves,
   onOpenSaveExercise,
   onOpenExerciseLibrary,
 }: DrumTransportProps) {
@@ -315,6 +317,21 @@ export default function DrumTransport({
               <span className="text-sm">🥁</span>
               <span>Rudimentos & Fills</span>
               <span className="text-[9px] px-1 rounded bg-synth-cyan/30 text-cyan-200">Vault</span>
+            </button>
+          )}
+
+          {onOpenGrooves && (
+            <button
+              type="button"
+              onClick={onOpenGrooves}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-amber-500/50 bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 hover:text-white transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(245,158,11,0.2)] cursor-pointer"
+              title="Abrir Groove Vault (85+ ritmos clasificados)"
+            >
+              <span className="text-sm">⚡</span>
+              <span>Groove Vault</span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-500/30 text-amber-200 font-bold">
+                85+
+              </span>
             </button>
           )}
 

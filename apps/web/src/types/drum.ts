@@ -1,8 +1,12 @@
 export type DrumPieceId =
   | 'crash'
+  | 'china'
   | 'ride'
+  | 'cowbell'
   | 'hihatOpen'
   | 'hihatClosed'
+  | 'hihat'
+  | 'hihatFoot'
   | 'tom1'
   | 'snare'
   | 'tom2'
@@ -35,6 +39,18 @@ export const DRUM_PIECES: Record<DrumPieceId, DrumPieceInfo> = {
     badgeBg: 'bg-sky-500/20',
     badgeBorder: 'border-sky-500/40',
   },
+  china: {
+    id: 'china',
+    name: 'China Cymbal',
+    shortName: 'China',
+    shortcut: 'N',
+    keyPos: 'b/5',
+    notehead: 'x',
+    staffPositionDesc: 'Espacio sobre línea superior (B5) con "x"',
+    color: '#06B6D4', // Cyan 500
+    badgeBg: 'bg-cyan-500/20',
+    badgeBorder: 'border-cyan-500/40',
+  },
   ride: {
     id: 'ride',
     name: 'Ride Cymbal',
@@ -46,6 +62,18 @@ export const DRUM_PIECES: Record<DrumPieceId, DrumPieceInfo> = {
     color: '#22D3EE', // Cyan 400
     badgeBg: 'bg-cyan-500/20',
     badgeBorder: 'border-cyan-500/40',
+  },
+  cowbell: {
+    id: 'cowbell',
+    name: 'Cowbell / Cencerro',
+    shortName: 'Cowbell',
+    shortcut: 'W',
+    keyPos: 'e/5',
+    notehead: 'normal',
+    staffPositionDesc: 'Cuarto espacio/línea (E5)',
+    color: '#EAB308', // Yellow 500
+    badgeBg: 'bg-yellow-500/20',
+    badgeBorder: 'border-yellow-500/40',
   },
   hihatOpen: {
     id: 'hihatOpen',
@@ -70,6 +98,30 @@ export const DRUM_PIECES: Record<DrumPieceId, DrumPieceInfo> = {
     color: '#818CF8', // Indigo 400
     badgeBg: 'bg-indigo-500/20',
     badgeBorder: 'border-indigo-500/40',
+  },
+  hihat: {
+    id: 'hihat',
+    name: 'Hi-Hat (Closed)',
+    shortName: 'H.H.',
+    shortcut: 'H',
+    keyPos: 'g/5',
+    notehead: 'x',
+    staffPositionDesc: 'Espacio sobre pentagrama (G5) con cruz "x"',
+    color: '#818CF8', // Indigo 400
+    badgeBg: 'bg-indigo-500/20',
+    badgeBorder: 'border-indigo-500/40',
+  },
+  hihatFoot: {
+    id: 'hihatFoot',
+    name: 'Hi-Hat (Foot Chick)',
+    shortName: 'H.H. Foot',
+    shortcut: 'P',
+    keyPos: 'd/4',
+    notehead: 'x',
+    staffPositionDesc: 'Espacio bajo pentagrama (D4) con cruz "x"',
+    color: '#6366F1', // Indigo 500
+    badgeBg: 'bg-indigo-600/20',
+    badgeBorder: 'border-indigo-600/40',
   },
   tom1: {
     id: 'tom1',
@@ -135,9 +187,12 @@ export const DRUM_PIECES: Record<DrumPieceId, DrumPieceInfo> = {
 
 export const DRUM_ORDER: DrumPieceId[] = [
   'crash',
+  'china',
   'ride',
+  'cowbell',
   'hihatOpen',
   'hihatClosed',
+  'hihatFoot',
   'tom1',
   'snare',
   'tom2',
@@ -266,3 +321,69 @@ export const SUBDIVISION_OPTIONS: SubdivisionOption[] = [
   { value: 7, label: '7:4', nameEs: 'Septillo', shortcut: '7', isTuplet: true, ratio: [7, 4], vexDuration: '16' },
   { value: 9, label: '9:8', nameEs: 'Nonillo', shortcut: '9', isTuplet: true, ratio: [9, 8], vexDuration: '32' },
 ];
+
+export type GrooveCategory =
+  | 'Rock & Metal'
+  | 'Funk & Gospel'
+  | 'Hip-Hop & Electronic'
+  | 'Latin & World'
+  | 'Jazz & Blues'
+  | 'Prog & Odd-Meter';
+
+export interface GrooveHit {
+  instrument:
+    | 'kick'
+    | 'snare'
+    | 'hihat'
+    | 'hihatOpen'
+    | 'hihatFoot'
+    | 'crash'
+    | 'ride'
+    | 'tom1'
+    | 'tom2'
+    | 'floorTom'
+    | 'cowbell'
+    | 'china';
+  accent?: boolean;
+  ghost?: boolean;
+  flam?: boolean;
+  velocity?: number;
+}
+
+export interface GroovePattern {
+  id: string;
+  name: string;
+  category: GrooveCategory;
+  subCategory?: string; // Ej: 'Metal/Double-Bass', 'Afro-Cuban', 'Trap', 'Shuffle'
+  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Virtuoso';
+  suggestedBpm: number;
+  timeSignature: '4/4' | '3/4' | '5/4' | '7/4' | '7/8' | '9/8' | '11/8' | '6/8' | '12/8';
+  swingRatio?: number; // 0.0 (Straight) a 0.7 (Heavy Swing/Dilla)
+  measuresCount: 1 | 2;
+  description: string;
+  subdivision: '1/8' | '1/16' | '1/32' | '3:2' | '6:4' | '5:4' | '7:4';
+  measures: Array<{
+    beats: Array<{
+      subdivisions: Array<Array<{
+        instrument:
+          | 'kick'
+          | 'snare'
+          | 'hihat'
+          | 'hihatOpen'
+          | 'hihatFoot'
+          | 'crash'
+          | 'ride'
+          | 'tom1'
+          | 'tom2'
+          | 'floorTom'
+          | 'cowbell'
+          | 'china';
+        accent?: boolean;
+        ghost?: boolean;
+        flam?: boolean;
+        velocity?: number;
+      }>>;
+    }>;
+  }>;
+}
+

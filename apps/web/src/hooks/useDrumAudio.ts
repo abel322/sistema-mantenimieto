@@ -13,6 +13,7 @@ export interface PlayheadPosition {
 export function useDrumAudio() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpmState] = useState(110);
+  const [swing, setSwingState] = useState(0);
   const [isMetronomeActive, setIsMetronomeActive] = useState(false);
   const [isLooping, setIsLooping] = useState(true);
   const [playhead, setPlayhead] = useState<PlayheadPosition>({
@@ -28,6 +29,7 @@ export function useDrumAudio() {
   const loopEventIdsRef = useRef<number[]>([]);
   const currentMeasuresRef = useRef<DrumMeasure[]>([]);
   const bpmRef = useRef(110);
+  const swingRef = useRef(0);
   const isPlayingRef = useRef(false);
   const isMetronomeRef = useRef(false);
   const isLoopingRef = useRef(true);
@@ -39,6 +41,14 @@ export function useDrumAudio() {
       ToneRef.current.Transport.bpm.value = bpm;
     }
   }, [bpm]);
+
+  useEffect(() => {
+    swingRef.current = swing;
+    if (ToneRef.current?.Transport) {
+      ToneRef.current.Transport.swing = swing;
+      ToneRef.current.Transport.swingSubdivision = '16n';
+    }
+  }, [swing]);
 
   useEffect(() => {
     isMetronomeRef.current = isMetronomeActive;
@@ -215,6 +225,52 @@ export function useDrumAudio() {
         },
       }).connect(drumBus);
 
+      // 10. Hi-Hat Foot (Chick sound: filtered tight white noise)
+      const hhFootFilter = new Tone.Filter({
+        frequency: 8500,
+        type: 'highpass',
+      }).connect(drumBus);
+
+      const hihatFoot = new Tone.NoiseSynth({
+        noise: { type: 'white' },
+        envelope: {
+          attack: 0.001,
+          decay: 0.038,
+          sustain: 0,
+        },
+      }).connect(hhFootFilter);
+      hihatFoot.volume.value = -4;
+
+      // 11. Cowbell (Classic resonant dual metal harmonics)
+      const cowbell = new Tone.MetalSynth({
+        envelope: {
+          attack: 0.001,
+          decay: 0.12,
+          release: 0.04,
+        },
+        harmonicity: 1.45,
+        modulationIndex: 12,
+        resonance: 1400,
+        octaves: 1.2,
+      }).connect(drumBus);
+      cowbell.frequency.value = 560;
+      cowbell.volume.value = -5;
+
+      // 12. China Cymbal (Trashy, explosive dark burst)
+      const chinaMetal = new Tone.MetalSynth({
+        envelope: {
+          attack: 0.002,
+          decay: 0.85,
+          release: 0.35,
+        },
+        harmonicity: 5.2,
+        modulationIndex: 42,
+        resonance: 2800,
+        octaves: 2.0,
+      }).connect(drumBus);
+      chinaMetal.frequency.value = 210;
+      chinaMetal.volume.value = -3;
+
       // Metronome synth
       const clickSynth = new Tone.Synth({
         oscillator: { type: 'sine' },
@@ -233,9 +289,12 @@ export function useDrumAudio() {
         snareNoise,
         hihatClosed,
         hihatOpen,
+        hihatFoot,
         ride,
         crashMetal,
         crashNoise,
+        chinaMetal,
+        cowbell,
         tom1,
         tom2,
         floorTom,
@@ -243,6 +302,8 @@ export function useDrumAudio() {
       };
 
       Tone.Transport.bpm.value = bpmRef.current;
+      Tone.Transport.swing = swingRef.current;
+      Tone.Transport.swingSubdivision = '16n';
       Tone.Transport.loop = isLoopingRef.current;
       isAudioReadyRef.current = true;
     } catch (e) {
@@ -273,12 +334,25 @@ export function useDrumAudio() {
           synths.snareNoise.triggerAttackRelease('16n', triggerTime, velocity * 0.9);
           break;
 
+        case 'hihat':
         case 'hihatClosed':
           synths.hihatClosed.triggerAttackRelease('32n', triggerTime, velocity * 0.85);
           break;
 
         case 'hihatOpen':
           synths.hihatOpen.triggerAttackRelease('8n', triggerTime, velocity * 0.85);
+          break;
+
+        case 'hihatFoot':
+          synths.hihatFoot.triggerAttackRelease('32n', triggerTime, velocity * 0.8);
+          break;
+
+        case 'cowbell':
+          synths.cowbell.triggerAttackRelease('16n', triggerTime, velocity * 0.85);
+          break;
+
+        case 'china':
+          synths.chinaMetal.triggerAttackRelease('4n', triggerTime, velocity);
           break;
 
         case 'ride':
@@ -446,6 +520,15 @@ export function useDrumAudio() {
     }
   }, []);
 
+  const setSwing = useCallback((val: number) => {
+    const clamped = Math.max(0, Math.min(0.7, Number(val.toFixed(2))));
+    setSwingState(clamped);
+    if (ToneRef.current?.Transport) {
+      ToneRef.current.Transport.swing = clamped;
+      ToneRef.current.Transport.swingSubdivision = '16n';
+    }
+  }, []);
+
   const toggleMetronome = useCallback(() => {
     setIsMetronomeActive((prev) => !prev);
   }, []);
@@ -457,6 +540,7 @@ export function useDrumAudio() {
   return {
     isPlaying,
     bpm,
+    swing,
     isMetronomeActive,
     isLooping,
     playhead,
@@ -465,6 +549,7 @@ export function useDrumAudio() {
     stop,
     togglePlay,
     setBpm,
+    setSwing,
     toggleMetronome,
     toggleLoop,
     playHit,

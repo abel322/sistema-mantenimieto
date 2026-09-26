@@ -169,14 +169,17 @@ export default function DrumScoreRenderer({
               } else {
                 // Sort keys from lowest to highest pitch to prevent stem collisions
                 const pitchPriority: Record<string, number> = {
+                  'd/4': 0, // hihat foot
                   'f/4': 1, // kick
                   'a/4': 2, // floor tom
                   'b/4': 3, // mid tom
                   'c/5': 4, // snare
                   'd/5': 5, // high tom
+                  'e/5': 5.5, // cowbell
                   'f/5': 6, // ride
                   'g/5': 7, // hi-hat
                   'a/5': 8, // crash
+                  'b/5': 9, // china
                 };
 
                 const sortedHits = [...step.hits].sort((a, b) => {
