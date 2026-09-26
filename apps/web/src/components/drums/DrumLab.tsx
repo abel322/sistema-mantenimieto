@@ -56,6 +56,27 @@ export default function DrumLab() {
     [score, audio]
   );
 
+  // Unified handler for Rest toggle (Keyboard 'Z'/'0' and Button click)
+  const handleToggleRest = useCallback(() => {
+    if (score.selectedBeatIndex === null && score.selectedStepIndex === null) return;
+    score.toggleRest(score.selectedMeasureIndex, score.selectedBeatIndex, score.selectedStepIndex);
+  }, [score]);
+
+  // Unified handler for Accent toggle
+  const handleToggleAccent = useCallback(() => {
+    score.toggleAccent();
+  }, [score]);
+
+  // Unified handler for Ghost note toggle
+  const handleToggleGhost = useCallback(() => {
+    score.toggleGhost();
+  }, [score]);
+
+  // Unified handler for Clear step
+  const handleClearStep = useCallback(() => {
+    score.clearStep();
+  }, [score]);
+
   // Toggle play/pause
   const handleTogglePlay = useCallback(() => {
     audio.togglePlay(score.measures);
@@ -165,20 +186,20 @@ export default function DrumLab() {
       // A or > = Accent
       if (key === 'A' || e.key === '>') {
         e.preventDefault();
-        score.toggleAccent();
+        handleToggleAccent();
         return;
       }
       // G or ( = Ghost
       if (key === 'G' || e.key === '(') {
         e.preventDefault();
-        score.toggleGhost();
+        handleToggleGhost();
         return;
       }
 
       // Rest (Silencio): Z or 0
       if (key === 'Z' || key === '0') {
         e.preventDefault();
-        score.toggleRest();
+        handleToggleRest();
         return;
       }
 
@@ -199,7 +220,7 @@ export default function DrumLab() {
       // Delete / Backspace: Clear step
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
-        score.clearStep();
+        handleClearStep();
         return;
       }
 
@@ -214,12 +235,21 @@ export default function DrumLab() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleTogglePlay, handleTogglePiece, score]);
+  }, [
+    handleTogglePlay,
+    handleTogglePiece,
+    handleToggleAccent,
+    handleToggleGhost,
+    handleToggleRest,
+    handleClearStep,
+    score,
+  ]);
 
   // Derived properties of current step
   const currentStepHits = score.selectedStep?.hits || [];
   const currentHasAccent = currentStepHits.some((h) => h.accent);
   const currentHasGhost = currentStepHits.some((h) => h.ghost);
+  const isCurrentSelectionRest = !score.selectedStep || !!score.selectedStep.isRest || currentStepHits.length === 0;
 
   return (
     <div className="space-y-6">
@@ -309,12 +339,12 @@ export default function DrumLab() {
         hasHits={currentStepHits.length > 0}
         isAccentMode={score.isAccentMode}
         isGhostMode={score.isGhostMode}
-        isRest={score.selectedStep?.isRest}
+        isRest={isCurrentSelectionRest}
         onChangeSubdivision={(sub) => score.changeBeatSubdivision(sub)}
-        onToggleAccent={score.toggleAccent}
-        onToggleGhost={score.toggleGhost}
-        onToggleRest={score.toggleRest}
-        onClearStep={score.clearStep}
+        onToggleAccent={handleToggleAccent}
+        onToggleGhost={handleToggleGhost}
+        onToggleRest={handleToggleRest}
+        onClearStep={handleClearStep}
         onClearMeasure={score.clearMeasure}
         onOpenLegend={() => setIsLegendOpen(true)}
       />

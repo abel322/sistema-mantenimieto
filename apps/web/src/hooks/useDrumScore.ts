@@ -299,15 +299,19 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
   // Toggle accent: works on both existing hits AND insertion mode
   const toggleAccent = useCallback(
     (
-      mIdx: number = selectedMeasureIndex,
-      bIdx: number = selectedBeatIndex,
-      sIdx: number = selectedStepIndex
+      mIdx?: number,
+      bIdx?: number,
+      sIdx?: number
     ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      const stepIndex = typeof sIdx === 'number' ? sIdx : selectedStepIndex;
+
       let nextAccentState = !isAccentMode;
 
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
-        const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
+        const targetStep = next[measureIndex]?.beats[beatIndex]?.steps[stepIndex];
         if (!targetStep) return prev;
 
         if (targetStep.hits.length > 0) {
@@ -331,15 +335,19 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
   // Toggle ghost note: works on both existing hits AND insertion mode
   const toggleGhost = useCallback(
     (
-      mIdx: number = selectedMeasureIndex,
-      bIdx: number = selectedBeatIndex,
-      sIdx: number = selectedStepIndex
+      mIdx?: number,
+      bIdx?: number,
+      sIdx?: number
     ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      const stepIndex = typeof sIdx === 'number' ? sIdx : selectedStepIndex;
+
       let nextGhostState = !isGhostMode;
 
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
-        const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
+        const targetStep = next[measureIndex]?.beats[beatIndex]?.steps[stepIndex];
         if (!targetStep) return prev;
 
         if (targetStep.hits.length > 0) {
@@ -360,38 +368,63 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex, isGhostMode]
   );
 
-  // Toggle Rest (Silencio): converts active step into a percussion rest
+  // Toggle Rest (Silencio): converts active step into a percussion rest or restores notes
   const toggleRest = useCallback(
     (
-      mIdx: number = selectedMeasureIndex,
-      bIdx: number = selectedBeatIndex,
-      sIdx: number = selectedStepIndex
+      mIdx?: number,
+      bIdx?: number,
+      sIdx?: number
     ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      const stepIndex = typeof sIdx === 'number' ? sIdx : selectedStepIndex;
+
+      if (measureIndex < 0 || beatIndex < 0 || stepIndex < 0) return;
+
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
-        const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
+        const targetStep = next[measureIndex]?.beats[beatIndex]?.steps[stepIndex];
         if (!targetStep) return prev;
 
-        targetStep.hits = [];
-        targetStep.isRest = true;
+        const isCurrentlyRest = !!targetStep.isRest || targetStep.hits.length === 0;
+
+        if (!isCurrentlyRest) {
+          // If it has active notes -> turn into silence/rest
+          targetStep.hits = [];
+          targetStep.isRest = true;
+        } else {
+          // If it was already a rest -> toggle off rest and add a standard note (e.g. snare or closed hi-hat)
+          targetStep.isRest = false;
+          targetStep.hits = [
+            {
+              pieceId: beatIndex % 2 === 1 ? 'snare' : 'kick',
+              accent: isAccentMode,
+              ghost: isGhostMode,
+            },
+          ];
+        }
 
         return next;
       });
       setActivePresetId(null);
     },
-    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]
+    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex, isAccentMode, isGhostMode]
   );
 
   // Clear a specific step
   const clearStep = useCallback(
     (
-      mIdx: number = selectedMeasureIndex,
-      bIdx: number = selectedBeatIndex,
-      sIdx: number = selectedStepIndex
+      mIdx?: number,
+      bIdx?: number,
+      sIdx?: number
     ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      const stepIndex = typeof sIdx === 'number' ? sIdx : selectedStepIndex;
+
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
-        const targetStep = next[mIdx]?.beats[bIdx]?.steps[sIdx];
+        const targetStep = next[measureIndex]?.beats[beatIndex]?.steps[stepIndex];
         if (!targetStep) return prev;
         targetStep.hits = [];
         targetStep.isRest = true;
@@ -404,10 +437,11 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
 
   // Clear entire measure
   const clearMeasure = useCallback(
-    (mIdx: number = selectedMeasureIndex) => {
+    (mIdx?: number) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
-        const targetMeasure = next[mIdx];
+        const targetMeasure = next[measureIndex];
         if (!targetMeasure) return prev;
 
         targetMeasure.beats.forEach((b) => {

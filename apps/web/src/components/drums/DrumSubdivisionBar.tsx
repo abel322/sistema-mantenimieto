@@ -70,8 +70,10 @@ export default function DrumSubdivisionBar({
             return (
               <button
                 key={opt.value}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onChangeSubdivision(opt.value)}
-                className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 select-none cursor-pointer ${
                   isSelected
                     ? 'bg-synth-cyan text-black shadow-glow-cyan'
                     : 'text-gray-300 hover:text-white hover:bg-white/5'
@@ -96,8 +98,10 @@ export default function DrumSubdivisionBar({
             return (
               <button
                 key={opt.value}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onChangeSubdivision(opt.value)}
-                className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 select-none cursor-pointer ${
                   isSelected
                     ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-glow-violet'
                     : 'text-purple-300 hover:text-white hover:bg-white/5'
@@ -116,8 +120,10 @@ export default function DrumSubdivisionBar({
       <div className="flex items-center gap-2 flex-wrap">
         {/* Accent Button */}
         <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onToggleAccent}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
             isAccentActive
               ? 'bg-amber-500/25 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.45)] ring-1 ring-amber-400'
               : 'bg-surface-slate border-white/10 text-gray-300 hover:border-amber-500/40 hover:text-amber-300'
@@ -131,8 +137,10 @@ export default function DrumSubdivisionBar({
 
         {/* Ghost Note Button */}
         <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onToggleGhost}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
             isGhostActive
               ? 'bg-purple-500/25 border-purple-400 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.45)] ring-1 ring-purple-400'
               : 'bg-surface-slate border-white/10 text-gray-300 hover:border-purple-500/40 hover:text-purple-300'
@@ -146,20 +154,25 @@ export default function DrumSubdivisionBar({
 
         {/* Rest Toggle Button */}
         <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onToggleRest}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer ${
-            isRest || !hasHits
-              ? 'bg-sky-500/20 border-sky-400 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.35)]'
-              : 'bg-surface-slate border-white/10 text-gray-300 hover:border-sky-500/40 hover:text-sky-300'
+          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
+            isRest
+              ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.35)] ring-1 ring-cyan-400'
+              : 'bg-surface-slate border-white/10 text-gray-300 hover:border-cyan-500/40 hover:text-cyan-300'
           }`}
-          title="Convertir pulso/subdivisión en Silencio percusivo (Atajo: Z o 0)"
+          title="Alternar Silencio percusivo (Atajo: Z o 0)"
         >
-          <span className="text-sm font-serif font-black">𝄽</span>
+          <span className="text-sm font-serif font-black mr-1.5">𝄽</span>
           <span>Silencio [Z]</span>
+          {isRest && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse ml-0.5" />}
         </button>
 
         {/* Clear Step Button */}
         <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onClearStep}
           className="p-1.5 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-rose-400 hover:border-rose-500/40 transition-all cursor-pointer"
           title="Borrar Nota Actual [Del / Backspace]"
@@ -169,6 +182,8 @@ export default function DrumSubdivisionBar({
 
         {/* Legend / Shortcut Help Modal Button */}
         <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={onOpenLegend}
           className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:border-synth-cyan/50 text-xs font-mono text-gray-300 hover:text-synth-cyan transition-all flex items-center gap-1.5 cursor-pointer"
           title="Ver Guía de Notación y Atajos"
