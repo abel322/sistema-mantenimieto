@@ -526,8 +526,12 @@ export default function DrumLab() {
       <RudimentLibraryModal
         isOpen={isRudimentsOpen}
         onClose={() => setIsRudimentsOpen(false)}
+        measuresCount={score.measures.length}
+        beatsPerMeasure={score.timeSignature[0]}
         selectedMeasureIndex={score.selectedMeasureIndex}
         selectedBeatIndex={score.selectedBeatIndex}
+        onBatchInsert={score.batchInsertRudiment}
+        onFillMeasuresBatch={score.fillMeasuresWithRudiment}
         onInsertInBeat={score.insertRudimentAtBeat}
         onFillMeasure={score.fillMeasureWithRudiment}
         onPlayHit={audio.playHit}

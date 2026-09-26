@@ -572,42 +572,51 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     };
   };
 
-  // Insert rudiment into the specified beat
-  const insertRudimentAtBeat = useCallback(
+  // Batch insert rudiment into multiple measures and multiple beats
+  const batchInsertRudiment = useCallback(
     (
       rudiment: RudimentItem,
       voicing: VoicingMode = 'snare',
-      mIdx?: number,
-      bIdx?: number
+      measureIndices: number[] = [selectedMeasureIndex],
+      beatIndices: number[] = [selectedBeatIndex]
     ) => {
-      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
-      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      const validMeasures = measureIndices.length > 0 ? measureIndices : [selectedMeasureIndex];
+      const validBeats = beatIndices.length > 0 ? beatIndices : [selectedBeatIndex];
+
+      const sub = rudiment.subdivision;
+      const isTuplet = [3, 5, 6, 7, 9].includes(sub);
+      const ratioMap: Record<number, [number, number]> = {
+        3: [3, 2],
+        5: [5, 4],
+        6: [6, 4],
+        7: [7, 4],
+        9: [9, 8],
+      };
 
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
-        const targetMeasure = next[measureIndex];
-        if (!targetMeasure) return prev;
-        const targetBeat = targetMeasure.beats[beatIndex];
-        if (!targetBeat) return prev;
 
-        const sub = rudiment.subdivision;
-        const isTuplet = [3, 5, 6, 7, 9].includes(sub);
-        const ratioMap: Record<number, [number, number]> = {
-          3: [3, 2],
-          5: [5, 4],
-          6: [6, 4],
-          7: [7, 4],
-          9: [9, 8],
-        };
+        validMeasures.forEach((mIdx) => {
+          const targetMeasure = next[mIdx];
+          if (!targetMeasure) return;
 
-        const newSteps: DrumStep[] = rudiment.steps.map((rudStep, sIdx) =>
-          createStepFromRudiment(rudStep, `${targetMeasure.id}-b${beatIndex}-s${sIdx}`, voicing, beatIndex)
-        );
+          validBeats.forEach((bIdx) => {
+            const targetBeat = targetMeasure.beats[bIdx];
+            if (!targetBeat) return;
 
-        targetBeat.subdivision = sub;
-        targetBeat.isTuplet = isTuplet;
-        targetBeat.tupletRatio = isTuplet ? ratioMap[sub] : undefined;
-        targetBeat.steps = newSteps;
+            targetBeat.subdivision = sub;
+            targetBeat.isTuplet = isTuplet;
+            targetBeat.tupletRatio = isTuplet ? ratioMap[sub] : undefined;
+            targetBeat.steps = rudiment.steps.map((rudStep, sIdx) =>
+              createStepFromRudiment(
+                rudStep,
+                `${targetMeasure.id}-b${bIdx}-s${sIdx}`,
+                voicing,
+                bIdx
+              )
+            );
+          });
+        });
 
         return next;
       });
@@ -617,37 +626,45 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     [selectedMeasureIndex, selectedBeatIndex]
   );
 
-  // Fill entire active measure with rudiment pattern
-  const fillMeasureWithRudiment = useCallback(
+  // Fill entire measures with rudiment pattern across multiple measures
+  const fillMeasuresWithRudiment = useCallback(
     (
       rudiment: RudimentItem,
       voicing: VoicingMode = 'snare',
-      mIdx?: number
+      measureIndices: number[] = [selectedMeasureIndex]
     ) => {
-      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const validMeasures = measureIndices.length > 0 ? measureIndices : [selectedMeasureIndex];
+
+      const sub = rudiment.subdivision;
+      const isTuplet = [3, 5, 6, 7, 9].includes(sub);
+      const ratioMap: Record<number, [number, number]> = {
+        3: [3, 2],
+        5: [5, 4],
+        6: [6, 4],
+        7: [7, 4],
+        9: [9, 8],
+      };
 
       setMeasures((prev) => {
         const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
-        const targetMeasure = next[measureIndex];
-        if (!targetMeasure) return prev;
 
-        const sub = rudiment.subdivision;
-        const isTuplet = [3, 5, 6, 7, 9].includes(sub);
-        const ratioMap: Record<number, [number, number]> = {
-          3: [3, 2],
-          5: [5, 4],
-          6: [6, 4],
-          7: [7, 4],
-          9: [9, 8],
-        };
+        validMeasures.forEach((mIdx) => {
+          const targetMeasure = next[mIdx];
+          if (!targetMeasure) return;
 
-        targetMeasure.beats.forEach((beat, bIdx) => {
-          beat.subdivision = sub;
-          beat.isTuplet = isTuplet;
-          beat.tupletRatio = isTuplet ? ratioMap[sub] : undefined;
-          beat.steps = rudiment.steps.map((rudStep, sIdx) =>
-            createStepFromRudiment(rudStep, `${targetMeasure.id}-b${bIdx}-s${sIdx}`, voicing, bIdx)
-          );
+          targetMeasure.beats.forEach((beat, bIdx) => {
+            beat.subdivision = sub;
+            beat.isTuplet = isTuplet;
+            beat.tupletRatio = isTuplet ? ratioMap[sub] : undefined;
+            beat.steps = rudiment.steps.map((rudStep, sIdx) =>
+              createStepFromRudiment(
+                rudStep,
+                `${targetMeasure.id}-b${bIdx}-s${sIdx}`,
+                voicing,
+                bIdx
+              )
+            );
+          });
         });
 
         return next;
@@ -656,6 +673,33 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
       setActivePresetId(null);
     },
     [selectedMeasureIndex]
+  );
+
+  // Convenience aliases for single-target insertion
+  const insertRudimentAtBeat = useCallback(
+    (
+      rudiment: RudimentItem,
+      voicing: VoicingMode = 'snare',
+      mIdx?: number,
+      bIdx?: number
+    ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      batchInsertRudiment(rudiment, voicing, [measureIndex], [beatIndex]);
+    },
+    [batchInsertRudiment, selectedMeasureIndex, selectedBeatIndex]
+  );
+
+  const fillMeasureWithRudiment = useCallback(
+    (
+      rudiment: RudimentItem,
+      voicing: VoicingMode = 'snare',
+      mIdx?: number
+    ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      fillMeasuresWithRudiment(rudiment, voicing, [measureIndex]);
+    },
+    [fillMeasuresWithRudiment, selectedMeasureIndex]
   );
 
   return {
@@ -684,6 +728,8 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     setTimeSignature,
     loadPreset,
     loadScoreData,
+    batchInsertRudiment,
+    fillMeasuresWithRudiment,
     insertRudimentAtBeat,
     fillMeasureWithRudiment,
   };
