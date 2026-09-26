@@ -6,8 +6,12 @@ import {
   DrumBeat,
   DrumStep,
   DrumPieceId,
+  DrumHit,
   DrumPreset,
   SUBDIVISION_OPTIONS,
+  RudimentItem,
+  RudimentStep,
+  VoicingMode,
 } from '@/types/drum';
 import { DRUM_PRESETS } from '@/lib/drumPresets';
 
@@ -500,6 +504,134 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     setSelectedStepIndex(0);
   }, []);
 
+  // Helper to construct a step from a RudimentStep
+  const createStepFromRudiment = (
+    rudStep: RudimentStep,
+    stepId: string,
+    voicing: VoicingMode,
+    beatOffset: number = 0
+  ): DrumStep => {
+    let pieceId: DrumPieceId = 'snare';
+
+    if (voicing === 'snare') {
+      pieceId = rudStep.sticking === 'K' ? 'kick' : 'snare';
+    } else {
+      // Kit orchestration: use kitPiece or intelligent tom/kick mapping
+      if (rudStep.kitPiece) {
+        pieceId = rudStep.kitPiece;
+      } else if (rudStep.sticking === 'K') {
+        pieceId = 'kick';
+      } else if (rudStep.accent) {
+        const tomRotation: DrumPieceId[] = ['snare', 'tom1', 'tom2', 'floorTom', 'crash'];
+        pieceId = tomRotation[beatOffset % tomRotation.length];
+      } else {
+        pieceId = 'snare';
+      }
+    }
+
+    const hit: DrumHit = {
+      pieceId,
+      accent: rudStep.accent,
+      ghost: rudStep.ghost,
+      sticking: rudStep.sticking,
+      flam: rudStep.flam,
+    };
+
+    return {
+      id: stepId,
+      hits: [hit],
+      isRest: false,
+      sticking: rudStep.sticking,
+      flam: rudStep.flam,
+    };
+  };
+
+  // Insert rudiment into the specified beat
+  const insertRudimentAtBeat = useCallback(
+    (
+      rudiment: RudimentItem,
+      voicing: VoicingMode = 'snare',
+      mIdx?: number,
+      bIdx?: number
+    ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+
+      setMeasures((prev) => {
+        const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
+        const targetMeasure = next[measureIndex];
+        if (!targetMeasure) return prev;
+        const targetBeat = targetMeasure.beats[beatIndex];
+        if (!targetBeat) return prev;
+
+        const sub = rudiment.subdivision;
+        const isTuplet = [3, 5, 6, 7, 9].includes(sub);
+        const ratioMap: Record<number, [number, number]> = {
+          3: [3, 2],
+          5: [5, 4],
+          6: [6, 4],
+          7: [7, 4],
+          9: [9, 8],
+        };
+
+        const newSteps: DrumStep[] = rudiment.steps.map((rudStep, sIdx) =>
+          createStepFromRudiment(rudStep, `${targetMeasure.id}-b${beatIndex}-s${sIdx}`, voicing, beatIndex)
+        );
+
+        targetBeat.subdivision = sub;
+        targetBeat.isTuplet = isTuplet;
+        targetBeat.tupletRatio = isTuplet ? ratioMap[sub] : undefined;
+        targetBeat.steps = newSteps;
+
+        return next;
+      });
+
+      setActivePresetId(null);
+    },
+    [selectedMeasureIndex, selectedBeatIndex]
+  );
+
+  // Fill entire active measure with rudiment pattern
+  const fillMeasureWithRudiment = useCallback(
+    (
+      rudiment: RudimentItem,
+      voicing: VoicingMode = 'snare',
+      mIdx?: number
+    ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+
+      setMeasures((prev) => {
+        const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
+        const targetMeasure = next[measureIndex];
+        if (!targetMeasure) return prev;
+
+        const sub = rudiment.subdivision;
+        const isTuplet = [3, 5, 6, 7, 9].includes(sub);
+        const ratioMap: Record<number, [number, number]> = {
+          3: [3, 2],
+          5: [5, 4],
+          6: [6, 4],
+          7: [7, 4],
+          9: [9, 8],
+        };
+
+        targetMeasure.beats.forEach((beat, bIdx) => {
+          beat.subdivision = sub;
+          beat.isTuplet = isTuplet;
+          beat.tupletRatio = isTuplet ? ratioMap[sub] : undefined;
+          beat.steps = rudiment.steps.map((rudStep, sIdx) =>
+            createStepFromRudiment(rudStep, `${targetMeasure.id}-b${bIdx}-s${sIdx}`, voicing, bIdx)
+          );
+        });
+
+        return next;
+      });
+
+      setActivePresetId(null);
+    },
+    [selectedMeasureIndex]
+  );
+
   return {
     measures,
     timeSignature,
@@ -525,5 +657,7 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     removeMeasure,
     setTimeSignature,
     loadPreset,
+    insertRudimentAtBeat,
+    fillMeasureWithRudiment,
   };
 }

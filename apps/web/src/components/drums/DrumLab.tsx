@@ -8,6 +8,7 @@ import DrumSequencerGrid from './DrumSequencerGrid';
 import DrumTransport from './DrumTransport';
 import DrumSubdivisionBar from './DrumSubdivisionBar';
 import DrumLegendModal from './DrumLegendModal';
+import RudimentLibraryModal from './RudimentLibraryModal';
 import { DrumPieceId, DrumPreset, DRUM_PIECES } from '@/types/drum';
 import {
   Layers,
@@ -23,6 +24,7 @@ import {
 export default function DrumLab() {
   const [viewMode, setViewMode] = useState<'both' | 'score' | 'grid'>('both');
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [isRudimentsOpen, setIsRudimentsOpen] = useState(false);
 
   const audio = useDrumAudio();
   const score = useDrumScore('classic-rock');
@@ -275,38 +277,55 @@ export default function DrumLab() {
           </p>
         </div>
 
-        {/* View Layout Mode Selector */}
-        <div className="flex items-center gap-1.5 bg-surface-card p-1.5 rounded-2xl border border-white/10">
+        {/* Header Actions: Rudiments Vault & View Mode Selector */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Rudiments & Fills Vault Button */}
           <button
-            onClick={() => setViewMode('both')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              viewMode === 'both'
-                ? 'bg-gradient-electric text-white shadow-glow-violet'
-                : 'text-gray-400 hover:text-white'
-            }`}
+            type="button"
+            onClick={() => setIsRudimentsOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-500/25 via-indigo-500/25 to-cyan-500/25 hover:from-purple-500/40 hover:to-cyan-500/40 border border-synth-cyan/50 hover:border-synth-cyan text-white text-xs font-bold font-mono transition-all shadow-[0_0_15px_rgba(34,211,238,0.25)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer"
+            title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
           >
-            Vista Completa
+            <span className="text-base">🥁</span>
+            <span>Rudimentos & Fills</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-synth-cyan/30 text-cyan-200 uppercase font-mono font-bold">
+              Vault
+            </span>
           </button>
-          <button
-            onClick={() => setViewMode('score')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              viewMode === 'score'
-                ? 'bg-gradient-electric text-white shadow-glow-violet'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Partitura VexFlow
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              viewMode === 'grid'
-                ? 'bg-gradient-electric text-white shadow-glow-violet'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Matriz DAW
-          </button>
+
+          {/* View Layout Mode Selector */}
+          <div className="flex items-center gap-1.5 bg-surface-card p-1.5 rounded-2xl border border-white/10">
+            <button
+              onClick={() => setViewMode('both')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                viewMode === 'both'
+                  ? 'bg-gradient-electric text-white shadow-glow-violet'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Vista Completa
+            </button>
+            <button
+              onClick={() => setViewMode('score')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                viewMode === 'score'
+                  ? 'bg-gradient-electric text-white shadow-glow-violet'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Partitura VexFlow
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                viewMode === 'grid'
+                  ? 'bg-gradient-electric text-white shadow-glow-violet'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Matriz DAW
+            </button>
+          </div>
         </div>
       </div>
 
@@ -327,6 +346,7 @@ export default function DrumLab() {
         onSetTimeSignature={score.setTimeSignature}
         onAddMeasure={score.addMeasure}
         onClearMeasure={score.clearMeasure}
+        onOpenRudiments={() => setIsRudimentsOpen(true)}
       />
 
       {/* 2. Rapid Subdivision & Dynamics Bar */}
@@ -417,6 +437,17 @@ export default function DrumLab() {
 
       {/* Help & Notation Legend Modal */}
       <DrumLegendModal isOpen={isLegendOpen} onClose={() => setIsLegendOpen(false)} />
+
+      {/* Rudiment & Fill Vault Modal */}
+      <RudimentLibraryModal
+        isOpen={isRudimentsOpen}
+        onClose={() => setIsRudimentsOpen(false)}
+        selectedMeasureIndex={score.selectedMeasureIndex}
+        selectedBeatIndex={score.selectedBeatIndex}
+        onInsertInBeat={score.insertRudimentAtBeat}
+        onFillMeasure={score.fillMeasureWithRudiment}
+        onPlayHit={audio.playHit}
+      />
     </div>
   );
 }

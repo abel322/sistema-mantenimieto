@@ -55,7 +55,21 @@ export default function DrumScoreRenderer({
         const vf = await import('vexflow');
         if (isCancelled || !containerRef.current) return;
 
-        const { Renderer, Stave, StaveNote, Voice, Formatter, Beam, Tuplet, Articulation, Annotation, Parenthesis, Modifier } = vf;
+        const {
+          Renderer,
+          Stave,
+          StaveNote,
+          Voice,
+          Formatter,
+          Beam,
+          Tuplet,
+          Articulation,
+          Annotation,
+          Parenthesis,
+          Modifier,
+          GraceNote,
+          GraceNoteGroup,
+        } = vf as any;
         const Glyphs = (vf as any).Glyphs || {};
 
         // Initialize SVG Renderer
@@ -191,6 +205,46 @@ export default function DrumScoreRenderer({
                     }
                   }
                 });
+
+                // Sticking annotation (R / L / K)
+                const sticking = step.sticking || step.hits.find((h) => h.sticking)?.sticking;
+                if (sticking && Annotation) {
+                  try {
+                    const stickingAnn = new Annotation(sticking);
+                    stickingAnn.setFont('monospace', 10, 'bold');
+                    stickingAnn.setVerticalJustification(Annotation.VerticalJustify.BOTTOM);
+                    staveNote.addModifier(stickingAnn, 0);
+                  } catch (_) {}
+                }
+
+                // Flam grace note (or fallback annotation)
+                const isFlam = step.flam || step.hits.some((h) => h.flam);
+                if (isFlam) {
+                  let flamAdded = false;
+                  if (GraceNote && GraceNoteGroup) {
+                    try {
+                      const graceKey = DRUM_PIECES[sortedHits[0]?.pieceId]?.keyPos || 'c/5';
+                      const graceNote = new GraceNote({
+                        keys: [graceKey],
+                        duration: '16',
+                        slash: true,
+                        clef: 'percussion',
+                      });
+                      graceNote.setStyle({ fillStyle: '#94A3B8', strokeStyle: '#94A3B8' });
+                      const graceGroup = new GraceNoteGroup([graceNote], true);
+                      staveNote.addModifier(graceGroup, 0);
+                      flamAdded = true;
+                    } catch (_) {}
+                  }
+                  if (!flamAdded && Annotation) {
+                    try {
+                      const flamAnn = new Annotation('flam');
+                      flamAnn.setFont('sans-serif', 9, 'bold');
+                      flamAnn.setVerticalJustification(Annotation.VerticalJustify.TOP);
+                      staveNote.addModifier(flamAnn, 0);
+                    } catch (_) {}
+                  }
+                }
 
                 // Note styling (cyan/violet neon vibe)
                 staveNote.setStyle({ fillStyle: '#38BDF8', strokeStyle: '#38BDF8' });

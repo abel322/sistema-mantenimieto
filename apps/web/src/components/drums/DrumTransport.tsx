@@ -34,6 +34,7 @@ interface DrumTransportProps {
   onSetTimeSignature: (ts: [number, number]) => void;
   onAddMeasure: () => void;
   onClearMeasure: () => void;
+  onOpenRudiments?: () => void;
 }
 
 export default function DrumTransport({
@@ -52,6 +53,7 @@ export default function DrumTransport({
   onSetTimeSignature,
   onAddMeasure,
   onClearMeasure,
+  onOpenRudiments,
 }: DrumTransportProps) {
   // Tap tempo logic
   const tapTimesRef = useRef<number[]>([]);
@@ -231,6 +233,19 @@ export default function DrumTransport({
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto w-full pb-1 scrollbar-none">
+          {onOpenRudiments && (
+            <button
+              type="button"
+              onClick={onOpenRudiments}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-synth-cyan/50 bg-gradient-to-r from-purple-500/20 to-cyan-500/20 hover:from-purple-500/30 hover:to-cyan-500/30 text-synth-cyan hover:text-white transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(34,211,238,0.2)]"
+              title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
+            >
+              <span className="text-sm">🥁</span>
+              <span>Rudimentos & Fills</span>
+              <span className="text-[9px] px-1 rounded bg-synth-cyan/30 text-cyan-200">Vault</span>
+            </button>
+          )}
+
           {DRUM_PRESETS.map((preset) => {
             const isSelected = activePresetId === preset.id;
             return (

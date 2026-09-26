@@ -149,12 +149,40 @@ export interface DrumHit {
   pieceId: DrumPieceId;
   accent?: boolean;
   ghost?: boolean;
+  sticking?: 'R' | 'L' | 'K' | 'B' | string;
+  flam?: boolean;
 }
 
 export interface DrumStep {
   id: string;
   hits: DrumHit[];
   isRest?: boolean;
+  sticking?: 'R' | 'L' | 'K' | 'B' | string;
+  flam?: boolean;
+}
+
+export type VoicingMode = 'snare' | 'kit';
+
+export type RudimentCategory = 'rolls' | 'diddles' | 'flams' | 'linear-chops';
+
+export interface RudimentStep {
+  sticking: 'R' | 'L' | 'K' | 'B' | string; // Right hand, Left hand, Kick, Both
+  accent?: boolean;
+  ghost?: boolean;
+  flam?: boolean;
+  kitPiece?: DrumPieceId; // Voicing assignment when in Kit/Chops mode
+}
+
+export interface RudimentItem {
+  id: string;
+  name: string;
+  category: RudimentCategory;
+  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado';
+  description: string;
+  subdivision: number; // 4 (16th), 3 (triplet 3:2), 6 (sextuplet 6:4), 2 (8th), 5 (quintuplet)
+  defaultBpm: number;
+  steps: RudimentStep[];
+  tags: string[];
 }
 
 export interface DrumBeat {
