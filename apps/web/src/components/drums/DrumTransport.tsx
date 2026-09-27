@@ -51,6 +51,7 @@ interface DrumTransportProps {
   onSelectMeasureIndex?: (index: number) => void;
   onOpenRudiments?: () => void;
   onOpenGrooves?: () => void;
+  onOpenWorkoutBuilder?: () => void;
   onOpenSaveExercise?: () => void;
   onOpenExerciseLibrary?: () => void;
 }
@@ -85,6 +86,7 @@ export default function DrumTransport({
   onSelectMeasureIndex,
   onOpenRudiments,
   onOpenGrooves,
+  onOpenWorkoutBuilder,
   onOpenSaveExercise,
   onOpenExerciseLibrary,
 }: DrumTransportProps) {
@@ -520,6 +522,21 @@ export default function DrumTransport({
               <span>Groove Vault</span>
               <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-500/30 text-amber-200 font-bold">
                 85+
+              </span>
+            </button>
+          )}
+
+          {onOpenWorkoutBuilder && (
+            <button
+              type="button"
+              onClick={onOpenWorkoutBuilder}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-emerald-500/50 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 hover:text-white transition-all flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.2)] cursor-pointer"
+              title="Abrir Workout Builder (Generador de Rutinas y Pirámides de 8, 16 y 24 compases)"
+            >
+              <span className="text-sm">⚙️</span>
+              <span>Workout Builder</span>
+              <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-500/30 text-emerald-200 font-bold">
+                8-24 C
               </span>
             </button>
           )}

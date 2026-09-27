@@ -13,6 +13,7 @@ import RudimentLibraryModal from './RudimentLibraryModal';
 import GrooveLibraryModal from './GrooveLibraryModal';
 import SaveExerciseModal from './SaveExerciseModal';
 import ExerciseLibraryModal from './ExerciseLibraryModal';
+import WorkoutBuilderModal from './WorkoutBuilderModal';
 import { DrumPieceId, DrumPreset, DRUM_PIECES, GroovePattern } from '@/types/drum';
 import { convertGrooveToDrumMeasures } from '@/lib/groovesData';
 import {
@@ -30,9 +31,12 @@ import {
 
 export default function DrumLab() {
   const [viewMode, setViewMode] = useState<'both' | 'score' | 'grid'>('both');
+  const [scoreLayoutMode, setScoreLayoutMode] = useState<'paginated' | 'runway'>('paginated');
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [isRudimentsOpen, setIsRudimentsOpen] = useState(false);
   const [isGroovesOpen, setIsGroovesOpen] = useState(false);
+  const [isWorkoutBuilderOpen, setIsWorkoutBuilderOpen] = useState(false);
   const [isSaveExerciseOpen, setIsSaveExerciseOpen] = useState(false);
   const [isExerciseLibraryOpen, setIsExerciseLibraryOpen] = useState(false);
   const [highlightSyncopations, setHighlightSyncopations] = useState(false);
@@ -523,6 +527,7 @@ export default function DrumLab() {
         onSelectMeasureIndex={(idx) => score.selectStep(idx, 0, 0)}
         onOpenRudiments={() => setIsRudimentsOpen(true)}
         onOpenGrooves={() => setIsGroovesOpen(true)}
+        onOpenWorkoutBuilder={() => setIsWorkoutBuilderOpen(true)}
         onOpenSaveExercise={() => setIsSaveExerciseOpen(true)}
         onOpenExerciseLibrary={() => setIsExerciseLibraryOpen(true)}
       />
@@ -558,12 +563,66 @@ export default function DrumLab() {
       {/* 3. Percussion Score View (VexFlow Standard 5-line Clef) */}
       {(viewMode === 'both' || viewMode === 'score') && (
         <section className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-400 px-1 font-mono">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-gray-400 px-1 font-mono">
             <span className="flex items-center gap-1.5 text-synth-cyan">
               <Music className="w-4 h-4" />
               MÓDULO 1: PARTITURA DE BATERÍA VEXFLOW (5 LÍNEAS & TUPLETS)
             </span>
-            <span>Clave Percusión • Playhead Láser • Ligaduras & Síncopas</span>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous Strip) */}
+              <div className="flex items-center p-0.5 rounded-xl bg-surface-card border border-white/10 select-none">
+                <button
+                  type="button"
+                  onClick={() => setScoreLayoutMode('paginated')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    scoreLayoutMode === 'paginated'
+                      ? 'bg-gradient-electric text-white shadow-glow-violet'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Vista Partitura: Páginas / Multilínea (2 compases por fila)"
+                >
+                  <span>⊞</span>
+                  <span>Páginas</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setScoreLayoutMode('runway')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    scoreLayoutMode === 'runway'
+                      ? 'bg-synth-cyan text-black shadow-glow-cyan font-extrabold'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Modo Ensayo Horizontal: Cinta Continua / Runway con Auto-Scroll sincronizado"
+                >
+                  <span>⇄</span>
+                  <span>Modo Runway</span>
+                  {scoreLayoutMode === 'runway' && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                  )}
+                </button>
+              </div>
+
+              {/* Zoom Controls (80%, 100%, 120%) */}
+              <div className="flex items-center gap-1 bg-surface-card p-0.5 rounded-xl border border-white/10 select-none">
+                <span className="text-[10px] text-gray-500 px-1 font-semibold">ZOOM:</span>
+                {[0.8, 1.0, 1.2].map((z) => (
+                  <button
+                    key={`zoom-lab-${z}`}
+                    type="button"
+                    onClick={() => setZoomLevel(z)}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                      zoomLevel === z
+                        ? 'bg-synth-cyan text-black shadow-glow-cyan'
+                        : 'text-gray-400 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    {Math.round(z * 100)}%
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <DrumScoreRenderer
@@ -576,6 +635,10 @@ export default function DrumLab() {
             highlightSyncopations={highlightSyncopations}
             isSyncopationDrill={audio.isSyncopationDrill}
             currentBeatFlash={audio.currentBeatFlash}
+            layoutMode={scoreLayoutMode}
+            onToggleLayoutMode={setScoreLayoutMode}
+            zoomLevel={zoomLevel}
+            onChangeZoomLevel={setZoomLevel}
             onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
             onSelectStep={score.selectStep}
             onTogglePiece={handleTogglePiece}
@@ -689,6 +752,19 @@ export default function DrumLab() {
         onExportAll={storage.exportAllExercisesToJson}
         onImportJson={storage.importExercisesFromJson}
         onOpenSaveCurrent={() => setIsSaveExerciseOpen(true)}
+      />
+
+      {/* Workout / Routine Builder Modal */}
+      <WorkoutBuilderModal
+        isOpen={isWorkoutBuilderOpen}
+        onClose={() => setIsWorkoutBuilderOpen(false)}
+        onGenerateWorkout={(routine) => {
+          audio.stop();
+          score.loadScoreData(routine.measures, [4, 4], 'workout-routine', 0, 0, 0);
+          audio.setBpm(routine.bpm);
+          setScoreLayoutMode('runway');
+        }}
+        onPlayHit={audio.playHit}
       />
     </div>
   );

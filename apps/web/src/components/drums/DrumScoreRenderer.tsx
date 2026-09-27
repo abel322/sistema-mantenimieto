@@ -15,6 +15,10 @@ interface DrumScoreRendererProps {
   highlightSyncopations?: boolean;
   isSyncopationDrill?: boolean;
   currentBeatFlash?: BeatFlash | null;
+  layoutMode?: 'paginated' | 'runway';
+  onToggleLayoutMode?: (mode: 'paginated' | 'runway') => void;
+  zoomLevel?: number;
+  onChangeZoomLevel?: (zoom: number) => void;
   onToggleHighlightSyncopations?: () => void;
   onSelectStep: (mIdx: number, bIdx: number, sIdx: number) => void;
   onTogglePiece?: (pieceId: DrumPieceId) => void;
@@ -40,14 +44,21 @@ export default function DrumScoreRenderer({
   highlightSyncopations = false,
   isSyncopationDrill = false,
   currentBeatFlash = null,
+  layoutMode = 'paginated',
+  onToggleLayoutMode,
+  zoomLevel = 1.0,
+  onChangeZoomLevel,
   onToggleHighlightSyncopations,
   onSelectStep,
   onRemoveMeasure,
 }: DrumScoreRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(880);
   const [notePositions, setNotePositions] = useState<NoteXPosition[]>([]);
   const [renderError, setRenderError] = useState<string | null>(null);
+
+  const isRunway = layoutMode === 'runway';
 
   // Responsive container width tracking
   useEffect(() => {
@@ -61,17 +72,27 @@ export default function DrumScoreRenderer({
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
 
-  // Calculate layout dimensions with responsive stave line-wrapping
+  // Calculate layout dimensions with responsive stave line-wrapping or continuous horizontal runway
   const minMeasureWidth = 400;
-  const measuresPerRow = Math.max(
-    1,
-    Math.min(measures.length, Math.floor((containerWidth - 40) / minMeasureWidth))
-  );
-  const currentMeasureWidth = Math.floor((containerWidth - 40) / measuresPerRow);
-  const rowHeight = 170;
-  const numRows = Math.ceil(measures.length / measuresPerRow);
-  const totalWidth = containerWidth;
-  const totalHeight = Math.max(200, numRows * rowHeight + 35);
+  const measuresPerRow = isRunway
+    ? measures.length
+    : Math.max(1, Math.min(measures.length, Math.floor((containerWidth - 40) / minMeasureWidth)));
+
+  const baseMeasureWidth = Math.round(410 * zoomLevel);
+  const currentMeasureWidth = isRunway
+    ? baseMeasureWidth
+    : Math.floor((containerWidth - 40) / measuresPerRow);
+
+  const rowHeight = Math.round(175 * zoomLevel);
+  const numRows = isRunway ? 1 : Math.ceil(measures.length / measuresPerRow);
+
+  const totalWidth = isRunway
+    ? Math.max(containerWidth, measures.length * currentMeasureWidth + 80)
+    : containerWidth;
+
+  const totalHeight = isRunway
+    ? Math.round(220 * zoomLevel)
+    : Math.max(200, numRows * rowHeight + 35);
 
   // Render VexFlow score onto container
   useEffect(() => {
@@ -118,8 +139,8 @@ export default function DrumScoreRenderer({
 
         measures.forEach((measure, mIdx) => {
           const [beatsCount, beatValue] = measure.timeSignature;
-          const rowIndex = Math.floor(mIdx / measuresPerRow);
-          const colIndex = mIdx % measuresPerRow;
+          const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
+          const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
           const measureX = 20 + colIndex * currentMeasureWidth;
           const measureY = 25 + rowIndex * rowHeight;
 
@@ -481,7 +502,7 @@ export default function DrumScoreRenderer({
     return () => {
       isCancelled = true;
     };
-  }, [measures, totalWidth, totalHeight, measuresPerRow, currentMeasureWidth, rowHeight, highlightSyncopations, isSyncopationDrill]);
+  }, [measures, totalWidth, totalHeight, measuresPerRow, currentMeasureWidth, rowHeight, highlightSyncopations, isSyncopationDrill, isRunway, zoomLevel]);
 
   // Find position of active playhead step
   const activePlayheadPos = useMemo(() => {
@@ -519,6 +540,43 @@ export default function DrumScoreRenderer({
     );
   }, [notePositions, selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]);
 
+  // Auto-scroll synchronized with Tone.Transport Playhead in Runway Mode
+  useEffect(() => {
+    if (!isRunway || !isPlaying || !activePlayheadPos || !scrollContainerRef.current) {
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    const containerVisibleWidth = container.clientWidth;
+    // Maintain active beat focused around 1/3 from the left side of the screen
+    const targetScrollLeft = Math.max(0, activePlayheadPos.x - containerVisibleWidth / 3);
+
+    container.scrollTo({
+      left: targetScrollLeft,
+      behavior: 'smooth',
+    });
+  }, [isRunway, isPlaying, activePlayheadPos]);
+
+  // Center selected step when clicking or navigating while paused
+  useEffect(() => {
+    if (!isRunway || isPlaying || !selectedStepPos || !scrollContainerRef.current) {
+      return;
+    }
+    const container = scrollContainerRef.current;
+    const containerVisibleWidth = container.clientWidth;
+    const currentScroll = container.scrollLeft;
+
+    if (
+      selectedStepPos.x < currentScroll + 50 ||
+      selectedStepPos.x > currentScroll + containerVisibleWidth - 80
+    ) {
+      container.scrollTo({
+        left: Math.max(0, selectedStepPos.x - containerVisibleWidth / 3),
+        behavior: 'smooth',
+      });
+    }
+  }, [isRunway, isPlaying, selectedStepPos]);
+
   const selectedBeat = measures[selectedMeasureIndex]?.beats[selectedBeatIndex];
   const selectedStep = selectedBeat?.steps[selectedStepIndex];
 
@@ -541,6 +599,63 @@ export default function DrumScoreRenderer({
         </div>
 
         <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
+          {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous strip) */}
+          {onToggleLayoutMode && (
+            <div className="flex items-center p-0.5 rounded-xl bg-surface-dark/90 border border-white/10 select-none">
+              <button
+                type="button"
+                onClick={() => onToggleLayoutMode('paginated')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  !isRunway
+                    ? 'bg-gradient-electric text-white shadow-glow-violet'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Vista Partitura: Páginas / Multilínea (2 compases por fila)"
+              >
+                <span>⊞</span>
+                <span className="hidden sm:inline">Páginas</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onToggleLayoutMode('runway')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isRunway
+                    ? 'bg-synth-cyan text-black shadow-glow-cyan font-extrabold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Modo Ensayo Horizontal: Cinta Continua / Runway con Auto-Scroll sincronizado"
+              >
+                <span>⇄</span>
+                <span>Runway</span>
+                {isRunway && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Zoom Level Selector (80%, 100%, 120%) */}
+          {onChangeZoomLevel && (
+            <div className="flex items-center gap-1 bg-surface-dark/90 p-0.5 rounded-xl border border-white/10 select-none">
+              <span className="text-[10px] text-gray-500 px-1 font-semibold">ZOOM:</span>
+              {[0.8, 1.0, 1.2].map((z) => (
+                <button
+                  key={`zoom-btn-${z}`}
+                  type="button"
+                  onClick={() => onChangeZoomLevel(z)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                    zoomLevel === z
+                      ? 'bg-synth-cyan text-black shadow-glow-cyan'
+                      : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {Math.round(z * 100)}%
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Synchronized Beat Flash Counter (Cyan on 1, Violet on 2, 3, 4) */}
           <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 font-mono text-[11px]">
             <span className="text-gray-400 text-[10px] mr-1">PULSO:</span>
@@ -631,59 +746,91 @@ export default function DrumScoreRenderer({
         </div>
       )}
 
-      {/* Main Score Scroll Container */}
-      <div className="relative overflow-x-auto overflow-y-hidden py-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      {/* Main Score Scroll Container (Horizontal Runway or Paginated) */}
+      <div
+        ref={scrollContainerRef}
+        className={`relative overflow-y-hidden py-4 ${
+          isRunway
+            ? 'overflow-x-auto scroll-smooth scrollbar-thin scrollbar-thumb-synth-cyan/40 scrollbar-track-surface-dark'
+            : 'overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent'
+        }`}
+      >
         <div
-          className="relative mx-auto"
+          className="relative mx-auto transition-all"
           style={{ width: `${totalWidth}px`, height: `${totalHeight}px`, minHeight: '190px' }}
         >
           {/* VexFlow Render Canvas Container */}
           <div ref={containerRef} className="w-full h-full pointer-events-none" />
 
-          {/* Measure Section Badges with Contextual Delete Action */}
+          {/* Measure Section Badges and Active Playing Perimeter Glow */}
           {measures.map((_, mIdx) => {
-            const rowIndex = Math.floor(mIdx / measuresPerRow);
-            const colIndex = mIdx % measuresPerRow;
+            const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
+            const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
             const measureX = 20 + colIndex * currentMeasureWidth;
             const measureY = 25 + rowIndex * rowHeight;
             const isMeasureSelected = selectedMeasureIndex === mIdx;
+            const isMeasurePlaying = isPlaying && playhead.measureIndex === mIdx;
 
             return (
-              <div
-                key={`measure-badge-${mIdx}`}
-                className="group/stave-hdr absolute z-25 flex items-center gap-1 transition-all"
-                style={{
-                  left: `${measureX + (colIndex === 0 ? 32 : 12)}px`,
-                  top: `${measureY - 14}px`,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => onSelectStep(mIdx, 0, 0)}
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 border select-none ${
-                    isMeasureSelected
-                      ? 'bg-synth-cyan/20 border-synth-cyan/60 text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
-                      : 'bg-surface-dark/90 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
-                  }`}
-                  title={`Compás ${mIdx + 1} (Clic para enfocar)`}
-                >
-                  <span>Compás {mIdx + 1}</span>
-                </button>
+              <React.Fragment key={`measure-group-${mIdx}`}>
+                {/* Active Playing Measure Perimeter Glow */}
+                {isMeasurePlaying && (
+                  <div
+                    className="absolute rounded-2xl pointer-events-none transition-all duration-150 z-5 border-2 border-synth-cyan/80 bg-gradient-to-b from-synth-cyan/[0.08] via-synth-violet/[0.04] to-transparent shadow-[0_0_24px_rgba(34,211,238,0.3),inset_0_0_12px_rgba(34,211,238,0.1)] animate-pulse-subtle"
+                    style={{
+                      left: `${measureX + 2}px`,
+                      top: `${measureY - 16}px`,
+                      width: `${currentMeasureWidth - 4}px`,
+                      height: `${rowHeight + 6}px`,
+                    }}
+                  >
+                    {isRunway && (
+                      <div className="absolute top-1 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-synth-cyan/25 border border-synth-cyan/60 text-[9px] font-mono text-cyan-200 shadow-[0_0_8px_#22d3ee]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-synth-cyan animate-ping" />
+                        <span className="font-bold">ON RUNWAY</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                {measures.length > 1 && onRemoveMeasure && (
+                {/* Measure Section Badge with Contextual Delete Action */}
+                <div
+                  className="group/stave-hdr absolute z-25 flex items-center gap-1 transition-all"
+                  style={{
+                    left: `${measureX + (colIndex === 0 ? 32 : 12)}px`,
+                    top: `${measureY - 14}px`,
+                  }}
+                >
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveMeasure(mIdx);
-                    }}
-                    className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-surface-dark/95 hover:bg-rose-500/25 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
-                    title={`Eliminar Compás C${mIdx + 1}`}
+                    onClick={() => onSelectStep(mIdx, 0, 0)}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 border select-none ${
+                      isMeasurePlaying
+                        ? 'bg-synth-cyan/30 border-synth-cyan text-synth-cyan shadow-[0_0_10px_rgba(34,211,238,0.4)] ring-1 ring-synth-cyan'
+                        : isMeasureSelected
+                        ? 'bg-synth-cyan/20 border-synth-cyan/60 text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
+                        : 'bg-surface-dark/90 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                    }`}
+                    title={`Compás ${mIdx + 1} (Clic para enfocar)`}
                   >
-                    <X className="w-3 h-3" />
+                    <span>Compás {mIdx + 1}</span>
                   </button>
-                )}
-              </div>
+
+                  {measures.length > 1 && onRemoveMeasure && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveMeasure(mIdx);
+                      }}
+                      className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-surface-dark/95 hover:bg-rose-500/25 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
+                      title={`Eliminar Compás C${mIdx + 1}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </React.Fragment>
             );
           })}
 
