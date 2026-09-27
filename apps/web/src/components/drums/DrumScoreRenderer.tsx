@@ -631,10 +631,10 @@ export default function DrumScoreRenderer({
           laserRef.current.style.transform = `translate3d(${exactX}px, 0, 0)`;
         }
 
-        // Keep reading line fixed around 25% from left of viewport (runway lookahead)
+        // Keep reading line fixed in the first third (around 28% from left) for optimal lookahead
         if (!isDraggingTimelineRef.current) {
           const containerVisibleWidth = container.clientWidth;
-          const focusPoint = Math.max(120, containerVisibleWidth * 0.25);
+          const focusPoint = Math.max(140, containerVisibleWidth * 0.28);
           const targetScrollLeft = Math.max(0, exactX - focusPoint);
           container.scrollLeft = targetScrollLeft;
         }
@@ -654,21 +654,47 @@ export default function DrumScoreRenderer({
     };
   }, [isRunway, isPlaying, getTimeXPosition, getTransportSeconds]);
 
-  // Graceful smooth reset to start (measure 1) when stopped
-  useEffect(() => {
-    if (prevIsPlayingRef.current && !isPlaying && scrollContainerRef.current) {
+  // Handle explicit Stop action (smooth reset to start)
+  const handleStop = useCallback(() => {
+    if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTo({
         left: 0,
         behavior: 'smooth',
       });
-      if (laserRef.current) {
-        laserRef.current.style.transform = `translate3d(20px, 0, 0)`;
+    }
+    if (laserRef.current) {
+      laserRef.current.style.transform = `translate3d(20px, 0, 0)`;
+    }
+    if (onStop) {
+      onStop();
+    }
+  }, [onStop]);
+
+  // Graceful smooth reset to start (measure 1) ONLY when explicitly stopped at origin
+  useEffect(() => {
+    if (!isPlaying && scrollContainerRef.current) {
+      const transportTime = getTransportSeconds ? getTransportSeconds() : 0;
+      const isAtOrigin =
+        playhead.measureIndex === 0 &&
+        playhead.beatIndex === 0 &&
+        playhead.stepIndex === 0 &&
+        transportTime === 0;
+
+      // Only scroll back to origin if explicitly stopped at 0, NEVER when pausing mid-playback!
+      if (isAtOrigin && prevIsPlayingRef.current) {
+        scrollContainerRef.current.scrollTo({
+          left: 0,
+          behavior: 'smooth',
+        });
+        if (laserRef.current) {
+          laserRef.current.style.transform = `translate3d(20px, 0, 0)`;
+        }
       }
     }
     prevIsPlayingRef.current = isPlaying;
-  }, [isPlaying]);
+  }, [isPlaying, playhead, getTransportSeconds]);
 
-  // Center selected step when clicking or navigating while paused
+  // Center selected step when clicking or navigating while paused (at 28% focus)
   useEffect(() => {
     if (!isRunway || isPlaying || !selectedStepPos || !scrollContainerRef.current) {
       return;
@@ -681,8 +707,9 @@ export default function DrumScoreRenderer({
       selectedStepPos.x < currentScroll + 50 ||
       selectedStepPos.x > currentScroll + containerVisibleWidth - 80
     ) {
+      const focusPoint = Math.max(140, containerVisibleWidth * 0.28);
       container.scrollTo({
-        left: Math.max(0, selectedStepPos.x - containerVisibleWidth / 3),
+        left: Math.max(0, selectedStepPos.x - focusPoint),
         behavior: 'smooth',
       });
     }
@@ -806,7 +833,7 @@ export default function DrumScoreRenderer({
             {onStop && (
               <button
                 type="button"
-                onClick={onStop}
+                onClick={handleStop}
                 className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
                 title="Detener y volver al Compás 1"
               >
@@ -1021,7 +1048,7 @@ export default function DrumScoreRenderer({
         ref={scrollContainerRef}
         className={`relative overflow-y-hidden py-4 ${
           isRunway
-            ? 'overflow-x-auto scrollbar-thin scrollbar-thumb-synth-cyan/40 scrollbar-track-surface-dark [will-change:scroll-position]'
+            ? 'overflow-x-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [will-change:scroll-position]'
             : 'overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent'
         }`}
       >
@@ -1272,7 +1299,7 @@ export default function DrumScoreRenderer({
             <div
               ref={laserRef}
               className={`absolute top-0 left-0 pointer-events-none z-30 transition-opacity duration-150 ${
-                isPlaying ? 'opacity-100' : 'opacity-0'
+                isPlaying || (getTransportSeconds && getTransportSeconds() > 0.01) ? 'opacity-100' : 'opacity-0'
               }`}
               style={{
                 transform: 'translate3d(20px, 0, 0)',
@@ -1280,10 +1307,22 @@ export default function DrumScoreRenderer({
                 willChange: 'transform',
               }}
             >
-              {/* Laser Core Beam */}
-              <div className="w-[2px] h-full bg-synth-cyan shadow-[0_0_14px_#22d3ee,0_0_28px_#38bdf8]" />
+              {/* Laser Core Beam (Cyan when playing, Amber when paused) */}
+              <div
+                className={`w-[2px] h-full ${
+                  isPlaying
+                    ? 'bg-synth-cyan shadow-[0_0_14px_#22d3ee,0_0_28px_#38bdf8]'
+                    : 'bg-amber-400 shadow-[0_0_14px_#f59e0b,0_0_24px_#f59e0b]'
+                }`}
+              />
               {/* Top Reading Diamond */}
-              <div className="absolute -top-1 -left-[5px] w-3 h-3 bg-synth-cyan rotate-45 shadow-[0_0_12px_#22d3ee]" />
+              <div
+                className={`absolute -top-1 -left-[5px] w-3 h-3 rotate-45 ${
+                  isPlaying
+                    ? 'bg-synth-cyan shadow-[0_0_12px_#22d3ee]'
+                    : 'bg-amber-400 shadow-[0_0_12px_#f59e0b]'
+                }`}
+              />
               {/* Glowing reading core dot at stave center */}
               <div className="absolute top-[88px] -left-[3px] w-2 h-2 rounded-full bg-white shadow-[0_0_10px_#fff]" />
             </div>
