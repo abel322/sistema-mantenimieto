@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Sparkles,
@@ -463,6 +464,12 @@ export default function WorkoutBuilderModal({
   onGenerateWorkout,
   onPlayHit,
 }: WorkoutBuilderModalProps) {
+  const [mounted, setMounted] = useState<boolean>(false);
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   // Library Selector Tab in Left Panel
   const [baseLibraryTab, setBaseLibraryTab] = useState<'rudiments' | 'grooves'>('rudiments');
 
@@ -613,7 +620,7 @@ export default function WorkoutBuilderModal({
     });
   }, [phases]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   // Set target total measures and distribute cleanly across existing phases
   const handleSetTotalMeasuresTarget = (target: number) => {
@@ -1130,16 +1137,13 @@ export default function WorkoutBuilderModal({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[92vh] sm:max-w-6xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
-        {/* Mobile Pull Handle */}
-        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
-
-        {/* Modal Sticky Header */}
-        <div className="sticky top-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-b border-white/10 p-3 sm:p-4 flex justify-between items-center gap-2 flex-shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/30 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)] flex-shrink-0">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl h-[88vh] max-h-[820px] bg-[#0B0F19] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        {/* Header Fijo */}
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-white/10 bg-[#0B0F19]">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/30 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)] flex-shrink-0">
               <Sparkles className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="min-w-0">
@@ -1158,16 +1162,17 @@ export default function WorkoutBuilderModal({
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 sm:p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all cursor-pointer flex-shrink-0"
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all cursor-pointer flex-shrink-0"
             title="Cerrar ventana"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Presets Strip (1 Clic) */}
-        <div className="bg-slate-950/90 border-b border-white/10 px-3 sm:px-5 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar flex-shrink-0">
+        {/* Presets Strip (Fijo) */}
+        <div className="flex-shrink-0 bg-slate-950/90 border-b border-white/10 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <span className="text-[10px] font-mono font-bold text-gray-400 flex items-center gap-1 shrink-0">
             <Wand2 className="w-3.5 h-3.5 text-emerald-400" />
             Plantillas de Práctica:
@@ -1195,15 +1200,15 @@ export default function WorkoutBuilderModal({
           </div>
         </div>
 
-        {/* Modal Scrollable Body (2 Paneles Limpios) */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-5 scrollbar-thin scrollbar-thumb-white/10">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Body: Grid Estricto 2 Columnas Balanceado */}
+        <div className="flex-1 overflow-hidden p-5 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 h-full min-h-0">
             {/* ======================================================== */}
-            {/* PANEL IZQUIERDO: Librerías & Parámetros (~35% -> col-span-4) */}
+            {/* COLUMNA IZQUIERDA: Catálogo y Parámetros */}
             {/* ======================================================== */}
-            <div className="lg:col-span-4 space-y-4">
+            <div className="w-full lg:w-[340px] flex flex-col h-full min-h-0 overflow-hidden pr-2 border-r border-white/10 space-y-3">
               {/* 1. Longitud Total Deseada (Libre) */}
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2.5 shadow-md">
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 space-y-2 shadow-md shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <label className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Target className="w-3.5 h-3.5 text-cyan-400" />
@@ -1215,7 +1220,7 @@ export default function WorkoutBuilderModal({
                 </div>
 
                 {/* Acceso Rápido */}
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-4 gap-1">
                   {QUICK_MEASURE_OPTIONS.map((val) => {
                     const isSelected = totalMeasures === val;
                     return (
@@ -1223,9 +1228,9 @@ export default function WorkoutBuilderModal({
                         key={`quick-bar-${val}`}
                         type="button"
                         onClick={() => handleSetTotalMeasuresTarget(val)}
-                        className={`py-1.5 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer ${
+                        className={`py-1 rounded-md border text-[11px] font-mono font-bold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
+                            ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_8px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
                             : 'bg-slate-950/60 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
                         }`}
                       >
@@ -1238,12 +1243,12 @@ export default function WorkoutBuilderModal({
                 {/* Stepper Manual + Input Directo (1 a 64 C) */}
                 <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10">
                   <span className="text-[10px] font-mono text-gray-400">Ajuste fino:</span>
-                  <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-white/10">
+                  <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-white/10">
                     <button
                       type="button"
                       onClick={() => handleSetTotalMeasuresTarget(totalMeasures - 1)}
                       disabled={totalMeasures <= 1}
-                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center font-mono font-bold text-sm cursor-pointer transition-all"
+                      className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center font-mono font-bold text-xs cursor-pointer transition-all"
                     >
                       -
                     </button>
@@ -1253,13 +1258,13 @@ export default function WorkoutBuilderModal({
                       max={64}
                       value={totalMeasures}
                       onChange={(e) => handleSetTotalMeasuresTarget(Number(e.target.value))}
-                      className="w-12 bg-transparent text-center font-mono text-xs font-black text-cyan-300 focus:outline-none"
+                      className="w-10 bg-transparent text-center font-mono text-xs font-black text-cyan-300 focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={() => handleSetTotalMeasuresTarget(totalMeasures + 1)}
                       disabled={totalMeasures >= 64}
-                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center font-mono font-bold text-sm cursor-pointer transition-all"
+                      className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center font-mono font-bold text-xs cursor-pointer transition-all"
                     >
                       +
                     </button>
@@ -1268,8 +1273,8 @@ export default function WorkoutBuilderModal({
               </div>
 
               {/* 2. Célula / Patrón Base (Pestañas Selectoras Vault) */}
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2.5 shadow-md">
-                <div className="flex items-center justify-between text-xs font-mono">
+              <div className="flex-1 flex flex-col min-h-0 p-3 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2 shadow-md overflow-hidden">
+                <div className="flex items-center justify-between text-xs font-mono shrink-0">
                   <label className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Music className="w-3.5 h-3.5 text-purple-400" />
                     CÉLULA / PATRÓN BASE:
@@ -1277,7 +1282,7 @@ export default function WorkoutBuilderModal({
                 </div>
 
                 {/* Tabs: Rudimentos Vault vs Grooves Vault */}
-                <div className="p-1 rounded-xl bg-slate-950 border border-white/10 flex items-center gap-1">
+                <div className="p-1 rounded-xl bg-slate-950 border border-white/10 flex items-center gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => {
@@ -1312,7 +1317,7 @@ export default function WorkoutBuilderModal({
                 </div>
 
                 {/* Buscador Compacto */}
-                <div className="relative">
+                <div className="relative shrink-0">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
@@ -1320,8 +1325,8 @@ export default function WorkoutBuilderModal({
                     onChange={(e) => setPatternSearch(e.target.value)}
                     placeholder={
                       baseLibraryTab === 'rudiments'
-                        ? 'Buscar paradiddle, roll, flam, diddle...'
-                        : 'Buscar rock, funk, shuffle, samba, jazz...'
+                        ? 'Buscar paradiddle, roll, flam...'
+                        : 'Buscar rock, funk, shuffle...'
                     }
                     className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all"
                   />
@@ -1329,7 +1334,7 @@ export default function WorkoutBuilderModal({
 
                 {/* Lista Scrolleable según pestaña activa con MiniScorePreview */}
                 {baseLibraryTab === 'rudiments' ? (
-                  <div className="max-h-[380px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                  <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar space-y-2 pr-1">
                     {filteredRudiments.map((rud) => (
                       <RudimentCardItem
                         key={`rud-${rud.id}`}
@@ -1347,7 +1352,7 @@ export default function WorkoutBuilderModal({
                     )}
                   </div>
                 ) : (
-                  <div className="max-h-[380px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                  <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar space-y-2 pr-1">
                     {filteredGrooves.map((grv) => (
                       <GrooveCardItem
                         key={`grv-${grv.id}`}
@@ -1368,24 +1373,24 @@ export default function WorkoutBuilderModal({
               </div>
 
               {/* 3. Tempo Objetivo (Slider Numérico Estilizado) */}
-              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2.5 shadow-md">
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 space-y-1.5 shadow-md shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-amber-400" />
-                    TEMPO OBJETIVO:
+                    TEMPO:
                   </span>
-                  <span className="text-amber-300 font-bold font-mono text-sm">
+                  <span className="text-amber-300 font-bold font-mono text-xs">
                     {bpm} BPM
                   </span>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <input
                     type="range"
                     min={50}
                     max={220}
                     value={bpm}
                     onChange={(e) => setBpm(Number(e.target.value))}
-                    className="flex-1 accent-amber-400 cursor-pointer"
+                    className="flex-1 accent-amber-400 cursor-pointer h-1.5"
                   />
                   <input
                     type="number"
@@ -1393,46 +1398,46 @@ export default function WorkoutBuilderModal({
                     max={220}
                     value={bpm}
                     onChange={(e) => setBpm(Number(e.target.value))}
-                    className="w-14 bg-slate-950 border border-white/15 rounded-lg px-1.5 py-0.5 text-center font-mono text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400"
+                    className="w-12 bg-slate-950 border border-white/15 rounded-md px-1 py-0.5 text-center font-mono text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400"
                   />
                 </div>
 
                 {/* Switch de Orquestación Progresiva */}
                 <div
                   onClick={() => setProgressiveOrchestration((prev) => !prev)}
-                  className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                  className={`p-1.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     progressiveOrchestration
                       ? 'bg-amber-500/15 border-amber-400/60 text-white'
                       : 'bg-slate-950/60 border-white/10 text-gray-400 hover:border-white/20'
                   }`}
                 >
-                  <div className="text-[11px] font-mono leading-tight">
+                  <div className="text-[10px] font-mono leading-tight">
                     <span className="font-bold block text-white">
-                      🥁 Orquestación Progresiva en Toms
+                      🥁 Orquestación Progresiva
                     </span>
                     <span className="text-[9px] text-gray-400">
                       {progressiveOrchestration
-                        ? 'Distribuye acentos y remates en toms/bombo'
-                        : 'Solo caja (modo pad de práctica)'}
+                        ? 'Distribuye acentos en toms'
+                        : 'Solo caja (pad de práctica)'}
                     </span>
                   </div>
                   <div
-                    className={`w-8 h-4 rounded-full transition-colors flex items-center p-0.5 shrink-0 ${
+                    className={`w-7 h-3.5 rounded-full transition-colors flex items-center p-0.5 shrink-0 ${
                       progressiveOrchestration ? 'bg-amber-400 justify-end' : 'bg-white/20 justify-start'
                     }`}
                   >
-                    <div className="w-3 h-3 rounded-full bg-black shadow-md" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-black shadow-md" />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* ======================================================== */}
-            {/* PANEL DERECHO: Timeline Modular & Fases (~65% -> col-span-8) */}
+            {/* PANEL DERECHO: Timeline Modular & Fases */}
             {/* ======================================================== */}
-            <div className="lg:col-span-8 space-y-4">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto pl-1 space-y-4 custom-scrollbar">
               {/* 1. Línea de Tiempo Visual Horizontal Interactiva */}
-              <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/10 space-y-2.5 shadow-xl">
+              <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/10 space-y-2.5 shadow-xl shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-emerald-400" />
@@ -1742,19 +1747,19 @@ export default function WorkoutBuilderModal({
         </div>
 
         {/* Modal Sticky Footer */}
-        <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 px-4 sm:px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs font-mono text-gray-300 truncate text-center sm:text-left">
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-t border-white/10 bg-[#0B0F19] gap-3">
+          <div className="text-xs font-mono text-gray-300 truncate text-left">
             Generando rutina de <span className="text-white font-bold">{totalMeasures} compases</span> ({phases.length} fases) • Groove:{' '}
             <span className="text-amber-300 font-bold">{activeGroove.name}</span> + Rudimento:{' '}
             <span className="text-purple-300 font-bold">{activeRudiment.name}</span> a{' '}
             <span className="text-cyan-400 font-bold">{bpm} BPM</span>.
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono flex-1 sm:flex-initial text-center"
+              className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono text-center"
             >
               Cancelar
             </button>
@@ -1762,7 +1767,7 @@ export default function WorkoutBuilderModal({
             <button
               type="button"
               onClick={handleGenerate}
-              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold text-xs font-mono tracking-wide transition-all shadow-[0_0_20px_rgba(16,185,129,0.35)] flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-initial active:scale-95"
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold text-xs font-mono tracking-wide transition-all shadow-[0_0_20px_rgba(16,185,129,0.35)] flex items-center justify-center gap-2 cursor-pointer active:scale-95"
             >
               <Zap className="w-4 h-4 fill-current" />
               <span>⚡ GENERAR Y CARGAR RUTINA</span>
@@ -1771,6 +1776,7 @@ export default function WorkoutBuilderModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
