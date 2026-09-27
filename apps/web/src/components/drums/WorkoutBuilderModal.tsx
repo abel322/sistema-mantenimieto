@@ -15,8 +15,12 @@ import {
   ArrowRight,
   Search,
   Wand2,
+  Plus,
+  Trash2,
+  Music,
+  Target,
 } from 'lucide-react';
-import { DrumMeasure, DrumBeat, DrumStep, DrumHit, DrumPieceId, DRUM_PIECES } from '@/types/drum';
+import { DrumMeasure, DrumBeat, DrumStep, DrumHit, DrumPieceId } from '@/types/drum';
 
 export interface WorkoutPatternDef {
   id: string;
@@ -153,9 +157,9 @@ export const WORKOUT_PATTERNS: WorkoutPatternDef[] = [
 ];
 
 export interface BlockSubdivisionDef {
-  value: number; // 1, 2, 3, 4, 5, 6, 7, 8
-  label: string; // '1/4', '1/8', '3:2', '1/16', '5:4', '6:4', '7:4', '1/32'
-  nameEs: string; // 'Negras', 'Corcheas', etc.
+  value: number; // 1, 2, 3, 4, 5, 6, 8
+  label: string; // '1/4', '1/8', '3:2', '1/16', '5:4', '6:4', '1/32'
+  nameEs: string;
   density: string;
   isTuplet: boolean;
   ratio?: [number, number];
@@ -236,18 +240,6 @@ export const WORKOUT_SUBDIVISION_OPTIONS: BlockSubdivisionDef[] = [
     bgGradient: 'from-amber-500/20 to-amber-500/5',
   },
   {
-    value: 7,
-    label: '7:4',
-    nameEs: 'Septillos',
-    density: '7 notas/pulso',
-    isTuplet: true,
-    ratio: [7, 4],
-    color: 'text-orange-400',
-    badgeColor: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-    borderColor: 'border-orange-500/40',
-    bgGradient: 'from-orange-500/20 to-orange-500/5',
-  },
-  {
     value: 8,
     label: '1/32',
     nameEs: 'Fusas',
@@ -259,6 +251,11 @@ export const WORKOUT_SUBDIVISION_OPTIONS: BlockSubdivisionDef[] = [
     bgGradient: 'from-rose-500/20 to-rose-500/5',
   },
 ];
+
+// 5 primary interactive subdivision chips
+export const CHIP_SUBDIVISIONS = WORKOUT_SUBDIVISION_OPTIONS.filter((s) =>
+  [2, 4, 3, 6, 8].includes(s.value)
+);
 
 export type BlockOrchestration =
   | 'snare-only'
@@ -272,16 +269,84 @@ export const BLOCK_ORCHESTRATION_OPTIONS: {
   desc: string;
   icon: string;
 }[] = [
-  { id: 'snare-only', label: 'Solo Caja / Snare', desc: 'Práctica pura en caja o pad', icon: '🥁' },
-  { id: 'snare-kick-downbeat', label: 'Caja + Bombo en Downbeat', desc: 'Anclaje en cada tiempo fuerte', icon: '⚡' },
-  { id: 'toms-cascade', label: 'Cascada Toms (Hi, Mid, Floor)', desc: 'Distribución melódica por el set', icon: '🌀' },
-  { id: 'full-kit-chops', label: 'Full Kit Chops (Platillos + Bombo)', desc: 'Chops modernos en todo el kit', icon: '🔥' },
+  { id: 'snare-only', label: 'Caja Sola', desc: 'Práctica pura en caja o pad', icon: '🥁' },
+  { id: 'snare-kick-downbeat', label: 'Caja + Bombo', desc: 'Anclaje en cada tiempo fuerte', icon: '⚡' },
+  { id: 'toms-cascade', label: 'Cascada Toms', desc: 'Distribución melódica por el set', icon: '🌀' },
+  { id: 'full-kit-chops', label: 'Full Kit Chops', desc: 'Chops modernos en todo el kit', icon: '💥' },
 ];
 
-export interface BlockConfig {
+export interface WorkoutPhase {
+  id: string;
+  measuresCount: number;
   subdivisionValue: number;
   orchestration: BlockOrchestration;
 }
+
+export interface WorkoutPreset {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  phases: Array<{ measuresCount: number; subdivisionValue: number; orchestration: BlockOrchestration }>;
+}
+
+export const WORKOUT_PRESETS: WorkoutPreset[] = [
+  {
+    id: 'classic-pyramid',
+    name: 'Pirámide Clásica (1/8 → 1/16 → 6:4 → 1/32)',
+    icon: '⚡',
+    description: 'Aceleración progresiva estándar de 4 fases.',
+    phases: [
+      { measuresCount: 4, subdivisionValue: 2, orchestration: 'snare-kick-downbeat' },
+      { measuresCount: 4, subdivisionValue: 4, orchestration: 'toms-cascade' },
+      { measuresCount: 4, subdivisionValue: 6, orchestration: 'toms-cascade' },
+      { measuresCount: 4, subdivisionValue: 8, orchestration: 'full-kit-chops' },
+    ],
+  },
+  {
+    id: 'warmup',
+    name: 'Calentamiento Progresivo (1/8 → 1/16)',
+    icon: '🔥',
+    description: 'Control de pulso, relajación y fluidez técnica.',
+    phases: [
+      { measuresCount: 4, subdivisionValue: 2, orchestration: 'snare-only' },
+      { measuresCount: 4, subdivisionValue: 4, orchestration: 'snare-kick-downbeat' },
+    ],
+  },
+  {
+    id: 'blues-12',
+    name: 'Forma Blues 12 Compases',
+    icon: '🎷',
+    description: 'Estructura ternaria de 12 compases con shuffle y dinámicas.',
+    phases: [
+      { measuresCount: 4, subdivisionValue: 3, orchestration: 'snare-kick-downbeat' },
+      { measuresCount: 4, subdivisionValue: 3, orchestration: 'toms-cascade' },
+      { measuresCount: 4, subdivisionValue: 6, orchestration: 'full-kit-chops' },
+    ],
+  },
+  {
+    id: 'endurance',
+    name: 'Endurance / Resistencia',
+    icon: '🛡️',
+    description: 'Misma subdivisión constante en 16 compases para desarrollar solidez.',
+    phases: [
+      { measuresCount: 8, subdivisionValue: 4, orchestration: 'snare-only' },
+      { measuresCount: 8, subdivisionValue: 4, orchestration: 'snare-kick-downbeat' },
+    ],
+  },
+  {
+    id: 'custom-free',
+    name: 'Workout Personalizado Libre',
+    icon: '✨',
+    description: 'Estructura limpia y flexible lista para personalizar.',
+    phases: [
+      { measuresCount: 4, subdivisionValue: 4, orchestration: 'snare-kick-downbeat' },
+      { measuresCount: 4, subdivisionValue: 6, orchestration: 'full-kit-chops' },
+    ],
+  },
+];
+
+export const QUICK_MEASURE_OPTIONS = [4, 8, 12, 16, 24, 32];
 
 interface WorkoutBuilderModalProps {
   isOpen: boolean;
@@ -301,19 +366,37 @@ export default function WorkoutBuilderModal({
   onGenerateWorkout,
   onPlayHit,
 }: WorkoutBuilderModalProps) {
-  const [lengthBars, setLengthBars] = useState<8 | 16 | 24>(16);
+  // Pattern & Tempo
   const [selectedPatternId, setSelectedPatternId] = useState<string>('single-paradiddle');
   const [patternSearch, setPatternSearch] = useState<string>('');
-  const [progressiveOrchestration, setProgressiveOrchestration] = useState<boolean>(true);
   const [bpm, setBpm] = useState<number>(105);
+  const [progressiveOrchestration, setProgressiveOrchestration] = useState<boolean>(true);
 
-  // Configuración de los 4 bloques personalizables (A, B, C, D)
-  const [blocks, setBlocks] = useState<BlockConfig[]>([
-    { subdivisionValue: 2, orchestration: 'snare-kick-downbeat' }, // Bloque A: 1/8
-    { subdivisionValue: 4, orchestration: 'toms-cascade' },        // Bloque B: 1/16
-    { subdivisionValue: 6, orchestration: 'toms-cascade' },        // Bloque C: 6:4
-    { subdivisionValue: 8, orchestration: 'full-kit-chops' },       // Bloque D: 1/32
+  // Modular Phases System
+  const [phases, setPhases] = useState<WorkoutPhase[]>([
+    { id: 'phase-1', measuresCount: 4, subdivisionValue: 2, orchestration: 'snare-kick-downbeat' },
+    { id: 'phase-2', measuresCount: 4, subdivisionValue: 4, orchestration: 'toms-cascade' },
+    { id: 'phase-3', measuresCount: 4, subdivisionValue: 6, orchestration: 'toms-cascade' },
+    { id: 'phase-4', measuresCount: 4, subdivisionValue: 8, orchestration: 'full-kit-chops' },
   ]);
+
+  const [activePresetId, setActivePresetId] = useState<string | null>('classic-pyramid');
+
+  // Total measures calculation
+  const totalMeasures = useMemo(() => {
+    return phases.reduce((acc, p) => acc + p.measuresCount, 0);
+  }, [phases]);
+
+  // Bar range boundaries per phase
+  const phaseRanges = useMemo(() => {
+    let currentStart = 1;
+    return phases.map((phase) => {
+      const startBar = currentStart;
+      const endBar = currentStart + phase.measuresCount - 1;
+      currentStart = endBar + 1;
+      return { startBar, endBar, count: phase.measuresCount };
+    });
+  }, [phases]);
 
   const currentPattern = useMemo(() => {
     return WORKOUT_PATTERNS.find((p) => p.id === selectedPatternId) || WORKOUT_PATTERNS[0];
@@ -332,51 +415,109 @@ export default function WorkoutBuilderModal({
 
   if (!isOpen) return null;
 
-  const barsPerBlock = lengthBars / 4;
+  // Set target total measures and distribute cleanly across existing phases
+  const handleSetTotalMeasuresTarget = (target: number) => {
+    const safeTarget = Math.max(1, Math.min(64, target));
+    setActivePresetId(null);
 
-  const getBarRangeText = (blockIndex: number) => {
-    const start = blockIndex * barsPerBlock + 1;
-    const end = (blockIndex + 1) * barsPerBlock;
-    return `Compases ${start} - ${end}`;
-  };
+    setPhases((prevPhases) => {
+      const numPhases = prevPhases.length;
+      if (numPhases === 0) return prevPhases;
 
-  // Botón rápido: Pirámide Clásica Sonora (1/8 -> 1/16 -> 6:4 -> 1/32)
-  const handleApplyClassicPyramid = () => {
-    setBlocks([
-      { subdivisionValue: 2, orchestration: progressiveOrchestration ? 'snare-kick-downbeat' : 'snare-only' },
-      { subdivisionValue: 4, orchestration: progressiveOrchestration ? 'toms-cascade' : 'snare-only' },
-      { subdivisionValue: 6, orchestration: progressiveOrchestration ? 'toms-cascade' : 'snare-only' },
-      { subdivisionValue: 8, orchestration: progressiveOrchestration ? 'full-kit-chops' : 'snare-only' },
-    ]);
-  };
+      const base = Math.floor(safeTarget / numPhases);
+      const remainder = safeTarget % numPhases;
 
-  const handleUpdateBlockSubdivision = (blockIndex: number, subValue: number) => {
-    setBlocks((prev) => {
-      const next = [...prev];
-      next[blockIndex] = { ...next[blockIndex], subdivisionValue: subValue };
-      return next;
+      return prevPhases.map((phase, idx) => {
+        let count = base + (idx < remainder ? 1 : 0);
+        if (count < 1) count = 1;
+        return { ...phase, measuresCount: count };
+      });
     });
   };
 
-  const handleUpdateBlockOrchestration = (blockIndex: number, orchestration: BlockOrchestration) => {
-    setBlocks((prev) => {
-      const next = [...prev];
-      next[blockIndex] = { ...next[blockIndex], orchestration };
-      return next;
-    });
+  // Phase manipulation handlers
+  const handleUpdatePhaseMeasures = (phaseId: string, count: number) => {
+    const safeCount = Math.max(1, Math.min(32, count));
+    setActivePresetId(null);
+    setPhases((prev) =>
+      prev.map((p) => (p.id === phaseId ? { ...p, measuresCount: safeCount } : p))
+    );
   };
 
-  // Asignador inteligente de sonido para cada golpe según orquestación
+  const handleUpdatePhaseSubdivision = (phaseId: string, subValue: number) => {
+    setActivePresetId(null);
+    setPhases((prev) =>
+      prev.map((p) => (p.id === phaseId ? { ...p, subdivisionValue: subValue } : p))
+    );
+  };
+
+  const handleUpdatePhaseOrchestration = (phaseId: string, orchestration: BlockOrchestration) => {
+    setActivePresetId(null);
+    setPhases((prev) =>
+      prev.map((p) => (p.id === phaseId ? { ...p, orchestration } : p))
+    );
+  };
+
+  const handleAddPhase = () => {
+    if (phases.length >= 8) return;
+    setActivePresetId(null);
+
+    const lastPhase = phases[phases.length - 1];
+    const nextSub = lastPhase
+      ? lastPhase.subdivisionValue === 2
+        ? 4
+        : lastPhase.subdivisionValue === 4
+        ? 6
+        : lastPhase.subdivisionValue === 6
+        ? 8
+        : 4
+      : 4;
+
+    const nextOrch: BlockOrchestration = lastPhase
+      ? lastPhase.orchestration === 'snare-only'
+        ? 'snare-kick-downbeat'
+        : lastPhase.orchestration === 'snare-kick-downbeat'
+        ? 'toms-cascade'
+        : 'full-kit-chops'
+      : 'toms-cascade';
+
+    const newPhase: WorkoutPhase = {
+      id: `phase-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      measuresCount: Math.max(2, Math.round(totalMeasures / (phases.length + 1)) || 4),
+      subdivisionValue: nextSub,
+      orchestration: nextOrch,
+    };
+
+    setPhases((prev) => [...prev, newPhase]);
+  };
+
+  const handleRemovePhase = (phaseId: string) => {
+    if (phases.length <= 1) return;
+    setActivePresetId(null);
+    setPhases((prev) => prev.filter((p) => p.id !== phaseId));
+  };
+
+  const handleApplyPreset = (preset: WorkoutPreset) => {
+    setActivePresetId(preset.id);
+    const newPhases = preset.phases.map((p, idx) => ({
+      id: `phase-${idx + 1}-${Date.now()}`,
+      measuresCount: p.measuresCount,
+      subdivisionValue: p.subdivisionValue,
+      orchestration: p.orchestration,
+    }));
+    setPhases(newPhases);
+  };
+
+  // Drum sound mapping for each step depending on chosen orchestration
   const getHitsForStep = (
     stepDef: WorkoutPatternDef['stickingCycle'][number],
     orchestration: BlockOrchestration,
     bIdx: number,
-    sIdx: number,
-    sub: number
+    sIdx: number
   ): DrumHit[] => {
     const hits: DrumHit[] = [];
 
-    // Hand es 'K' (Bombo / Foot)
+    // Hand is 'K' (Kick)
     if (stepDef.hand === 'K') {
       hits.push({
         pieceId: 'kick',
@@ -386,7 +527,7 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    // Modo 1: Solo Caja / Snare
+    // Mode 1: Pure Snare
     if (orchestration === 'snare-only') {
       hits.push({
         pieceId: 'snare',
@@ -398,7 +539,7 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    // Modo 2: Caja + Bombo en Downbeat
+    // Mode 2: Snare + Kick on Downbeats
     if (orchestration === 'snare-kick-downbeat') {
       hits.push({
         pieceId: 'snare',
@@ -413,7 +554,7 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    // Modo 3: Cascada en Toms (Snare -> Tom1 -> Tom2 -> FloorTom)
+    // Mode 3: Toms Cascade (Snare -> Tom1 -> Tom2 -> FloorTom)
     if (orchestration === 'toms-cascade') {
       let pieceId: DrumPieceId = 'snare';
       if (stepDef.ghost) {
@@ -440,7 +581,7 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    // Modo 4: Full Kit Chops (Crash + Bombo en acentos, toms en dinámicas)
+    // Mode 4: Full Kit Chops
     if (orchestration === 'full-kit-chops') {
       let pieceId: DrumPieceId = 'snare';
       if (stepDef.ghost) {
@@ -476,7 +617,6 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    // Fallback estándar
     hits.push({
       pieceId: 'snare',
       accent: stepDef.accent,
@@ -487,75 +627,77 @@ export default function WorkoutBuilderModal({
     return hits;
   };
 
-  // Generador de la secuencia completa
+  // Full score generator across all dynamic phases
   const handleGenerate = () => {
     const cycle = currentPattern.stickingCycle;
     const measures: DrumMeasure[] = [];
     let cycleIndex = 0;
+    let measureIndexTracker = 1;
 
-    for (let mIdx = 0; mIdx < lengthBars; mIdx++) {
-      const blockIdx = Math.min(3, Math.floor(mIdx / barsPerBlock));
-      const blockCfg = blocks[blockIdx];
+    for (const phase of phases) {
       const subOption =
-        WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === blockCfg.subdivisionValue) ||
+        WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === phase.subdivisionValue) ||
         WORKOUT_SUBDIVISION_OPTIONS[1];
       const sub = subOption.value;
 
-      const beats: DrumBeat[] = [];
+      for (let m = 0; m < phase.measuresCount; m++) {
+        const beats: DrumBeat[] = [];
 
-      for (let bIdx = 0; bIdx < 4; bIdx++) {
-        const steps: DrumStep[] = [];
+        for (let bIdx = 0; bIdx < 4; bIdx++) {
+          const steps: DrumStep[] = [];
 
-        for (let sIdx = 0; sIdx < sub; sIdx++) {
-          const stepDef = cycle[cycleIndex % cycle.length];
-          cycleIndex++;
+          for (let sIdx = 0; sIdx < sub; sIdx++) {
+            const stepDef = cycle[cycleIndex % cycle.length];
+            cycleIndex++;
 
-          const hits = getHitsForStep(
-            stepDef,
-            progressiveOrchestration ? blockCfg.orchestration : 'snare-only',
-            bIdx,
-            sIdx,
-            sub
-          );
+            const hits = getHitsForStep(
+              stepDef,
+              progressiveOrchestration ? phase.orchestration : 'snare-only',
+              bIdx,
+              sIdx
+            );
 
-          steps.push({
-            id: `m${mIdx + 1}-b${bIdx}-s${sIdx}`,
-            hits,
-            isRest: false,
-            sticking: stepDef.hand,
-            flam: stepDef.flam,
+            steps.push({
+              id: `m${measureIndexTracker}-b${bIdx}-s${sIdx}`,
+              hits,
+              isRest: false,
+              sticking: stepDef.hand,
+              flam: stepDef.flam,
+            });
+          }
+
+          beats.push({
+            id: `m${measureIndexTracker}-b${bIdx}`,
+            beatIndex: bIdx,
+            subdivision: sub,
+            isTuplet: subOption.isTuplet,
+            tupletRatio: subOption.ratio,
+            steps,
           });
         }
 
-        beats.push({
-          id: `m${mIdx + 1}-b${bIdx}`,
-          beatIndex: bIdx,
-          subdivision: sub,
-          isTuplet: subOption.isTuplet,
-          tupletRatio: subOption.ratio,
-          steps,
+        measures.push({
+          id: `m${measureIndexTracker}`,
+          timeSignature: [4, 4],
+          beats,
         });
-      }
 
-      measures.push({
-        id: `m${mIdx + 1}`,
-        timeSignature: [4, 4],
-        beats,
-      });
+        measureIndexTracker++;
+      }
     }
 
     onGenerateWorkout({
-      title: `Workout: ${currentPattern.name} (${lengthBars} C)`,
+      title: `Workout: ${currentPattern.name} (${totalMeasures} C)`,
       measures,
       bpm,
-      measuresCount: lengthBars,
+      measuresCount: totalMeasures,
     });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-5xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[92vh] sm:max-w-6xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
         {/* Mobile Pull Handle */}
         <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
 
@@ -568,14 +710,14 @@ export default function WorkoutBuilderModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-white tracking-wide truncate">
-                  Workout Builder: Pirámide
+                  Workout Builder: Pirámide Modular
                 </h2>
                 <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold flex-shrink-0">
-                  Personalizable
+                  {totalMeasures} Compases
                 </span>
               </div>
               <p className="text-[10px] sm:text-xs text-gray-400 truncate hidden sm:block">
-                Diseña secuencias estructuradas de práctica técnica con progresión de subdivisiones y orquestación.
+                Diseña rutinas dinámicas por fases sin restricciones de compases ni bloques fijos.
               </p>
             </div>
           </div>
@@ -589,73 +731,133 @@ export default function WorkoutBuilderModal({
           </button>
         </div>
 
-        {/* Modal Scrollable Body */}
+        {/* Presets Strip (1 Clic) */}
+        <div className="bg-slate-950/90 border-b border-white/10 px-3 sm:px-5 py-2 flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 flex-shrink-0">
+          <span className="text-[10px] font-mono font-bold text-gray-400 flex items-center gap-1 shrink-0">
+            <Wand2 className="w-3.5 h-3.5 text-emerald-400" />
+            Plantillas:
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {WORKOUT_PRESETS.map((preset) => {
+              const isSelected = activePresetId === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => handleApplyPreset(preset)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0 ${
+                    isSelected
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                      : 'bg-slate-900 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title={preset.description}
+                >
+                  <span>{preset.icon}</span>
+                  <span>{preset.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Modal Scrollable Body (2 Paneles Limpios) */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-5 scrollbar-thin scrollbar-thumb-white/10">
-          {/* Main 2-Column Responsive Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             {/* ======================================================== */}
-            {/* COLUMNA 1: Parámetros Base (lg:col-span-5) */}
+            {/* PANEL IZQUIERDO: Parámetros Base (~35% -> lg:col-span-4) */}
             {/* ======================================================== */}
-            <div className="lg:col-span-5 space-y-4">
-              {/* 1. Longitud de Secuencia */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-mono font-bold uppercase tracking-wider text-gray-300 flex items-center justify-between">
-                  <span>1. Longitud de Secuencia:</span>
-                  <span className="text-[10px] text-emerald-400 font-normal">
-                    {barsPerBlock} compases/bloque
+            <div className="lg:col-span-4 space-y-4">
+              {/* 1. Longitud Total Deseada (Libre) */}
+              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2.5 shadow-md">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <label className="font-bold text-gray-200 flex items-center gap-1.5">
+                    <Target className="w-3.5 h-3.5 text-cyan-400" />
+                    LONGITUD TOTAL:
+                  </label>
+                  <span className="text-cyan-300 font-bold font-mono">
+                    {totalMeasures} compases
                   </span>
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[8, 16, 24].map((bars) => {
-                    const isSelected = lengthBars === bars;
+                </div>
+
+                {/* Acceso Rápido */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {QUICK_MEASURE_OPTIONS.map((val) => {
+                    const isSelected = totalMeasures === val;
                     return (
                       <button
-                        key={`bars-${bars}`}
+                        key={`quick-bar-${val}`}
                         type="button"
-                        onClick={() => setLengthBars(bars as 8 | 16 | 24)}
-                        className={`py-2 px-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                        onClick={() => handleSetTotalMeasuresTarget(val)}
+                        className={`py-1.5 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-gradient-to-br from-emerald-500/25 to-teal-500/15 border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-1 ring-emerald-400'
-                            : 'bg-slate-900 border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                            ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_10px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
+                            : 'bg-slate-950/60 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
                         }`}
                       >
-                        <div className="font-mono text-xs sm:text-sm font-extrabold text-white">
-                          {bars} Compases
-                        </div>
-                        <span className="text-[10px] text-gray-400 font-mono block">
-                          {bars === 8 ? 'Rápido (2 C)' : bars === 16 ? 'Estándar (4 C)' : 'Resistencia (6 C)'}
-                        </span>
+                        {val} C
                       </button>
                     );
                   })}
                 </div>
+
+                {/* Stepper Manual + Input Directo (1 a 64 C) */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10">
+                  <span className="text-[10px] font-mono text-gray-400">Ajuste fino:</span>
+                  <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => handleSetTotalMeasuresTarget(totalMeasures - 1)}
+                      disabled={totalMeasures <= 1}
+                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center font-mono font-bold text-sm cursor-pointer transition-all"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min={1}
+                      max={64}
+                      value={totalMeasures}
+                      onChange={(e) => handleSetTotalMeasuresTarget(Number(e.target.value))}
+                      className="w-12 bg-transparent text-center font-mono text-xs font-black text-cyan-300 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSetTotalMeasuresTarget(totalMeasures + 1)}
+                      disabled={totalMeasures >= 64}
+                      className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center font-mono font-bold text-sm cursor-pointer transition-all"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* 2. Célula / Rudimento Base */}
-              <div className="space-y-1.5">
+              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2.5 shadow-md">
                 <div className="flex items-center justify-between text-xs font-mono">
-                  <label className="font-bold uppercase tracking-wider text-gray-300">
-                    2. Célula / Rudimento Base:
+                  <label className="font-bold text-gray-200 flex items-center gap-1.5">
+                    <Music className="w-3.5 h-3.5 text-purple-400" />
+                    CÉLULA / RUDIMENTO:
                   </label>
-                  <span className="text-[10px] text-cyan-400">
-                    {WORKOUT_PATTERNS.length} opciones
+                  <span className="text-[10px] text-purple-300 font-mono">
+                    {WORKOUT_PATTERNS.length} patrones
                   </span>
                 </div>
 
-                {/* Filtro rápido */}
+                {/* Buscador Compacto */}
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
                     value={patternSearch}
                     onChange={(e) => setPatternSearch(e.target.value)}
-                    placeholder="Filtrar paradiddle, roll, linear..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all"
+                    placeholder="Buscar paradiddle, roll, chops..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-purple-400 transition-all"
                   />
                 </div>
 
-                {/* Lista compacta scrolleable */}
-                <div className="max-h-[175px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                {/* Lista Compacta de Patrones con Sticking Preview */}
+                <div className="max-h-[190px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-white/10">
                   {filteredPatterns.map((pattern) => {
                     const isSelected = selectedPatternId === pattern.id;
                     return (
@@ -665,10 +867,10 @@ export default function WorkoutBuilderModal({
                           setSelectedPatternId(pattern.id);
                           setBpm(pattern.defaultBpm);
                         }}
-                        className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                        className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                           isSelected
-                            ? 'bg-cyan-500/15 border-cyan-400 text-white shadow-[0_0_12px_rgba(34,211,238,0.25)] ring-1 ring-cyan-400'
-                            : 'bg-slate-900/70 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
+                            ? 'bg-purple-500/20 border-purple-400 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400'
+                            : 'bg-slate-950/60 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
                         }`}
                       >
                         <div className="space-y-0.5 min-w-0 flex-1">
@@ -676,16 +878,27 @@ export default function WorkoutBuilderModal({
                             <span className="font-bold text-xs text-white truncate">
                               {pattern.name}
                             </span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/10 text-cyan-300 font-semibold shrink-0">
-                              {pattern.subtitle}
-                            </span>
                           </div>
-                          <p className="text-[10px] text-gray-400 truncate">
-                            {pattern.description}
-                          </p>
+                          {/* Mini Sticking Chips */}
+                          <div className="flex items-center gap-1 overflow-x-hidden pt-0.5">
+                            {pattern.stickingCycle.slice(0, 8).map((st, sIdx) => (
+                              <span
+                                key={`st-${pattern.id}-${sIdx}`}
+                                className={`text-[8px] font-mono px-1 py-0.2 rounded font-black ${
+                                  st.hand === 'R'
+                                    ? 'bg-cyan-500/25 text-cyan-300'
+                                    : st.hand === 'L'
+                                    ? 'bg-purple-500/25 text-purple-300'
+                                    : 'bg-emerald-500/25 text-emerald-300'
+                                }`}
+                              >
+                                {st.accent ? `>${st.hand}` : st.ghost ? `(${st.hand})` : st.hand}
+                              </span>
+                            ))}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           {onPlayHit && (
                             <button
                               type="button"
@@ -693,20 +906,20 @@ export default function WorkoutBuilderModal({
                                 e.stopPropagation();
                                 onPlayHit('snare');
                               }}
-                              className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all"
+                              className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all cursor-pointer"
                               title="Probar sonido"
                             >
                               <Play className="w-3 h-3 fill-current" />
                             </button>
                           )}
                           <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
                               isSelected
-                                ? 'border-cyan-400 bg-cyan-400 text-black'
+                                ? 'border-purple-400 bg-purple-400 text-black'
                                 : 'border-white/20 text-transparent'
                             }`}
                           >
-                            <Check className="w-3 h-3 stroke-[3]" />
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
                           </div>
                         </div>
                       </div>
@@ -715,274 +928,297 @@ export default function WorkoutBuilderModal({
                 </div>
               </div>
 
-              {/* 3. Tempo Objetivo y Orquestación Switch */}
-              <div className="space-y-3 pt-2 border-t border-white/10">
-                {/* Tempo Objetivo BPM */}
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-white/10 space-y-2">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="font-bold text-gray-300 flex items-center gap-1.5">
-                      <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-                      TEMPO OBJETIVO:
-                    </span>
-                    <span className="text-sm font-bold text-cyan-400">
-                      {bpm} BPM
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="range"
-                      min={50}
-                      max={220}
-                      value={bpm}
-                      onChange={(e) => setBpm(Number(e.target.value))}
-                      className="flex-1 accent-cyan-400 cursor-pointer"
-                    />
-                    <input
-                      type="number"
-                      min={50}
-                      max={220}
-                      value={bpm}
-                      onChange={(e) => setBpm(Number(e.target.value))}
-                      className="w-16 bg-slate-900 border border-white/15 rounded-lg px-2 py-1 text-center font-mono text-xs font-bold text-cyan-300 focus:outline-none focus:border-cyan-400"
-                    />
-                  </div>
-                  <span className="text-[10px] font-mono text-gray-500 block">
-                    Tempo sugerido para {currentPattern.name}: {currentPattern.defaultBpm} BPM
+              {/* 3. Tempo Objetivo (Slider Numérico Estilizado) */}
+              <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2.5 shadow-md">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-gray-200 flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                    TEMPO OBJETIVO:
+                  </span>
+                  <span className="text-amber-300 font-bold font-mono text-sm">
+                    {bpm} BPM
                   </span>
                 </div>
+                <div className="flex items-center gap-2.5">
+                  <input
+                    type="range"
+                    min={50}
+                    max={220}
+                    value={bpm}
+                    onChange={(e) => setBpm(Number(e.target.value))}
+                    className="flex-1 accent-amber-400 cursor-pointer"
+                  />
+                  <input
+                    type="number"
+                    min={50}
+                    max={220}
+                    value={bpm}
+                    onChange={(e) => setBpm(Number(e.target.value))}
+                    className="w-14 bg-slate-950 border border-white/15 rounded-lg px-1.5 py-0.5 text-center font-mono text-xs font-bold text-amber-300 focus:outline-none focus:border-amber-400"
+                  />
+                </div>
 
-                {/* Orquestación Progresiva en el Kit Switch */}
+                {/* Switch de Orquestación Progresiva */}
                 <div
                   onClick={() => setProgressiveOrchestration((prev) => !prev)}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                  className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
                     progressiveOrchestration
-                      ? 'bg-amber-500/15 border-amber-400/80 text-white'
-                      : 'bg-slate-900/60 border-white/10 text-gray-400 hover:border-white/20'
+                      ? 'bg-amber-500/15 border-amber-400/60 text-white'
+                      : 'bg-slate-950/60 border-white/10 text-gray-400 hover:border-white/20'
                   }`}
                 >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white">
-                        🥁 Orquestación Progresiva en el Kit
-                      </span>
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
-                          progressiveOrchestration
-                            ? 'bg-amber-500/25 text-amber-300'
-                            : 'bg-white/10 text-gray-400'
-                        }`}
-                      >
-                        {progressiveOrchestration ? 'ACTIVADA' : 'SÓLO CAJA'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-gray-400">
+                  <div className="text-[11px] font-mono leading-tight">
+                    <span className="font-bold block text-white">
+                      🥁 Orquestación Progresiva
+                    </span>
+                    <span className="text-[9px] text-gray-400">
                       {progressiveOrchestration
-                        ? 'Distribuye acentos y frases entre toms, bombo y platillos.'
-                        : 'Mantiene toda la secuencia en caja pura (estilo pad de práctica).'}
-                    </p>
+                        ? 'Acentos y notas en toms/bombo/crash'
+                        : 'Solo caja (modo pad)'}
+                    </span>
                   </div>
-
                   <div
-                    className={`w-10 h-5 rounded-full transition-colors flex items-center p-0.5 shrink-0 ${
+                    className={`w-8 h-4 rounded-full transition-colors flex items-center p-0.5 shrink-0 ${
                       progressiveOrchestration ? 'bg-amber-400 justify-end' : 'bg-white/20 justify-start'
                     }`}
                   >
-                    <div className="w-4 h-4 rounded-full bg-black shadow-md" />
+                    <div className="w-3 h-3 rounded-full bg-black shadow-md" />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* ======================================================== */}
-            {/* COLUMNA 2: Constructor de la Pirámide Interactiva (lg:col-span-7) */}
+            {/* PANEL DERECHO: Timeline Modular & Fases (~65% -> lg:col-span-8) */}
             {/* ======================================================== */}
-            <div className="lg:col-span-7 space-y-3.5 flex flex-col justify-between">
-              {/* Header de la Columna 2 con botón de Pirámide Clásica */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-amber-400" />
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-gray-200">
-                    3. Constructor de Bloques de Aceleración:
+            <div className="lg:col-span-8 space-y-4">
+              {/* 1. Línea de Tiempo Visual Horizontal Interactiva */}
+              <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/10 space-y-2.5 shadow-xl">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-gray-200 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                    Línea de Tiempo Modular ({totalMeasures} Compases en Total):
+                  </span>
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    {phases.length} {phases.length === 1 ? 'fase' : 'fases'} activas
                   </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleApplyClassicPyramid}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center gap-1.5 transition-all cursor-pointer shadow-[0_0_10px_rgba(16,185,129,0.15)]"
-                >
-                  <Wand2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>🪄 Usar Pirámide Clásica Sonora (1/8 → 1/16 → 6:4 → 1/32)</span>
-                </button>
-              </div>
+                {/* Barra Segmentada Proporcional */}
+                <div className="w-full h-12 rounded-xl bg-slate-950/80 border border-white/10 p-1 flex items-center gap-1 shadow-inner overflow-hidden">
+                  {phases.map((phase, idx) => {
+                    const range = phaseRanges[idx];
+                    const subInfo =
+                      WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === phase.subdivisionValue) ||
+                      WORKOUT_SUBDIVISION_OPTIONS[1];
+                    const orchInfo = BLOCK_ORCHESTRATION_OPTIONS.find(
+                      (o) => o.id === phase.orchestration
+                    );
+                    const widthPct = Math.max(8, (phase.measuresCount / totalMeasures) * 100);
 
-              {/* Grid 2x2 de los 4 Bloques Personalizables */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
-                {blocks.map((block, idx) => {
-                  const blockLetter = ['A', 'B', 'C', 'D'][idx];
-                  const subDef =
-                    WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === block.subdivisionValue) ||
-                    WORKOUT_SUBDIVISION_OPTIONS[1];
-                  const barRange = getBarRangeText(idx);
-
-                  return (
-                    <div
-                      key={`block-card-${blockLetter}`}
-                      className={`p-3.5 rounded-2xl border ${subDef.borderColor} bg-gradient-to-b ${subDef.bgGradient} flex flex-col justify-between space-y-3 shadow-lg`}
-                    >
-                      {/* Cabecera del Bloque */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center font-mono font-black text-xs ${subDef.badgeColor} border`}
-                          >
-                            {blockLetter}
+                    return (
+                      <div
+                        key={`timeline-segment-${phase.id}`}
+                        style={{ width: `${widthPct}%` }}
+                        className={`h-full rounded-lg border ${subInfo.borderColor} ${subInfo.badgeColor} px-2 flex items-center justify-between transition-all select-none relative group overflow-hidden`}
+                        title={`Fase ${idx + 1}: C${range.startBar} - C${range.endBar} (${phase.measuresCount} C) • ${subInfo.label} • ${orchInfo?.label}`}
+                      >
+                        <div className="min-w-0 flex items-center gap-1.5 truncate">
+                          <span className="w-4 h-4 rounded-full bg-white/20 text-white font-mono text-[9px] font-black flex items-center justify-center shrink-0">
+                            {idx + 1}
                           </span>
-                          <span className="font-bold text-xs text-white uppercase tracking-wider font-mono">
-                            Bloque {blockLetter}
+                          <span className="font-black text-xs text-white shrink-0">
+                            {subInfo.label}
+                          </span>
+                          <span className="text-[10px] text-gray-200 font-mono hidden sm:inline truncate">
+                            C{range.startBar}–C{range.endBar}
                           </span>
                         </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-gray-300 border border-white/10">
-                          {barRange}
-                        </span>
-                      </div>
 
-                      {/* Selectores del Bloque */}
-                      <div className="space-y-2">
-                        {/* Selector de Subdivisión */}
-                        <div>
-                          <label className="block text-[10px] font-mono font-bold text-gray-400 uppercase mb-1">
-                            Subdivisión Rítmica:
-                          </label>
-                          <select
-                            value={block.subdivisionValue}
-                            onChange={(e) =>
-                              handleUpdateBlockSubdivision(idx, Number(e.target.value))
-                            }
-                            className="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-white/15 text-white font-mono text-xs font-bold focus:outline-none focus:border-cyan-400 cursor-pointer"
-                          >
-                            {WORKOUT_SUBDIVISION_OPTIONS.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label} ({opt.nameEs}) • {opt.density}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Selector de Orquestación */}
-                        <div>
-                          <label className="block text-[10px] font-mono font-bold text-gray-400 uppercase mb-1">
-                            Orquestación en Batería:
-                          </label>
-                          <select
-                            disabled={!progressiveOrchestration}
-                            value={block.orchestration}
-                            onChange={(e) =>
-                              handleUpdateBlockOrchestration(
-                                idx,
-                                e.target.value as BlockOrchestration
-                              )
-                            }
-                            className="w-full px-2.5 py-1.5 rounded-xl bg-slate-900 border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                          >
-                            {BLOCK_ORCHESTRATION_OPTIONS.map((orch) => (
-                              <option key={orch.id} value={orch.id}>
-                                {orch.icon} {orch.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <span className="text-xs shrink-0">{orchInfo?.icon}</span>
                       </div>
-
-                      {/* Resumen de Densidad */}
-                      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px] font-mono">
-                        <span className={`font-bold ${subDef.color}`}>
-                          {subDef.label} {subDef.nameEs}
-                        </span>
-                        <span className="text-gray-400">
-                          ⚡ {subDef.density}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Tips sutiles */}
-              <p className="text-[10px] font-mono text-gray-400 text-center">
-                Consejo: Puedes crear pirámides simétricas o progresiones irregulares (ej. 1/4 → 3:2 → 5:4 → 7:4).
-              </p>
-            </div>
-          </div>
+              {/* 2. Lista Limpia de Fases Activas Configuradas */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="font-bold text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-amber-400" />
+                    Fases de Aceleración y Orquestación:
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    Personaliza subdivisión y kit en cada fase
+                  </span>
+                </div>
 
-          {/* ======================================================== */}
-          {/* 3. BARRA VISUAL DE LA LÍNEA DE TIEMPO (Timeline Preview) */}
-          {/* ======================================================== */}
-          <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/10 space-y-2.5 shadow-xl">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="font-bold text-gray-200 flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-                Línea de Tiempo de la Rutina ({lengthBars} Compases en Total):
-              </span>
-              <span className="text-[10px] text-gray-400">
-                {barsPerBlock} compases por cada fase
-              </span>
-            </div>
+                <div className="space-y-2.5">
+                  {phases.map((phase, idx) => {
+                    const range = phaseRanges[idx];
+                    const subInfo =
+                      WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === phase.subdivisionValue) ||
+                      WORKOUT_SUBDIVISION_OPTIONS[1];
 
-            {/* Tira continua con cajas conectadas */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-              {blocks.map((b, idx) => {
-                const blockLetter = ['A', 'B', 'C', 'D'][idx];
-                const subInfo =
-                  WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === b.subdivisionValue) ||
-                  WORKOUT_SUBDIVISION_OPTIONS[1];
-                const orchInfo = BLOCK_ORCHESTRATION_OPTIONS.find(
-                  (o) => o.id === b.orchestration
-                );
-                const startBar = idx * barsPerBlock + 1;
-                const endBar = (idx + 1) * barsPerBlock;
+                    return (
+                      <div
+                        key={phase.id}
+                        className={`p-3 sm:p-3.5 rounded-2xl border ${subInfo.borderColor} bg-slate-900/80 hover:bg-slate-900 transition-all space-y-2.5 shadow-md`}
+                      >
+                        {/* Cabecera de la Fase */}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-6 h-6 rounded-lg ${subInfo.badgeColor} border flex items-center justify-center font-mono font-black text-xs text-white`}
+                            >
+                              {idx + 1}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-xs text-white font-mono">
+                                Fase {idx + 1}
+                              </span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-cyan-300 border border-white/10">
+                                Compases {range.startBar} al {range.endBar} ({phase.measuresCount} C)
+                              </span>
+                            </div>
+                          </div>
 
-                return (
-                  <div
-                    key={`timeline-strip-${blockLetter}`}
-                    className={`p-2.5 rounded-xl border ${subInfo.borderColor} ${subInfo.badgeColor} flex flex-col justify-between transition-all`}
+                          <div className="flex items-center gap-2 ml-auto">
+                            {/* Stepper de Compases para esta Fase */}
+                            <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-white/10">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdatePhaseMeasures(phase.id, phase.measuresCount - 1)
+                                }
+                                disabled={phase.measuresCount <= 1}
+                                className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center text-xs font-mono font-bold cursor-pointer transition-all"
+                                title="Reducir 1 compás"
+                              >
+                                -
+                              </button>
+                              <span className="w-10 text-center font-mono text-xs font-bold text-white">
+                                {phase.measuresCount} C
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUpdatePhaseMeasures(phase.id, phase.measuresCount + 1)
+                                }
+                                disabled={phase.measuresCount >= 32}
+                                className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center text-xs font-mono font-bold cursor-pointer transition-all"
+                                title="Añadir 1 compás"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            {/* Botón Eliminar Fase */}
+                            {phases.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePhase(phase.id)}
+                                className="p-1 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                                title="Eliminar fase"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Controles de Subdivisión & Orquestación en Chips Interactivos */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-white/5">
+                          {/* Subdivisión Chips */}
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
+                              Subdivisión:
+                            </span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {CHIP_SUBDIVISIONS.map((opt) => {
+                                const isSelected = phase.subdivisionValue === opt.value;
+                                return (
+                                  <button
+                                    key={`sub-${phase.id}-${opt.value}`}
+                                    type="button"
+                                    onClick={() =>
+                                      handleUpdatePhaseSubdivision(phase.id, opt.value)
+                                    }
+                                    className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border ${
+                                      isSelected
+                                        ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]'
+                                        : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                    title={`${opt.label} (${opt.nameEs}) • ${opt.density}`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Orquestación Chips */}
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
+                              Orquestación:
+                            </span>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {BLOCK_ORCHESTRATION_OPTIONS.map((orch) => {
+                                const isSelected = phase.orchestration === orch.id;
+                                return (
+                                  <button
+                                    key={`orch-${phase.id}-${orch.id}`}
+                                    type="button"
+                                    onClick={() =>
+                                      handleUpdatePhaseOrchestration(phase.id, orch.id)
+                                    }
+                                    className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                      isSelected
+                                        ? 'bg-amber-500/25 text-amber-300 border-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                                        : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                                    }`}
+                                    title={orch.desc}
+                                  >
+                                    <span>{orch.icon}</span>
+                                    <span>{orch.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 3. Botón Añadir Fase de Aceleración */}
+                {phases.length < 8 && (
+                  <button
+                    type="button"
+                    onClick={handleAddPhase}
+                    className="w-full py-2.5 rounded-2xl border-2 border-dashed border-white/15 hover:border-emerald-400/50 bg-slate-900/40 hover:bg-emerald-500/5 text-gray-400 hover:text-emerald-300 transition-all flex items-center justify-center gap-2 cursor-pointer font-mono text-xs font-bold"
                   >
-                    <div className="flex items-center justify-between text-[10px] font-mono font-bold">
-                      <span className="text-white">Bloque {blockLetter}</span>
-                      <span className="opacity-90">C{startBar} - C{endBar}</span>
-                    </div>
-
-                    <div className="my-1.5 flex items-baseline gap-1.5">
-                      <span className="text-base font-black text-white">
-                        {subInfo.label}
-                      </span>
-                      <span className="text-[10px] font-mono font-medium opacity-85">
-                        {subInfo.nameEs}
-                      </span>
-                    </div>
-
-                    <div className="text-[10px] font-mono truncate text-gray-300 flex items-center gap-1">
-                      <span>{orchInfo?.icon}</span>
-                      <span className="truncate">
-                        {progressiveOrchestration ? orchInfo?.label.split(' ')[0] : 'Solo Caja'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+                    <Plus className="w-4 h-4 text-emerald-400" />
+                    <span>+ Añadir Fase de Aceleración</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Modal Sticky Footer */}
-        <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 px-5 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-xs font-mono text-gray-300">
-            Generará <span className="text-white font-bold">{lengthBars} compases</span> con{' '}
+        <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 px-4 sm:px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs font-mono text-gray-300 truncate text-center sm:text-left">
+            Generando rutina de <span className="text-white font-bold">{totalMeasures} compases</span> ({phases.length} fases) con{' '}
             <span className="text-emerald-300 font-bold">{currentPattern.name}</span> a{' '}
             <span className="text-cyan-400 font-bold">{bpm} BPM</span>.
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
               type="button"
               onClick={onClose}
@@ -994,7 +1230,7 @@ export default function WorkoutBuilderModal({
             <button
               type="button"
               onClick={handleGenerate}
-              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-bold text-xs font-mono tracking-wide transition-all shadow-[0_0_20px_rgba(16,185,129,0.35)] flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-initial active:scale-95"
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-extrabold text-xs font-mono tracking-wide transition-all shadow-[0_0_20px_rgba(16,185,129,0.35)] flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-initial active:scale-95"
             >
               <Zap className="w-4 h-4 fill-current" />
               <span>⚡ GENERAR Y CARGAR RUTINA</span>
