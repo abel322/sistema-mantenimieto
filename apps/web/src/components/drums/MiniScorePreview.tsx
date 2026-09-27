@@ -333,32 +333,21 @@ function MiniScorePreviewComponent({
 
   // --- Case 2: Groove Pattern Rendering (Polyphonic Multi-Voice) ---
   if (groove) {
-    const firstMeasure = groove.measures?.[0];
-    const beats = firstMeasure?.beats || [];
+    const isMultiMeasure = (groove.measuresCount === 2 || (groove.measures && groove.measures.length > 1));
+    const rawMeasures = groove.measures || [];
+    const measuresToRender = isMultiMeasure && rawMeasures.length >= 2
+      ? [rawMeasures[0], rawMeasures[1]]
+      : [rawMeasures[0] || { beats: [] }];
     const timeSig = groove.timeSignature || '4/4';
+    const subStr = String(groove.subdivision || '1/16');
+    const isTernary = subStr === '3:2' || subStr === 'triplet' || timeSig === '6/8' || timeSig === '12/8';
 
-    // Flatten time slices into sequential steps
-    const stepSlices: {
-      timeIndex: number;
-      hits: GrooveHit[];
-    }[] = [];
-
-    beats.forEach((b) => {
-      (b.subdivisions || []).forEach((hits) => {
-        stepSlices.push({
-          timeIndex: stepSlices.length,
-          hits: hits || [],
-        });
-      });
-    });
-
-    const totalSteps = Math.max(1, stepSlices.length);
     const staffStartX = 10;
     const staffEndX = width - 10;
     const notesStartX = 42; // Leave room for Clef & Time Signature
     const notesEndX = width - 16;
-    const availableWidth = notesEndX - notesStartX;
-    const stepWidth = availableWidth / totalSteps;
+    const totalAvailWidth = notesEndX - notesStartX;
+    const midBarlineX = notesStartX + totalAvailWidth / 2;
 
     const topBeamY = 6;
     const bottomBeamY = 48;
@@ -420,132 +409,212 @@ function MiniScorePreviewComponent({
             </g>
           )}
 
+          {/* Middle Measure Divider if 2 Measures */}
+          {isMultiMeasure && (
+            <g>
+              <line x1={midBarlineX} y1="16" x2={midBarlineX} y2="40" stroke="#475569" strokeWidth="1.2" strokeDasharray="none" />
+              <text x={notesStartX + 8} y="11" fill="#64748B" fontSize="6.5" fontWeight="bold" fontFamily="ui-monospace, monospace">
+                C1
+              </text>
+              <text x={midBarlineX + 6} y="11" fill="#64748B" fontSize="6.5" fontWeight="bold" fontFamily="ui-monospace, monospace">
+                C2
+              </text>
+            </g>
+          )}
+
           {/* Right End Barline */}
           <line x1={staffEndX - 3} y1="16" x2={staffEndX - 3} y2="40" stroke="#475569" strokeWidth="1" />
           <line x1={staffEndX} y1="16" x2={staffEndX} y2="40" stroke="#475569" strokeWidth="2" />
 
-          {/* Continuous Top Horizontal Beam for Cymbal / Hi-Hat voice */}
-          <line
-            x1={notesStartX + 0.5 * stepWidth}
-            y1={topBeamY}
-            x2={notesStartX + (totalSteps - 0.5) * stepWidth}
-            y2={topBeamY}
-            stroke="#38BDF8"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-          />
+          {/* Render Each Measure Independently */}
+          {measuresToRender.map((mObj, mIdx) => {
+            const beats = mObj.beats || [];
+            const stepSlices: { timeIndex: number; hits: GrooveHit[]; beatIdx: number; stepInBeat: number }[] = [];
 
-          {/* Render Each Step Slice with Polyphonic Voices */}
-          {stepSlices.map(({ timeIndex, hits }) => {
-            const x = notesStartX + (timeIndex + 0.5) * stepWidth;
+            beats.forEach((b, bIdx) => {
+              (b.subdivisions || []).forEach((hits, sIdx) => {
+                stepSlices.push({
+                  timeIndex: stepSlices.length,
+                  hits: hits || [],
+                  beatIdx: bIdx,
+                  stepInBeat: sIdx,
+                });
+              });
+            });
 
-            const cymbalsHit = hits.find((h) =>
-              ['hihat', 'hihatClosed', 'hihatOpen', 'ride', 'crash', 'china', 'cowbell'].includes(h.instrument)
-            );
-            const snareHit = hits.find((h) => ['snare', 'tom1', 'tom2', 'floorTom'].includes(h.instrument));
-            const kickHit = hits.find((h) => ['kick', 'hihatFoot'].includes(h.instrument));
+            const mTotalSteps = Math.max(1, stepSlices.length);
+            const mStartX = isMultiMeasure
+              ? mIdx === 0
+                ? notesStartX
+                : midBarlineX + 5
+              : notesStartX;
+            const mEndX = isMultiMeasure
+              ? mIdx === 0
+                ? midBarlineX - 5
+                : notesEndX
+              : notesEndX;
 
-            // Downbeat pulse marker on first step of each beat
-            const stepsPerBeat = Math.max(1, Math.round(totalSteps / (parseInt(timeSig.split('/')[0], 10) || 4)));
-            const isDownbeat = timeIndex % stepsPerBeat === 0;
-            const beatNumber = Math.floor(timeIndex / stepsPerBeat) + 1;
+            const mAvailWidth = mEndX - mStartX;
+            const stepWidth = mAvailWidth / mTotalSteps;
+
+            const numBeats = Math.max(1, beats.length);
+            const stepsPerBeat = Math.max(1, Math.round(mTotalSteps / numBeats));
 
             return (
-              <g key={`groove-step-${timeIndex}`}>
-                {/* 1. Cymbal / Hi-Hat Voice (Top, Line 0/G5, y = 14) */}
-                {cymbalsHit && (
-                  <g>
-                    {/* Stem up to top beam */}
-                    <line x1={x + 3.2} y1="14" x2={x + 3.2} y2={topBeamY} stroke="#38BDF8" strokeWidth="1.2" />
-                    {cymbalsHit.instrument === 'hihatOpen' || cymbalsHit.instrument === 'crash' ? (
-                      <>
-                        <circle cx={x} cy="14" r="4.2" fill="none" stroke="#38BDF8" strokeWidth="1" />
-                        <line x1={x - 3} y1="11" x2={x + 3} y2="17" stroke="#38BDF8" strokeWidth="1.5" />
-                        <line x1={x - 3} y1="17" x2={x + 3} y2="11" stroke="#38BDF8" strokeWidth="1.5" />
-                      </>
-                    ) : (
-                      <>
-                        <line x1={x - 3} y1="11" x2={x + 3} y2="17" stroke="#38BDF8" strokeWidth="1.5" />
-                        <line x1={x - 3} y1="17" x2={x + 3} y2="11" stroke="#38BDF8" strokeWidth="1.5" />
-                      </>
-                    )}
-                    {cymbalsHit.accent && (
-                      <path
-                        d={`M ${x - 3} 1 L ${x + 3} 2.5 L ${x - 3} 4`}
-                        fill="none"
-                        stroke="#F59E0B"
-                        strokeWidth="1.4"
-                      />
-                    )}
-                  </g>
-                )}
+              <g key={`measure-${mIdx}`}>
+                {/* Continuous Top Horizontal Beam for Cymbal / Hi-Hat voice in this measure */}
+                <line
+                  x1={mStartX + 0.5 * stepWidth}
+                  y1={topBeamY}
+                  x2={mStartX + (mTotalSteps - 0.5) * stepWidth}
+                  y2={topBeamY}
+                  stroke="#38BDF8"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
 
-                {/* 2. Snare / Mid Voice (Line 3/C5, y = 28) */}
-                {snareHit && (
-                  <g opacity={snareHit.ghost ? 0.6 : 1}>
-                    {/* Stem pointing up */}
-                    <line x1={x + 3.2} y1="28" x2={x + 3.2} y2={topBeamY + 3} stroke="#38BDF8" strokeWidth="1.2" />
-                    <ellipse
-                      cx={x}
-                      cy="28"
-                      rx={snareHit.ghost ? 3.2 : 3.8}
-                      ry={snareHit.ghost ? 2.2 : 2.7}
-                      transform={`rotate(-20 ${x} 28)`}
-                      fill={snareHit.accent ? '#F59E0B' : '#38BDF8'}
-                    />
-                    {snareHit.ghost && (
-                      <>
-                        <text x={x - 5.5} y="31" fill="#94A3B8" fontSize="9" fontWeight="bold" textAnchor="middle">(</text>
-                        <text x={x + 5.5} y="31" fill="#94A3B8" fontSize="9" fontWeight="bold" textAnchor="middle">)</text>
-                      </>
-                    )}
-                    {snareHit.accent && (
-                      <path
-                        d={`M ${x - 3} 21 L ${x + 3} 22.5 L ${x - 3} 24`}
-                        fill="none"
-                        stroke="#F59E0B"
-                        strokeWidth="1.5"
-                      />
-                    )}
-                  </g>
-                )}
+                {/* Tuplet '3' Indicators if Ternary */}
+                {isTernary && beats.map((b, bIdx) => {
+                  const bSteps = b.subdivisions?.length || 3;
+                  if (bSteps === 3) {
+                    const bStartStep = bIdx * 3;
+                    const bX1 = mStartX + (bStartStep + 0.5) * stepWidth;
+                    const bX2 = mStartX + (bStartStep + 2.5) * stepWidth;
+                    const midBX = (bX1 + bX2) / 2;
+                    return (
+                      <text
+                        key={`tuplet-${mIdx}-${bIdx}`}
+                        x={midBX}
+                        y={topBeamY - 2}
+                        fill="#38BDF8"
+                        fontSize="6.5"
+                        fontWeight="bold"
+                        fontFamily="ui-monospace, monospace"
+                        textAnchor="middle"
+                      >
+                        3
+                      </text>
+                    );
+                  }
+                  return null;
+                })}
 
-                {/* 3. Kick / Bass Drum Voice (Line 1/F4, y = 40, Stem DOWN) */}
-                {kickHit && (
-                  <g>
-                    <ellipse
-                      cx={x}
-                      cy="40"
-                      rx="3.8"
-                      ry="2.7"
-                      transform={`rotate(-20 ${x} 40)`}
-                      fill="#38BDF8"
-                    />
-                    {/* Stem down */}
-                    <line x1={x - 3.2} y1="40" x2={x - 3.2} y2={bottomBeamY} stroke="#38BDF8" strokeWidth="1.2" />
-                    {kickHit.accent && (
-                      <path
-                        d={`M ${x - 3} 44 L ${x + 3} 45.5 L ${x - 3} 47`}
-                        fill="none"
-                        stroke="#F59E0B"
-                        strokeWidth="1.5"
-                      />
-                    )}
-                  </g>
-                )}
+                {/* Render Each Step Slice with Polyphonic Voices */}
+                {stepSlices.map(({ timeIndex, hits, stepInBeat }) => {
+                  const x = mStartX + (timeIndex + 0.5) * stepWidth;
 
-                {/* Downbeat Metric Reference Indicator (1, 2, 3, 4...) */}
-                <text
-                  x={x}
-                  y="59"
-                  fill={isDownbeat ? '#38BDF8' : '#475569'}
-                  fontSize={isDownbeat ? '9.5' : '7.5'}
-                  fontWeight={isDownbeat ? 'bold' : 'normal'}
-                  fontFamily="ui-monospace, monospace"
-                  textAnchor="middle"
-                >
-                  {isDownbeat ? `${beatNumber}` : '·'}
-                </text>
+                  const cymbalsHit = hits.find((h) =>
+                    ['hihat', 'hihatClosed', 'hihatOpen', 'ride', 'crash', 'china', 'cowbell'].includes(h.instrument)
+                  );
+                  const snareHit = hits.find((h) => ['snare', 'tom1', 'tom2', 'floorTom'].includes(h.instrument));
+                  const kickHit = hits.find((h) => ['kick', 'hihatFoot'].includes(h.instrument));
+
+                  const isDownbeat = stepInBeat === 0;
+                  const beatNumber = Math.floor(timeIndex / stepsPerBeat) + 1;
+
+                  return (
+                    <g key={`groove-m${mIdx}-s${timeIndex}`}>
+                      {/* 1. Cymbal / Hi-Hat Voice (Top, Line 0/G5, y = 14) */}
+                      {cymbalsHit && (
+                        <g>
+                          {/* Stem up to top beam */}
+                          <line x1={x + 3} y1="14" x2={x + 3} y2={topBeamY} stroke="#38BDF8" strokeWidth="1.2" />
+                          {cymbalsHit.instrument === 'hihatOpen' || cymbalsHit.instrument === 'crash' ? (
+                            <>
+                              <circle cx={x} cy="14" r="3.8" fill="none" stroke="#38BDF8" strokeWidth="1" />
+                              <line x1={x - 2.8} y1="11.2" x2={x + 2.8} y2="16.8" stroke="#38BDF8" strokeWidth="1.4" />
+                              <line x1={x - 2.8} y1="16.8" x2={x + 2.8} y2="11.2" stroke="#38BDF8" strokeWidth="1.4" />
+                            </>
+                          ) : (
+                            <>
+                              <line x1={x - 2.8} y1="11.2" x2={x + 2.8} y2="16.8" stroke="#38BDF8" strokeWidth="1.4" />
+                              <line x1={x - 2.8} y1="16.8" x2={x + 2.8} y2="11.2" stroke="#38BDF8" strokeWidth="1.4" />
+                            </>
+                          )}
+                          {cymbalsHit.accent && (
+                            <path
+                              d={`M ${x - 2.5} 1 L ${x + 2.5} 2.5 L ${x - 2.5} 4`}
+                              fill="none"
+                              stroke="#F59E0B"
+                              strokeWidth="1.3"
+                            />
+                          )}
+                        </g>
+                      )}
+
+                      {/* 2. Snare / Mid Voice (Line 3/C5, y = 28) */}
+                      {snareHit && (
+                        <g opacity={snareHit.ghost ? 0.6 : 1}>
+                          {/* Stem pointing up */}
+                          <line x1={x + 3} y1="28" x2={x + 3} y2={topBeamY + 3} stroke="#38BDF8" strokeWidth="1.2" />
+                          <ellipse
+                            cx={x}
+                            cy="28"
+                            rx={snareHit.ghost ? 2.8 : 3.5}
+                            ry={snareHit.ghost ? 1.8 : 2.5}
+                            transform={`rotate(-20 ${x} 28)`}
+                            fill={snareHit.accent ? '#F59E0B' : '#38BDF8'}
+                          />
+                          {snareHit.ghost && (
+                            <>
+                              <text x={x - 5} y="31" fill="#94A3B8" fontSize="8" fontWeight="bold" textAnchor="middle">(</text>
+                              <text x={x + 5} y="31" fill="#94A3B8" fontSize="8" fontWeight="bold" textAnchor="middle">)</text>
+                            </>
+                          )}
+                          {snareHit.accent && (
+                            <path
+                              d={`M ${x - 2.5} 21 L ${x + 2.5} 22.5 L ${x - 2.5} 24`}
+                              fill="none"
+                              stroke="#F59E0B"
+                              strokeWidth="1.4"
+                            />
+                          )}
+                        </g>
+                      )}
+
+                      {/* 3. Kick / Bass Drum Voice (Line 1/F4, y = 40, Stem DOWN) */}
+                      {kickHit && (
+                        <g>
+                          <ellipse
+                            cx={x}
+                            cy="40"
+                            rx="3.5"
+                            ry="2.5"
+                            transform={`rotate(-20 ${x} 40)`}
+                            fill="#38BDF8"
+                          />
+                          {/* Stem down */}
+                          <line x1={x - 3} y1="40" x2={x - 3} y2={bottomBeamY} stroke="#38BDF8" strokeWidth="1.2" />
+                          {kickHit.accent && (
+                            <path
+                              d={`M ${x - 2.5} 44 L ${x + 2.5} 45.5 L ${x - 2.5} 47`}
+                              fill="none"
+                              stroke="#F59E0B"
+                              strokeWidth="1.4"
+                            />
+                          )}
+                        </g>
+                      )}
+
+                      {/* Downbeat Metric Reference Indicator */}
+                      <text
+                        x={x}
+                        y="58"
+                        fill={isDownbeat ? '#38BDF8' : '#475569'}
+                        fontSize={isDownbeat ? (isMultiMeasure ? '8' : '9') : '6.5'}
+                        fontWeight={isDownbeat ? 'bold' : 'normal'}
+                        fontFamily="ui-monospace, monospace"
+                        textAnchor="middle"
+                      >
+                        {timeSig === '6/8'
+                          ? timeIndex + 1
+                          : isDownbeat
+                          ? `${beatNumber}`
+                          : '·'}
+                      </text>
+                    </g>
+                  );
+                })}
               </g>
             );
           })}

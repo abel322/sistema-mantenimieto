@@ -14,6 +14,7 @@ import {
   Camera,
   Grid3X3,
   Wand2,
+  Copy,
 } from 'lucide-react';
 import {
   GrooveCategory,
@@ -29,6 +30,36 @@ export type HiHatStepState = 'off' | 'closed' | 'open' | 'accent';
 export type SnareStepState = 'off' | 'normal' | 'ghost' | 'accent';
 export type KickStepState = 'off' | 'normal' | 'accent';
 
+export type SupportedTimeSignature = '4/4' | '3/4' | '6/8' | '12/8' | '5/4' | '7/8';
+export type SupportedSubdivisionMode = '1/8' | '1/16' | 'triplet' | 'sextuplet';
+
+export interface BeatStep {
+  stepIndex: number;
+  label: string;
+  isDownbeat: boolean;
+}
+
+export interface BeatGroup {
+  beatNumber: number;
+  label: string;
+  steps: BeatStep[];
+}
+
+export interface MetricGridConfig {
+  timeSignature: SupportedTimeSignature;
+  subdivision: SupportedSubdivisionMode;
+  totalSteps: number;
+  beatGroups: BeatGroup[];
+  dbSubdivision: '1/8' | '1/16' | '3:2' | '6:4';
+  stepDurationFactor: number; // Multiplier against (60000 / BPM)
+}
+
+export interface MeasureMatrixState {
+  hihat: HiHatStepState[];
+  snare: SnareStepState[];
+  kick: KickStepState[];
+}
+
 export interface SaveGrooveModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,62 +73,626 @@ export interface SaveGrooveModalProps {
   currentSwing?: number;
 }
 
-// 16 steps labels for 4/4 in 16th notes
-const STEP_LABELS = [
-  '1', 'e', '&', 'a',
-  '2', 'e', '&', 'a',
-  '3', 'e', '&', 'a',
-  '4', 'e', '&', 'a',
+export const TIME_SIGNATURE_OPTIONS: SupportedTimeSignature[] = [
+  '4/4',
+  '3/4',
+  '6/8',
+  '12/8',
+  '5/4',
+  '7/8',
 ];
 
-// Helper to build 4/4 GroovePattern measures from matrix state
-function buildGrooveMeasuresFromMatrix(
-  hihats: HiHatStepState[],
-  snares: SnareStepState[],
-  kicks: KickStepState[]
-) {
-  const beats: { subdivisions: GrooveHit[][] }[] = [];
+export const SUBDIVISION_MODE_OPTIONS: { id: SupportedSubdivisionMode; label: string; desc: string }[] = [
+  { id: '1/8', label: '1/8 (Corcheas)', desc: '2 subdivisiones por pulso' },
+  { id: '1/16', label: '1/16 (Semicorcheas)', desc: '4 subdivisiones por pulso' },
+  { id: 'triplet', label: 'Ternaria / Shuffle', desc: 'Tresillos (3 por pulso)' },
+  { id: 'sextuplet', label: 'Seisillos', desc: '6 subdivisiones por pulso' },
+];
 
-  for (let bIdx = 0; bIdx < 4; bIdx++) {
-    const subdivisions: GrooveHit[][] = [];
-    for (let sIdx = 0; sIdx < 4; sIdx++) {
-      const stepIdx = bIdx * 4 + sIdx;
-      const stepHits: GrooveHit[] = [];
+/**
+ * Calculates dynamic grid grouping, step count, and audio timing for any meter & subdivision
+ */
+export function getMetricGridConfig(
+  timeSig: SupportedTimeSignature,
+  subdivision: SupportedSubdivisionMode
+): MetricGridConfig {
+  let beatGroups: BeatGroup[] = [];
+  let dbSubdivision: '1/8' | '1/16' | '3:2' | '6:4' = '1/16';
+  let stepDurationFactor = 0.25;
+  let currentStep = 0;
 
-      // Hi-Hat
-      const hState = hihats[stepIdx];
-      if (hState === 'closed') {
-        stepHits.push({ instrument: 'hihat' });
-      } else if (hState === 'open') {
-        stepHits.push({ instrument: 'hihatOpen' });
-      } else if (hState === 'accent') {
-        stepHits.push({ instrument: 'hihat', accent: true });
+  if (timeSig === '4/4' || timeSig === '3/4' || timeSig === '5/4') {
+    const numBeats = timeSig === '4/4' ? 4 : timeSig === '3/4' ? 3 : 5;
+
+    if (subdivision === '1/8') {
+      dbSubdivision = '1/8';
+      stepDurationFactor = 0.5;
+      for (let b = 1; b <= numBeats; b++) {
+        beatGroups.push({
+          beatNumber: b,
+          label: `T${b}`,
+          steps: [
+            { stepIndex: currentStep++, label: `${b}`, isDownbeat: true },
+            { stepIndex: currentStep++, label: '&', isDownbeat: false },
+          ],
+        });
       }
-
-      // Snare
-      const sState = snares[stepIdx];
-      if (sState === 'normal') {
-        stepHits.push({ instrument: 'snare' });
-      } else if (sState === 'ghost') {
-        stepHits.push({ instrument: 'snare', ghost: true });
-      } else if (sState === 'accent') {
-        stepHits.push({ instrument: 'snare', accent: true });
+    } else if (subdivision === '1/16') {
+      dbSubdivision = '1/16';
+      stepDurationFactor = 0.25;
+      for (let b = 1; b <= numBeats; b++) {
+        beatGroups.push({
+          beatNumber: b,
+          label: `T${b}`,
+          steps: [
+            { stepIndex: currentStep++, label: `${b}`, isDownbeat: true },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '&', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'a', isDownbeat: false },
+          ],
+        });
       }
-
-      // Kick
-      const kState = kicks[stepIdx];
-      if (kState === 'normal') {
-        stepHits.push({ instrument: 'kick' });
-      } else if (kState === 'accent') {
-        stepHits.push({ instrument: 'kick', accent: true });
+    } else if (subdivision === 'triplet') {
+      dbSubdivision = '3:2';
+      stepDurationFactor = 1 / 3;
+      for (let b = 1; b <= numBeats; b++) {
+        beatGroups.push({
+          beatNumber: b,
+          label: `T${b}`,
+          steps: [
+            { stepIndex: currentStep++, label: `${b}`, isDownbeat: true },
+            { stepIndex: currentStep++, label: 'tri', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'plet', isDownbeat: false },
+          ],
+        });
       }
-
-      subdivisions.push(stepHits);
+    } else {
+      // sextuplet
+      dbSubdivision = '6:4';
+      stepDurationFactor = 1 / 6;
+      for (let b = 1; b <= numBeats; b++) {
+        beatGroups.push({
+          beatNumber: b,
+          label: `T${b}`,
+          steps: [
+            { stepIndex: currentStep++, label: `${b}`, isDownbeat: true },
+            { stepIndex: currentStep++, label: '2', isDownbeat: false },
+            { stepIndex: currentStep++, label: '3', isDownbeat: false },
+            { stepIndex: currentStep++, label: '4', isDownbeat: false },
+            { stepIndex: currentStep++, label: '5', isDownbeat: false },
+            { stepIndex: currentStep++, label: '6', isDownbeat: false },
+          ],
+        });
+      }
     }
-    beats.push({ subdivisions });
+  } else if (timeSig === '6/8') {
+    // 2 dotted-quarter compound beats: 1 2 3 | 4 5 6
+    if (subdivision === '1/8' || subdivision === 'triplet') {
+      dbSubdivision = subdivision === 'triplet' ? '3:2' : '1/8';
+      stepDurationFactor = 0.5;
+      beatGroups = [
+        {
+          beatNumber: 1,
+          label: 'P1 (1-3)',
+          steps: [
+            { stepIndex: currentStep++, label: '1', isDownbeat: true },
+            { stepIndex: currentStep++, label: '2', isDownbeat: false },
+            { stepIndex: currentStep++, label: '3', isDownbeat: false },
+          ],
+        },
+        {
+          beatNumber: 2,
+          label: 'P2 (4-6)',
+          steps: [
+            { stepIndex: currentStep++, label: '4', isDownbeat: true },
+            { stepIndex: currentStep++, label: '5', isDownbeat: false },
+            { stepIndex: currentStep++, label: '6', isDownbeat: false },
+          ],
+        },
+      ];
+    } else {
+      // 1/16 or sextuplet: 12 steps
+      dbSubdivision = subdivision === 'sextuplet' ? '6:4' : '1/16';
+      stepDurationFactor = 0.25;
+      beatGroups = [
+        {
+          beatNumber: 1,
+          label: 'P1 (1..6)',
+          steps: [
+            { stepIndex: currentStep++, label: '1', isDownbeat: true },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '2', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '3', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+          ],
+        },
+        {
+          beatNumber: 2,
+          label: 'P2 (7..12)',
+          steps: [
+            { stepIndex: currentStep++, label: '4', isDownbeat: true },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '5', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '6', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+          ],
+        },
+      ];
+    }
+  } else if (timeSig === '12/8') {
+    // 4 dotted-quarter compound beats
+    if (subdivision === '1/8' || subdivision === 'triplet') {
+      dbSubdivision = subdivision === 'triplet' ? '3:2' : '1/8';
+      stepDurationFactor = 0.5;
+      for (let b = 1; b <= 4; b++) {
+        const startNum = (b - 1) * 3 + 1;
+        beatGroups.push({
+          beatNumber: b,
+          label: `P${b}`,
+          steps: [
+            { stepIndex: currentStep++, label: `${startNum}`, isDownbeat: true },
+            { stepIndex: currentStep++, label: `${startNum + 1}`, isDownbeat: false },
+            { stepIndex: currentStep++, label: `${startNum + 2}`, isDownbeat: false },
+          ],
+        });
+      }
+    } else {
+      // 1/16 or sextuplet: 24 steps
+      dbSubdivision = subdivision === 'sextuplet' ? '6:4' : '1/16';
+      stepDurationFactor = 0.25;
+      for (let b = 1; b <= 4; b++) {
+        const startNum = (b - 1) * 3 + 1;
+        beatGroups.push({
+          beatNumber: b,
+          label: `P${b}`,
+          steps: [
+            { stepIndex: currentStep++, label: `${startNum}`, isDownbeat: true },
+            { stepIndex: currentStep++, label: '·', isDownbeat: false },
+            { stepIndex: currentStep++, label: `${startNum + 1}`, isDownbeat: false },
+            { stepIndex: currentStep++, label: '·', isDownbeat: false },
+            { stepIndex: currentStep++, label: `${startNum + 2}`, isDownbeat: false },
+            { stepIndex: currentStep++, label: '·', isDownbeat: false },
+          ],
+        });
+      }
+    }
+  } else if (timeSig === '7/8') {
+    // Asymmetric 7 eighth notes grouped 2 + 2 + 3
+    if (subdivision === '1/8' || subdivision === 'triplet') {
+      dbSubdivision = subdivision === 'triplet' ? '3:2' : '1/8';
+      stepDurationFactor = 0.5;
+      beatGroups = [
+        {
+          beatNumber: 1,
+          label: '2/8',
+          steps: [
+            { stepIndex: currentStep++, label: '1', isDownbeat: true },
+            { stepIndex: currentStep++, label: '2', isDownbeat: false },
+          ],
+        },
+        {
+          beatNumber: 2,
+          label: '2/8',
+          steps: [
+            { stepIndex: currentStep++, label: '3', isDownbeat: true },
+            { stepIndex: currentStep++, label: '4', isDownbeat: false },
+          ],
+        },
+        {
+          beatNumber: 3,
+          label: '3/8',
+          steps: [
+            { stepIndex: currentStep++, label: '5', isDownbeat: true },
+            { stepIndex: currentStep++, label: '6', isDownbeat: false },
+            { stepIndex: currentStep++, label: '7', isDownbeat: false },
+          ],
+        },
+      ];
+    } else {
+      // 14 sixteenth notes (4 + 4 + 6)
+      dbSubdivision = subdivision === 'sextuplet' ? '6:4' : '1/16';
+      stepDurationFactor = 0.25;
+      beatGroups = [
+        {
+          beatNumber: 1,
+          label: '4/16',
+          steps: [
+            { stepIndex: currentStep++, label: '1', isDownbeat: true },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '2', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+          ],
+        },
+        {
+          beatNumber: 2,
+          label: '4/16',
+          steps: [
+            { stepIndex: currentStep++, label: '3', isDownbeat: true },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '4', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+          ],
+        },
+        {
+          beatNumber: 3,
+          label: '6/16',
+          steps: [
+            { stepIndex: currentStep++, label: '5', isDownbeat: true },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '6', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+            { stepIndex: currentStep++, label: '7', isDownbeat: false },
+            { stepIndex: currentStep++, label: 'e', isDownbeat: false },
+          ],
+        },
+      ];
+    }
   }
 
-  return [{ beats }];
+  return {
+    timeSignature: timeSig,
+    subdivision,
+    totalSteps: currentStep,
+    beatGroups,
+    dbSubdivision,
+    stepDurationFactor,
+  };
+}
+
+/**
+ * Resizes an array maintaining existing items and padding with fillVal
+ */
+function resizeArray<T>(arr: T[], targetLen: number, fillVal: T): T[] {
+  if (!arr || arr.length === 0) return new Array(targetLen).fill(fillVal);
+  if (arr.length === targetLen) return [...arr];
+  if (arr.length < targetLen) {
+    return [...arr, ...new Array(targetLen - arr.length).fill(fillVal)];
+  }
+  return arr.slice(0, targetLen);
+}
+
+/**
+ * Helper to build GroovePattern measures from multi-measure matrix state
+ */
+function buildGrooveMeasuresFromMatrix(
+  measuresData: MeasureMatrixState[],
+  measuresCount: 1 | 2,
+  gridConfig: MetricGridConfig
+) {
+  const resultMeasures: Array<{
+    beats: Array<{
+      subdivisions: GrooveHit[][];
+    }>;
+  }> = [];
+
+  const count = Math.min(measuresCount, measuresData.length);
+
+  for (let m = 0; m < count; m++) {
+    const measureData = measuresData[m];
+    const beats: Array<{ subdivisions: GrooveHit[][] }> = [];
+
+    for (const group of gridConfig.beatGroups) {
+      const subdivisions: GrooveHit[][] = [];
+
+      for (const step of group.steps) {
+        const sIdx = step.stepIndex;
+        const stepHits: GrooveHit[] = [];
+
+        // Hi-Hat
+        const hState = measureData?.hihat?.[sIdx];
+        if (hState === 'closed') {
+          stepHits.push({ instrument: 'hihat' });
+        } else if (hState === 'open') {
+          stepHits.push({ instrument: 'hihatOpen' });
+        } else if (hState === 'accent') {
+          stepHits.push({ instrument: 'hihat', accent: true });
+        }
+
+        // Snare
+        const sState = measureData?.snare?.[sIdx];
+        if (sState === 'normal') {
+          stepHits.push({ instrument: 'snare' });
+        } else if (sState === 'ghost') {
+          stepHits.push({ instrument: 'snare', ghost: true });
+        } else if (sState === 'accent') {
+          stepHits.push({ instrument: 'snare', accent: true });
+        }
+
+        // Kick
+        const kState = measureData?.kick?.[sIdx];
+        if (kState === 'normal') {
+          stepHits.push({ instrument: 'kick' });
+        } else if (kState === 'accent') {
+          stepHits.push({ instrument: 'kick', accent: true });
+        }
+
+        subdivisions.push(stepHits);
+      }
+
+      beats.push({ subdivisions });
+    }
+
+    resultMeasures.push({ beats });
+  }
+
+  return resultMeasures;
+}
+
+/**
+ * Generates tailored musical drum presets for any time signature
+ */
+export function getPresetsForMeter(
+  meter: SupportedTimeSignature,
+  subdivision: SupportedSubdivisionMode,
+  totalSteps: number
+): { id: string; name: string; apply: () => [MeasureMatrixState, MeasureMatrixState] }[] {
+  const emptyMeasure = (): MeasureMatrixState => ({
+    hihat: new Array(totalSteps).fill('off'),
+    snare: new Array(totalSteps).fill('off'),
+    kick: new Array(totalSteps).fill('off'),
+  });
+
+  const clearPreset = {
+    id: 'clear',
+    name: 'Limpiar',
+    apply: (): [MeasureMatrixState, MeasureMatrixState] => [emptyMeasure(), emptyMeasure()],
+  };
+
+  if (meter === '4/4') {
+    if (subdivision === 'triplet') {
+      return [
+        {
+          id: 'shuffle',
+          name: 'Blues Shuffle',
+          apply: () => {
+            const m1 = emptyMeasure();
+            [0, 2, 3, 5, 6, 8, 9, 11].forEach((s) => {
+              if (s < totalSteps) m1.hihat[s] = 'closed';
+            });
+            if (totalSteps > 0) m1.kick[0] = 'normal';
+            if (totalSteps > 6) m1.kick[6] = 'normal';
+            if (totalSteps > 3) m1.snare[3] = 'accent';
+            if (totalSteps > 9) m1.snare[9] = 'accent';
+
+            const m2: MeasureMatrixState = {
+              hihat: [...m1.hihat],
+              snare: [...m1.snare],
+              kick: [...m1.kick],
+            };
+            if (totalSteps > 5) m2.kick[5] = 'normal';
+            if (totalSteps > 10) m2.snare[10] = 'ghost';
+            if (totalSteps > 11) m2.snare[11] = 'normal';
+
+            return [m1, m2];
+          },
+        },
+        clearPreset,
+      ];
+    }
+
+    return [
+      {
+        id: 'rock',
+        name: 'Rock Básico',
+        apply: () => {
+          const m1 = emptyMeasure();
+          if (totalSteps === 16) {
+            for (let i = 0; i < 16; i += 2) m1.hihat[i] = 'closed';
+            m1.kick[0] = 'normal';
+            m1.kick[8] = 'normal';
+            m1.kick[10] = 'normal';
+            m1.snare[4] = 'normal';
+            m1.snare[12] = 'normal';
+
+            const m2: MeasureMatrixState = {
+              hihat: [...m1.hihat],
+              snare: [...m1.snare],
+              kick: [...m1.kick],
+            };
+            m2.kick[6] = 'normal';
+            m2.snare[14] = 'ghost';
+            m2.snare[15] = 'accent';
+            return [m1, m2];
+          } else {
+            for (let i = 0; i < totalSteps; i++) m1.hihat[i] = 'closed';
+            if (totalSteps > 0) m1.kick[0] = 'normal';
+            if (totalSteps > 2) m1.snare[Math.floor(totalSteps / 4)] = 'normal';
+            return [m1, { ...m1, snare: [...m1.snare], kick: [...m1.kick], hihat: [...m1.hihat] }];
+          }
+        },
+      },
+      {
+        id: 'fourOnFloor',
+        name: '4-on-Floor',
+        apply: () => {
+          const m1 = emptyMeasure();
+          if (totalSteps === 16) {
+            [0, 4, 8, 12].forEach((s) => (m1.kick[s] = 'normal'));
+            [4, 12].forEach((s) => (m1.snare[s] = 'accent'));
+            [0, 4, 8, 12].forEach((s) => (m1.hihat[s] = 'closed'));
+            [2, 6, 10, 14].forEach((s) => (m1.hihat[s] = 'open'));
+
+            const m2: MeasureMatrixState = {
+              hihat: [...m1.hihat],
+              snare: [...m1.snare],
+              kick: [...m1.kick],
+            };
+            m2.snare[14] = 'ghost';
+            m2.snare[15] = 'accent';
+            return [m1, m2];
+          }
+          return [m1, m1];
+        },
+      },
+      {
+        id: 'funk',
+        name: 'Funk Pocket',
+        apply: () => {
+          const m1 = emptyMeasure();
+          if (totalSteps === 16) {
+            for (let i = 0; i < 16; i++) m1.hihat[i] = i % 4 === 0 ? 'accent' : 'closed';
+            m1.kick[0] = 'normal';
+            m1.kick[7] = 'normal';
+            m1.kick[10] = 'normal';
+            m1.snare[4] = 'normal';
+            m1.snare[6] = 'ghost';
+            m1.snare[12] = 'normal';
+            m1.snare[15] = 'ghost';
+
+            const m2: MeasureMatrixState = {
+              hihat: [...m1.hihat],
+              snare: [...m1.snare],
+              kick: [...m1.kick],
+            };
+            m2.snare[13] = 'ghost';
+            m2.snare[14] = 'normal';
+            m2.snare[15] = 'accent';
+            return [m1, m2];
+          }
+          return [m1, m1];
+        },
+      },
+      clearPreset,
+    ];
+  } else if (meter === '3/4') {
+    return [
+      {
+        id: 'waltz',
+        name: 'Vals Rock 3/4',
+        apply: () => {
+          const m1 = emptyMeasure();
+          const beats = 3;
+          const stepsPerBeat = totalSteps / beats;
+          for (let b = 0; b < beats; b++) {
+            const step = Math.floor(b * stepsPerBeat);
+            if (step < totalSteps) m1.hihat[step] = 'closed';
+          }
+          if (totalSteps > 0) m1.kick[0] = 'normal';
+          const b2 = Math.floor(1 * stepsPerBeat);
+          const b3 = Math.floor(2 * stepsPerBeat);
+          if (b2 < totalSteps) m1.snare[b2] = 'normal';
+          if (b3 < totalSteps) m1.snare[b3] = 'normal';
+          return [m1, { ...m1, snare: [...m1.snare], kick: [...m1.kick], hihat: [...m1.hihat] }];
+        },
+      },
+      clearPreset,
+    ];
+  } else if (meter === '6/8') {
+    return [
+      {
+        id: 'ballad68',
+        name: 'Balada / Blues 6/8',
+        apply: () => {
+          const m1 = emptyMeasure();
+          if (totalSteps === 6) {
+            for (let i = 0; i < 6; i++) m1.hihat[i] = i === 0 || i === 3 ? 'accent' : 'closed';
+            m1.kick[0] = 'normal';
+            m1.kick[2] = 'normal';
+            m1.snare[3] = 'accent';
+
+            const m2: MeasureMatrixState = {
+              hihat: [...m1.hihat],
+              snare: [...m1.snare],
+              kick: [...m1.kick],
+            };
+            m2.kick[4] = 'normal';
+            m2.snare[5] = 'normal';
+            return [m1, m2];
+          } else {
+            for (let i = 0; i < totalSteps; i += 2) m1.hihat[i] = 'closed';
+            if (totalSteps > 0) m1.kick[0] = 'normal';
+            if (totalSteps > 6) m1.snare[6] = 'accent';
+            return [m1, { ...m1, snare: [...m1.snare], kick: [...m1.kick], hihat: [...m1.hihat] }];
+          }
+        },
+      },
+      clearPreset,
+    ];
+  } else if (meter === '12/8') {
+    return [
+      {
+        id: 'blues128',
+        name: 'Slow Blues 12/8',
+        apply: () => {
+          const m1 = emptyMeasure();
+          if (totalSteps === 12) {
+            for (let i = 0; i < 12; i++) m1.hihat[i] = i % 3 === 0 ? 'accent' : 'closed';
+            m1.kick[0] = 'normal';
+            m1.kick[6] = 'normal';
+            m1.snare[3] = 'accent';
+            m1.snare[9] = 'accent';
+
+            const m2: MeasureMatrixState = {
+              hihat: [...m1.hihat],
+              snare: [...m1.snare],
+              kick: [...m1.kick],
+            };
+            m2.kick[5] = 'normal';
+            m2.snare[11] = 'ghost';
+            return [m1, m2];
+          }
+          return [m1, m1];
+        },
+      },
+      clearPreset,
+    ];
+  } else if (meter === '5/4') {
+    return [
+      {
+        id: 'takeFive',
+        name: 'Take Five / Jazz 5/4',
+        apply: () => {
+          const m1 = emptyMeasure();
+          const beats = 5;
+          const stepsPerBeat = totalSteps / beats;
+          for (let b = 0; b < beats; b++) {
+            const step = Math.floor(b * stepsPerBeat);
+            if (step < totalSteps) m1.hihat[step] = 'closed';
+          }
+          if (totalSteps > 0) m1.kick[0] = 'normal';
+          const b4 = Math.floor(3 * stepsPerBeat);
+          if (b4 < totalSteps) m1.kick[b4] = 'normal';
+          const b2 = Math.floor(1 * stepsPerBeat);
+          const b5 = Math.floor(4 * stepsPerBeat);
+          if (b2 < totalSteps) m1.snare[b2] = 'normal';
+          if (b5 < totalSteps) m1.snare[b5] = 'normal';
+          return [m1, { ...m1, snare: [...m1.snare], kick: [...m1.kick], hihat: [...m1.hihat] }];
+        },
+      },
+      clearPreset,
+    ];
+  } else if (meter === '7/8') {
+    return [
+      {
+        id: 'balkan78',
+        name: 'Balkan / Prog (2+2+3)',
+        apply: () => {
+          const m1 = emptyMeasure();
+          if (totalSteps === 7) {
+            for (let i = 0; i < 7; i++) m1.hihat[i] = i === 0 || i === 2 || i === 4 ? 'accent' : 'closed';
+            m1.kick[0] = 'normal';
+            m1.kick[2] = 'normal';
+            m1.snare[4] = 'accent';
+
+            const m2: MeasureMatrixState = {
+              hihat: [...m1.hihat],
+              snare: [...m1.snare],
+              kick: [...m1.kick],
+            };
+            m2.kick[5] = 'normal';
+            m2.snare[6] = 'normal';
+            return [m1, m2];
+          }
+          return [m1, m1];
+        },
+      },
+      clearPreset,
+    ];
+  }
+
+  return [clearPreset];
 }
 
 export default function SaveGrooveModal({
@@ -124,40 +719,47 @@ export default function SaveGrooveModal({
   const [saveBpm, setSaveBpm] = useState<number>(currentBpm);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Dynamic Matrix Configuration State
+  const [matrixTimeSignature, setMatrixTimeSignature] = useState<SupportedTimeSignature>('4/4');
+  const [matrixSubdivision, setMatrixSubdivision] = useState<SupportedSubdivisionMode>('1/16');
+  const [matrixMeasuresCount, setMatrixMeasuresCount] = useState<1 | 2>(1);
+  const [activeMeasureTab, setActiveMeasureTab] = useState<0 | 1>(0);
+
+  // Compute metric grid configuration reactively
+  const gridConfig = useMemo(() => {
+    return getMetricGridConfig(matrixTimeSignature, matrixSubdivision);
+  }, [matrixTimeSignature, matrixSubdivision]);
+
+  // Multi-Measure Matrix State (Measure 0 and Measure 1)
+  const [matrixMeasures, setMatrixMeasures] = useState<[MeasureMatrixState, MeasureMatrixState]>(() => {
+    const initialConfig = getMetricGridConfig('4/4', '1/16');
+    const presets = getPresetsForMeter('4/4', '1/16', initialConfig.totalSteps);
+    const initialRock = presets.find((p) => p.id === 'rock');
+    return initialRock ? initialRock.apply() : [
+      { hihat: new Array(16).fill('off'), snare: new Array(16).fill('off'), kick: new Array(16).fill('off') },
+      { hihat: new Array(16).fill('off'), snare: new Array(16).fill('off'), kick: new Array(16).fill('off') },
+    ];
+  });
+
   // Audio Preview State
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [currentPlaybackStep, setCurrentPlaybackStep] = useState<number | null>(null);
   const previewTimerRef = useRef<NodeJS.Timeout | null>(null);
   const previewStepIndexRef = useRef<number>(0);
 
-  // Step Sequencer Matrix State (16 steps for 4/4)
-  // Default to Rock Básico
-  const [hihatSteps, setHihatSteps] = useState<HiHatStepState[]>([
-    'closed', 'off', 'closed', 'off',
-    'closed', 'off', 'closed', 'off',
-    'closed', 'off', 'closed', 'off',
-    'closed', 'off', 'closed', 'off',
-  ]);
-  const [snareSteps, setSnareSteps] = useState<SnareStepState[]>([
-    'off', 'off', 'off', 'off',
-    'normal', 'off', 'off', 'off',
-    'off', 'off', 'off', 'off',
-    'normal', 'off', 'off', 'off',
-  ]);
-  const [kickSteps, setKickSteps] = useState<KickStepState[]>([
-    'normal', 'off', 'off', 'off',
-    'off', 'off', 'off', 'off',
-    'normal', 'off', 'normal', 'off',
-    'off', 'off', 'off', 'off',
-  ]);
-
-  // Sync props on open
+  // Sync props on modal open
   useEffect(() => {
     if (isOpen) {
       setSaveSourceMeasureIndex(Math.max(0, Math.min(totalMeasures - 1, selectedMeasureIndex)));
       setSaveBpm(currentBpm);
+
+      // Match outer time signature if supported
+      const outerTsStr = `${currentTimeSignature[0]}/${currentTimeSignature[1]}` as SupportedTimeSignature;
+      if (TIME_SIGNATURE_OPTIONS.includes(outerTsStr)) {
+        setMatrixTimeSignature(outerTsStr);
+      }
     }
-  }, [isOpen, selectedMeasureIndex, totalMeasures, currentBpm]);
+  }, [isOpen, selectedMeasureIndex, totalMeasures, currentBpm, currentTimeSignature]);
 
   // Stop playback on modal close or unmount
   const stopPreviewAudio = useCallback(() => {
@@ -179,89 +781,85 @@ export default function SaveGrooveModal({
     };
   }, [isOpen, stopPreviewAudio]);
 
-  // Presets Handlers
-  const handleApplyPreset = (preset: 'clear' | 'rock' | 'fourOnFloor' | 'funk') => {
+  // Handle Time Signature Change
+  const handleSelectTimeSignature = (ts: SupportedTimeSignature) => {
+    if (ts === matrixTimeSignature) return;
     stopPreviewAudio();
-    if (preset === 'clear') {
-      setHihatSteps(new Array(16).fill('off'));
-      setSnareSteps(new Array(16).fill('off'));
-      setKickSteps(new Array(16).fill('off'));
-    } else if (preset === 'rock') {
-      setHihatSteps([
-        'closed', 'off', 'closed', 'off',
-        'closed', 'off', 'closed', 'off',
-        'closed', 'off', 'closed', 'off',
-        'closed', 'off', 'closed', 'off',
-      ]);
-      setSnareSteps([
-        'off', 'off', 'off', 'off',
-        'normal', 'off', 'off', 'off',
-        'off', 'off', 'off', 'off',
-        'normal', 'off', 'off', 'off',
-      ]);
-      setKickSteps([
-        'normal', 'off', 'off', 'off',
-        'off', 'off', 'off', 'off',
-        'normal', 'off', 'normal', 'off',
-        'off', 'off', 'off', 'off',
-      ]);
-    } else if (preset === 'fourOnFloor') {
-      setHihatSteps([
-        'closed', 'off', 'open', 'off',
-        'closed', 'off', 'open', 'off',
-        'closed', 'off', 'open', 'off',
-        'closed', 'off', 'open', 'off',
-      ]);
-      setSnareSteps([
-        'off', 'off', 'off', 'off',
-        'accent', 'off', 'off', 'off',
-        'off', 'off', 'off', 'off',
-        'accent', 'off', 'off', 'off',
-      ]);
-      setKickSteps([
-        'normal', 'off', 'off', 'off',
-        'normal', 'off', 'off', 'off',
-        'normal', 'off', 'off', 'off',
-        'normal', 'off', 'off', 'off',
-      ]);
-    } else if (preset === 'funk') {
-      setHihatSteps([
-        'accent', 'closed', 'closed', 'closed',
-        'accent', 'closed', 'closed', 'closed',
-        'accent', 'closed', 'closed', 'closed',
-        'accent', 'closed', 'closed', 'closed',
-      ]);
-      setSnareSteps([
-        'off', 'off', 'off', 'off',
-        'normal', 'off', 'off', 'ghost',
-        'off', 'ghost', 'off', 'off',
-        'normal', 'off', 'off', 'ghost',
-      ]);
-      setKickSteps([
-        'normal', 'off', 'off', 'off',
-        'off', 'off', 'normal', 'off',
-        'off', 'off', 'normal', 'off',
-        'off', 'off', 'off', 'off',
-      ]);
-    }
+    setMatrixTimeSignature(ts);
+    const newConfig = getMetricGridConfig(ts, matrixSubdivision);
+
+    setMatrixMeasures((prev) => [
+      {
+        hihat: resizeArray(prev[0].hihat, newConfig.totalSteps, 'off'),
+        snare: resizeArray(prev[0].snare, newConfig.totalSteps, 'off'),
+        kick: resizeArray(prev[0].kick, newConfig.totalSteps, 'off'),
+      },
+      {
+        hihat: resizeArray(prev[1].hihat, newConfig.totalSteps, 'off'),
+        snare: resizeArray(prev[1].snare, newConfig.totalSteps, 'off'),
+        kick: resizeArray(prev[1].kick, newConfig.totalSteps, 'off'),
+      },
+    ]);
   };
 
-  // Step Toggling Logic
-  const handleToggleHihat = (index: number) => {
-    setHihatSteps((prev) => {
-      const next = [...prev];
-      const cur = next[index];
-      const nextVal: HiHatStepState =
-        cur === 'off'
-          ? 'closed'
-          : cur === 'closed'
-          ? 'open'
-          : cur === 'open'
-          ? 'accent'
-          : 'off';
-      next[index] = nextVal;
+  // Handle Subdivision Change
+  const handleSelectSubdivision = (sub: SupportedSubdivisionMode) => {
+    if (sub === matrixSubdivision) return;
+    stopPreviewAudio();
+    setMatrixSubdivision(sub);
+    const newConfig = getMetricGridConfig(matrixTimeSignature, sub);
 
-      // Audio feedback
+    setMatrixMeasures((prev) => [
+      {
+        hihat: resizeArray(prev[0].hihat, newConfig.totalSteps, 'off'),
+        snare: resizeArray(prev[0].snare, newConfig.totalSteps, 'off'),
+        kick: resizeArray(prev[0].kick, newConfig.totalSteps, 'off'),
+      },
+      {
+        hihat: resizeArray(prev[1].hihat, newConfig.totalSteps, 'off'),
+        snare: resizeArray(prev[1].snare, newConfig.totalSteps, 'off'),
+        kick: resizeArray(prev[1].kick, newConfig.totalSteps, 'off'),
+      },
+    ]);
+  };
+
+  // Presets available for currently active meter
+  const currentPresets = useMemo(() => {
+    return getPresetsForMeter(matrixTimeSignature, matrixSubdivision, gridConfig.totalSteps);
+  }, [matrixTimeSignature, matrixSubdivision, gridConfig.totalSteps]);
+
+  const handleApplyPreset = (presetItem: { apply: () => [MeasureMatrixState, MeasureMatrixState] }) => {
+    stopPreviewAudio();
+    const [m1, m2] = presetItem.apply();
+    setMatrixMeasures([m1, m2]);
+  };
+
+  // Copy Measure 1 into Measure 2 helper
+  const handleCopyMeasure1To2 = () => {
+    setMatrixMeasures((prev) => [
+      prev[0],
+      {
+        hihat: [...prev[0].hihat],
+        snare: [...prev[0].snare],
+        kick: [...prev[0].kick],
+      },
+    ]);
+    setActiveMeasureTab(1);
+  };
+
+  // Step Toggling Logic for active measure tab
+  const handleToggleHihat = (index: number) => {
+    setMatrixMeasures((prev) => {
+      const next: [MeasureMatrixState, MeasureMatrixState] = [
+        { ...prev[0], hihat: [...prev[0].hihat] },
+        { ...prev[1], hihat: [...prev[1].hihat] },
+      ];
+      const target = next[activeMeasureTab];
+      const cur = target.hihat[index] || 'off';
+      const nextVal: HiHatStepState =
+        cur === 'off' ? 'closed' : cur === 'closed' ? 'open' : cur === 'open' ? 'accent' : 'off';
+      target.hihat[index] = nextVal;
+
       if (nextVal === 'closed') onPlayHit('hihatClosed', false, false);
       else if (nextVal === 'open') onPlayHit('hihatOpen', false, false);
       else if (nextVal === 'accent') onPlayHit('hihatClosed', true, false);
@@ -271,20 +869,17 @@ export default function SaveGrooveModal({
   };
 
   const handleToggleSnare = (index: number) => {
-    setSnareSteps((prev) => {
-      const next = [...prev];
-      const cur = next[index];
+    setMatrixMeasures((prev) => {
+      const next: [MeasureMatrixState, MeasureMatrixState] = [
+        { ...prev[0], snare: [...prev[0].snare] },
+        { ...prev[1], snare: [...prev[1].snare] },
+      ];
+      const target = next[activeMeasureTab];
+      const cur = target.snare[index] || 'off';
       const nextVal: SnareStepState =
-        cur === 'off'
-          ? 'normal'
-          : cur === 'normal'
-          ? 'ghost'
-          : cur === 'ghost'
-          ? 'accent'
-          : 'off';
-      next[index] = nextVal;
+        cur === 'off' ? 'normal' : cur === 'normal' ? 'ghost' : cur === 'ghost' ? 'accent' : 'off';
+      target.snare[index] = nextVal;
 
-      // Audio feedback
       if (nextVal === 'normal') onPlayHit('snare', false, false);
       else if (nextVal === 'ghost') onPlayHit('snare', false, true);
       else if (nextVal === 'accent') onPlayHit('snare', true, false);
@@ -294,14 +889,16 @@ export default function SaveGrooveModal({
   };
 
   const handleToggleKick = (index: number) => {
-    setKickSteps((prev) => {
-      const next = [...prev];
-      const cur = next[index];
-      const nextVal: KickStepState =
-        cur === 'off' ? 'normal' : cur === 'normal' ? 'accent' : 'off';
-      next[index] = nextVal;
+    setMatrixMeasures((prev) => {
+      const next: [MeasureMatrixState, MeasureMatrixState] = [
+        { ...prev[0], kick: [...prev[0].kick] },
+        { ...prev[1], kick: [...prev[1].kick] },
+      ];
+      const target = next[activeMeasureTab];
+      const cur = target.kick[index] || 'off';
+      const nextVal: KickStepState = cur === 'off' ? 'normal' : cur === 'normal' ? 'accent' : 'off';
+      target.kick[index] = nextVal;
 
-      // Audio feedback
       if (nextVal === 'normal') onPlayHit('kick', false, false);
       else if (nextVal === 'accent') onPlayHit('kick', true, false);
 
@@ -318,7 +915,7 @@ export default function SaveGrooveModal({
   // Build active GroovePattern object for live preview and database payload
   const activePreviewGroove: GroovePattern | null = useMemo(() => {
     if (originMode === 'matrix') {
-      const measures = buildGrooveMeasuresFromMatrix(hihatSteps, snareSteps, kickSteps);
+      const measures = buildGrooveMeasuresFromMatrix(matrixMeasures, matrixMeasuresCount, gridConfig);
       return {
         id: 'save-modal-matrix-preview',
         name: saveName.trim() || 'Nuevo Groove en Matriz',
@@ -326,11 +923,13 @@ export default function SaveGrooveModal({
         subCategory: 'Diseñado en Matriz',
         difficulty: saveDifficulty as any,
         suggestedBpm: saveBpm,
-        timeSignature: '4/4',
+        timeSignature: matrixTimeSignature,
         swingRatio: currentSwing,
-        measuresCount: 1,
-        subdivision: '1/16',
-        description: saveDescription.trim() || 'Groove diseñado con el secuenciador interactivo de Sonora.',
+        measuresCount: matrixMeasuresCount,
+        subdivision: gridConfig.dbSubdivision,
+        description:
+          saveDescription.trim() ||
+          `Groove en ${matrixTimeSignature} (${matrixMeasuresCount} compás${matrixMeasuresCount > 1 ? 'es' : ''}) diseñado en Sonora.`,
         isCustom: true,
         measures,
       };
@@ -355,9 +954,10 @@ export default function SaveGrooveModal({
     }
   }, [
     originMode,
-    hihatSteps,
-    snareSteps,
-    kickSteps,
+    matrixMeasures,
+    matrixMeasuresCount,
+    gridConfig,
+    matrixTimeSignature,
     liveSourceMeasure,
     saveName,
     saveGenre,
@@ -368,7 +968,7 @@ export default function SaveGrooveModal({
     saveDescription,
   ]);
 
-  // Audio Preview Loop handler
+  // Audio Preview Loop handler supporting full 1 or 2 measures continuously
   const handleTogglePreviewAudio = () => {
     if (isPlayingPreview) {
       stopPreviewAudio();
@@ -381,17 +981,25 @@ export default function SaveGrooveModal({
     previewStepIndexRef.current = 0;
     setCurrentPlaybackStep(0);
 
-    // 16th note step duration in ms: (60000 / BPM) / 4
-    const stepDurationMs = Math.max(50, (60000 / (saveBpm || 120)) / 4);
+    const totalStepsInMeasure = gridConfig.totalSteps;
+    const numMeasures = originMode === 'matrix' ? matrixMeasuresCount : 1;
+    const totalGlobalSteps = totalStepsInMeasure * numMeasures;
+
+    // Step duration in ms with dynamic subdivision factor
+    const stepDurationMs = Math.max(35, (60000 / (saveBpm || 120)) * gridConfig.stepDurationFactor);
 
     const playCurrentStep = () => {
-      const step = previewStepIndexRef.current;
-      setCurrentPlaybackStep(step);
+      const globalStep = previewStepIndexRef.current;
+      setCurrentPlaybackStep(globalStep);
 
       if (originMode === 'matrix') {
-        const h = hihatSteps[step];
-        const s = snareSteps[step];
-        const k = kickSteps[step];
+        const mIdx = Math.floor(globalStep / totalStepsInMeasure);
+        const sIdx = globalStep % totalStepsInMeasure;
+        const measureData = matrixMeasures[mIdx] || matrixMeasures[0];
+
+        const h = measureData?.hihat?.[sIdx];
+        const s = measureData?.snare?.[sIdx];
+        const k = measureData?.kick?.[sIdx];
 
         if (h === 'closed') onPlayHit('hihatClosed', false, false);
         else if (h === 'open') onPlayHit('hihatOpen', false, false);
@@ -407,8 +1015,8 @@ export default function SaveGrooveModal({
         // Capture mode playback
         const measureTemplate = activePreviewGroove.measures[0];
         if (measureTemplate) {
-          const bIdx = Math.floor(step / 4);
-          const sIdx = step % 4;
+          const bIdx = Math.floor(globalStep / 4);
+          const sIdx = globalStep % 4;
           const hits = measureTemplate.beats[bIdx]?.subdivisions?.[sIdx] || [];
           hits.forEach((hit) => {
             const pieceId = (hit.instrument === 'hihat' ? 'hihatClosed' : hit.instrument) as DrumPieceId;
@@ -417,7 +1025,7 @@ export default function SaveGrooveModal({
         }
       }
 
-      previewStepIndexRef.current = (step + 1) % 16;
+      previewStepIndexRef.current = (globalStep + 1) % totalGlobalSteps;
     };
 
     // Play initial step immediately
@@ -436,7 +1044,12 @@ export default function SaveGrooveModal({
     setIsSaving(true);
     stopPreviewAudio();
 
-    const timeSigStr = originMode === 'matrix' ? '4/4' : `${currentTimeSignature[0]}/${currentTimeSignature[1]}`;
+    const timeSigStr =
+      originMode === 'matrix' ? matrixTimeSignature : `${currentTimeSignature[0]}/${currentTimeSignature[1]}`;
+    const measuresCountNum = originMode === 'matrix' ? matrixMeasuresCount : 1;
+    const subdivisionStr =
+      originMode === 'matrix' ? gridConfig.dbSubdivision : activePreviewGroove.subdivision || '1/16';
+
     const payload = {
       name: saveName.trim(),
       genre: saveGenre,
@@ -445,9 +1058,13 @@ export default function SaveGrooveModal({
       suggestedBpm: saveBpm,
       timeSignature: timeSigStr,
       swingRatio: currentSwing,
-      measuresCount: 1,
-      subdivision: activePreviewGroove.subdivision || '1/16',
-      description: saveDescription.trim() || (originMode === 'matrix' ? 'Groove diseñado con el secuenciador interactivo.' : 'Groove capturado en Sonora Drum Lab.'),
+      measuresCount: measuresCountNum,
+      subdivision: subdivisionStr,
+      description:
+        saveDescription.trim() ||
+        (originMode === 'matrix'
+          ? `Groove en ${timeSigStr} (${measuresCountNum} compás${measuresCountNum > 1 ? 'es' : ''}) diseñado con la mini matriz dinámica.`
+          : 'Groove capturado en Sonora Drum Lab.'),
       measures: activePreviewGroove.measures,
     };
 
@@ -484,9 +1101,11 @@ export default function SaveGrooveModal({
 
   if (!isOpen) return null;
 
+  const currentMeasureData = matrixMeasures[activeMeasureTab] || matrixMeasures[0];
+
   return (
     <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[92vh] sm:max-w-4xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
         {/* Mobile Pull Handle */}
         <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
 
@@ -652,226 +1271,363 @@ export default function SaveGrooveModal({
                     </p>
                   </div>
                 ) : (
-                  /* Modo Mini Matriz Secuenciadora Interactiva */
-                  <div className="p-3 rounded-xl bg-slate-900/90 border border-white/10 space-y-2.5">
-                    {/* Presets Rápidos */}
+                  /* Modo Mini Matriz Secuenciadora Interactiva Dinámica */
+                  <div className="p-3 rounded-xl bg-slate-900/90 border border-white/10 space-y-3">
+                    {/* 1. Métrica & Subdivisión Selectores */}
+                    <div className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 space-y-2">
+                      {/* Fila 1: Métrica & Longitud Toggle */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-mono font-bold text-gray-400">Métrica:</span>
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {TIME_SIGNATURE_OPTIONS.map((ts) => (
+                              <button
+                                key={`ts-btn-${ts}`}
+                                type="button"
+                                onClick={() => handleSelectTimeSignature(ts)}
+                                className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all cursor-pointer border ${
+                                  matrixTimeSignature === ts
+                                    ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]'
+                                    : 'bg-slate-900 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                                }`}
+                              >
+                                {ts}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Toggle de Longitud (1 Compás / 2 Compases) */}
+                        <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-white/10 text-[10px] font-mono">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMatrixMeasuresCount(1);
+                              setActiveMeasureTab(0);
+                            }}
+                            className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                              matrixMeasuresCount === 1
+                                ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 shadow-[0_0_8px_rgba(6,182,212,0.25)]'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            1 Compás
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMatrixMeasuresCount(2)}
+                            className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                              matrixMeasuresCount === 2
+                                ? 'bg-purple-500/25 text-purple-300 border border-purple-400/50 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
+                                : 'text-gray-400 hover:text-white'
+                            }`}
+                          >
+                            2 Compases
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Fila 2: Subdivisión por Pulso */}
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-white/5">
+                        <span className="text-[10px] font-mono font-bold text-gray-400">Subdivisión:</span>
+                        <div className="flex items-center gap-1 flex-wrap flex-1">
+                          {SUBDIVISION_MODE_OPTIONS.map((sub) => (
+                            <button
+                              key={`sub-btn-${sub.id}`}
+                              type="button"
+                              onClick={() => handleSelectSubdivision(sub.id)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer border ${
+                                matrixSubdivision === sub.id
+                                  ? 'bg-purple-500/25 text-purple-300 border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.3)]'
+                                  : 'bg-slate-900 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                              }`}
+                              title={sub.desc}
+                            >
+                              {sub.label}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-[10px] font-mono text-cyan-400 font-bold ml-auto">
+                          {gridConfig.totalSteps} pasos {matrixMeasuresCount === 2 ? '× 2 compases' : ''}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 2. Pestañas de Navegación si 2 Compases */}
+                    {matrixMeasuresCount === 2 && (
+                      <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-950/80 border border-white/10 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setActiveMeasureTab(0)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                              activeMeasureTab === 0
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5 border-transparent'
+                            }`}
+                          >
+                            <span>Compás 1 (A)</span>
+                            {currentPlaybackStep !== null &&
+                              Math.floor(currentPlaybackStep / gridConfig.totalSteps) === 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                              )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveMeasureTab(1)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                              activeMeasureTab === 1
+                                ? 'bg-purple-500/20 text-purple-300 border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5 border-transparent'
+                            }`}
+                          >
+                            <span>Compás 2 (B / Variación)</span>
+                            {currentPlaybackStep !== null &&
+                              Math.floor(currentPlaybackStep / gridConfig.totalSteps) === 1 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                              )}
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleCopyMeasure1To2}
+                          className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-cyan-300 border border-white/10 text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer ml-auto"
+                          title="Copiar todas las notas de Compás 1 a Compás 2"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Copiar C1 a C2</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Presets Rápidos según la métrica activa */}
                     <div className="flex items-center justify-between gap-1 flex-wrap text-[10px] font-mono">
                       <span className="text-gray-400 font-bold flex items-center gap-1">
                         <Wand2 className="w-3 h-3 text-purple-400" />
-                        Presets:
+                        Presets ({matrixTimeSignature}):
                       </span>
                       <div className="flex items-center gap-1 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => handleApplyPreset('rock')}
-                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-cyan-300 border border-white/10 transition-colors cursor-pointer"
-                        >
-                          Rock Básico
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleApplyPreset('fourOnFloor')}
-                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-emerald-300 border border-white/10 transition-colors cursor-pointer"
-                        >
-                          4-on-Floor
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleApplyPreset('funk')}
-                          className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-amber-300 border border-white/10 transition-colors cursor-pointer"
-                        >
-                          Funk Pocket
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleApplyPreset('clear')}
-                          className="px-1.5 py-0.5 rounded bg-red-950/40 hover:bg-red-900/40 text-red-300 border border-red-500/30 transition-colors cursor-pointer"
-                          title="Limpiar matriz"
-                        >
-                          Limpiar
-                        </button>
+                        {currentPresets.map((preset) => (
+                          <button
+                            key={`preset-${preset.id}`}
+                            type="button"
+                            onClick={() => handleApplyPreset(preset)}
+                            className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                              preset.id === 'clear'
+                                ? 'bg-red-950/40 hover:bg-red-900/40 text-red-300 border-red-500/30'
+                                : 'bg-slate-800 hover:bg-slate-700 text-gray-300 hover:text-cyan-300 border-white/10'
+                            }`}
+                          >
+                            {preset.name}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Matrix Grid: 16 Steps across 3 Instruments */}
-                    <div className="space-y-1.5 pt-1">
-                      {/* Cabecera de Tiempos (1 e & a 2 e & a 3 e & a 4 e & a) */}
-                      <div className="flex items-center gap-1">
-                        <div className="w-7 text-[10px] font-mono text-gray-500 font-bold text-center">
-                          P
-                        </div>
-                        <div className="flex-1 grid grid-cols-4 gap-1">
-                          {[0, 1, 2, 3].map((bIdx) => (
-                            <div key={`beat-header-${bIdx}`} className="grid grid-cols-4 gap-0.5">
-                              {[0, 1, 2, 3].map((sIdx) => {
-                                const stepNum = bIdx * 4 + sIdx;
-                                const isDownbeat = sIdx === 0;
-                                const isCurrent = currentPlaybackStep === stepNum;
-                                return (
-                                  <div
-                                    key={`step-lbl-${stepNum}`}
-                                    className={`h-4.5 rounded text-[9px] font-mono flex items-center justify-center font-bold transition-all ${
-                                      isCurrent
-                                        ? 'bg-amber-400 text-black shadow-[0_0_8px_#f59e0b]'
-                                        : isDownbeat
-                                        ? 'bg-white/15 text-cyan-300 border border-white/20'
-                                        : 'text-gray-500'
-                                    }`}
-                                  >
-                                    {STEP_LABELS[stepNum]}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                    {/* 3. Reagrupación Visual de Pasos (Visual Beat Clustering) con Scroll Horizontal */}
+                    <div className="overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-white/10">
+                      <div className="min-w-fit space-y-1.5 pt-1">
+                        {/* Cabecera de Tiempos Dinámica */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-7 text-[10px] font-mono text-gray-500 font-bold text-center flex-shrink-0">
+                            P
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {gridConfig.beatGroups.map((group, gIdx) => (
+                              <div
+                                key={`header-group-${group.beatNumber}-${gIdx}`}
+                                className="flex items-center gap-0.5 p-0.5 rounded bg-slate-950/40 border border-white/5"
+                              >
+                                {group.steps.map((step) => {
+                                  const isCurrent =
+                                    currentPlaybackStep !== null &&
+                                    Math.floor(currentPlaybackStep / gridConfig.totalSteps) === activeMeasureTab &&
+                                    currentPlaybackStep % gridConfig.totalSteps === step.stepIndex;
 
-                      {/* Fila 1: Hi-Hat / Cymbals (H) */}
-                      <div className="flex items-center gap-1">
-                        <div className="w-7 text-[10px] font-mono font-bold text-sky-400 text-center py-1 rounded bg-sky-950/40 border border-sky-500/30">
-                          H
+                                  return (
+                                    <div
+                                      key={`step-lbl-${step.stepIndex}`}
+                                      className={`w-6 h-4.5 rounded text-[9px] font-mono flex items-center justify-center font-bold transition-all flex-shrink-0 ${
+                                        isCurrent
+                                          ? 'bg-amber-400 text-black shadow-[0_0_8px_#f59e0b]'
+                                          : step.isDownbeat
+                                          ? 'bg-white/15 text-cyan-300 border border-white/20'
+                                          : 'text-gray-500'
+                                      }`}
+                                      title={`Tiempo ${group.beatNumber} - ${step.label}`}
+                                    >
+                                      {step.label}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex-1 grid grid-cols-4 gap-1">
-                          {[0, 1, 2, 3].map((bIdx) => (
-                            <div key={`hh-beat-${bIdx}`} className="grid grid-cols-4 gap-0.5">
-                              {[0, 1, 2, 3].map((sIdx) => {
-                                const stepNum = bIdx * 4 + sIdx;
-                                const state = hihatSteps[stepNum];
-                                const isCurrent = currentPlaybackStep === stepNum;
 
-                                return (
-                                  <button
-                                    key={`hh-${stepNum}`}
-                                    type="button"
-                                    onClick={() => handleToggleHihat(stepNum)}
-                                    className={`h-6 rounded text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-pointer border ${
-                                      isCurrent
-                                        ? 'ring-1 ring-amber-400 shadow-[0_0_6px_#f59e0b]'
-                                        : ''
-                                    } ${
-                                      state === 'closed'
-                                        ? 'bg-sky-500/30 border-sky-400 text-sky-200'
+                        {/* Fila 1: Hi-Hat / Cymbals (H) */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-7 text-[10px] font-mono font-bold text-sky-400 text-center py-1 rounded bg-sky-950/40 border border-sky-500/30 flex-shrink-0">
+                            H
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {gridConfig.beatGroups.map((group, gIdx) => (
+                              <div
+                                key={`hh-group-${group.beatNumber}-${gIdx}`}
+                                className="flex items-center gap-0.5 p-0.5 rounded bg-slate-950/40 border border-white/5"
+                              >
+                                {group.steps.map((step) => {
+                                  const stepNum = step.stepIndex;
+                                  const state = currentMeasureData?.hihat?.[stepNum] || 'off';
+                                  const isCurrent =
+                                    currentPlaybackStep !== null &&
+                                    Math.floor(currentPlaybackStep / gridConfig.totalSteps) === activeMeasureTab &&
+                                    currentPlaybackStep % gridConfig.totalSteps === stepNum;
+
+                                  return (
+                                    <button
+                                      key={`hh-${stepNum}`}
+                                      type="button"
+                                      onClick={() => handleToggleHihat(stepNum)}
+                                      className={`w-6 h-6 rounded text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-pointer border flex-shrink-0 ${
+                                        isCurrent ? 'ring-1 ring-amber-400 shadow-[0_0_6px_#f59e0b]' : ''
+                                      } ${
+                                        state === 'closed'
+                                          ? 'bg-sky-500/30 border-sky-400 text-sky-200'
+                                          : state === 'open'
+                                          ? 'bg-sky-400 border-white text-black shadow-[0_0_8px_rgba(56,189,248,0.6)] font-black'
+                                          : state === 'accent'
+                                          ? 'bg-gradient-to-tr from-sky-500 to-cyan-300 border-white text-black font-black'
+                                          : 'bg-slate-900 border-white/10 hover:border-white/30 text-gray-700'
+                                      }`}
+                                      title={`Hi-Hat Paso ${stepNum + 1}: ${state}`}
+                                    >
+                                      {state === 'closed'
+                                        ? 'x'
                                         : state === 'open'
-                                        ? 'bg-sky-400 border-white text-black shadow-[0_0_8px_rgba(56,189,248,0.6)] font-black'
+                                        ? 'O'
                                         : state === 'accent'
-                                        ? 'bg-gradient-to-tr from-sky-500 to-cyan-300 border-white text-black font-black'
-                                        : 'bg-slate-900 border-white/10 hover:border-white/30 text-gray-700'
-                                    }`}
-                                    title={`Paso ${stepNum + 1}: ${state}`}
-                                  >
-                                    {state === 'closed'
-                                      ? 'x'
-                                      : state === 'open'
-                                      ? 'O'
-                                      : state === 'accent'
-                                      ? '>x'
-                                      : '·'}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ))}
+                                        ? '>x'
+                                        : '·'}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Fila 2: Snare / Caja (S) */}
-                      <div className="flex items-center gap-1">
-                        <div className="w-7 text-[10px] font-mono font-bold text-purple-400 text-center py-1 rounded bg-purple-950/40 border border-purple-500/30">
-                          S
-                        </div>
-                        <div className="flex-1 grid grid-cols-4 gap-1">
-                          {[0, 1, 2, 3].map((bIdx) => (
-                            <div key={`snare-beat-${bIdx}`} className="grid grid-cols-4 gap-0.5">
-                              {[0, 1, 2, 3].map((sIdx) => {
-                                const stepNum = bIdx * 4 + sIdx;
-                                const state = snareSteps[stepNum];
-                                const isCurrent = currentPlaybackStep === stepNum;
+                        {/* Fila 2: Snare / Caja (S) */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-7 text-[10px] font-mono font-bold text-purple-400 text-center py-1 rounded bg-purple-950/40 border border-purple-500/30 flex-shrink-0">
+                            S
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {gridConfig.beatGroups.map((group, gIdx) => (
+                              <div
+                                key={`snare-group-${group.beatNumber}-${gIdx}`}
+                                className="flex items-center gap-0.5 p-0.5 rounded bg-slate-950/40 border border-white/5"
+                              >
+                                {group.steps.map((step) => {
+                                  const stepNum = step.stepIndex;
+                                  const state = currentMeasureData?.snare?.[stepNum] || 'off';
+                                  const isCurrent =
+                                    currentPlaybackStep !== null &&
+                                    Math.floor(currentPlaybackStep / gridConfig.totalSteps) === activeMeasureTab &&
+                                    currentPlaybackStep % gridConfig.totalSteps === stepNum;
 
-                                return (
-                                  <button
-                                    key={`snare-${stepNum}`}
-                                    type="button"
-                                    onClick={() => handleToggleSnare(stepNum)}
-                                    className={`h-6 rounded text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-pointer border ${
-                                      isCurrent
-                                        ? 'ring-1 ring-amber-400 shadow-[0_0_6px_#f59e0b]'
-                                        : ''
-                                    } ${
-                                      state === 'normal'
-                                        ? 'bg-purple-500/35 border-purple-400 text-purple-200'
+                                  return (
+                                    <button
+                                      key={`snare-${stepNum}`}
+                                      type="button"
+                                      onClick={() => handleToggleSnare(stepNum)}
+                                      className={`w-6 h-6 rounded text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-pointer border flex-shrink-0 ${
+                                        isCurrent ? 'ring-1 ring-amber-400 shadow-[0_0_6px_#f59e0b]' : ''
+                                      } ${
+                                        state === 'normal'
+                                          ? 'bg-purple-500/35 border-purple-400 text-purple-200'
+                                          : state === 'ghost'
+                                          ? 'bg-purple-950/50 border-purple-500/40 text-purple-400 text-[9px]'
+                                          : state === 'accent'
+                                          ? 'bg-purple-500 border-white text-white font-black shadow-[0_0_8px_rgba(168,85,247,0.6)]'
+                                          : 'bg-slate-900 border-white/10 hover:border-white/30 text-gray-700'
+                                      }`}
+                                      title={`Snare Paso ${stepNum + 1}: ${state}`}
+                                    >
+                                      {state === 'normal'
+                                        ? 'S'
                                         : state === 'ghost'
-                                        ? 'bg-purple-950/50 border-purple-500/40 text-purple-400 text-[9px]'
+                                        ? '(•)'
                                         : state === 'accent'
-                                        ? 'bg-purple-500 border-white text-white font-black shadow-[0_0_8px_rgba(168,85,247,0.6)]'
-                                        : 'bg-slate-900 border-white/10 hover:border-white/30 text-gray-700'
-                                    }`}
-                                    title={`Paso ${stepNum + 1}: ${state}`}
-                                  >
-                                    {state === 'normal'
-                                      ? 'S'
-                                      : state === 'ghost'
-                                      ? '(•)'
-                                      : state === 'accent'
-                                      ? '>S'
-                                      : '·'}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ))}
+                                        ? '>S'
+                                        : '·'}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Fila 3: Kick / Bombo (K) */}
-                      <div className="flex items-center gap-1">
-                        <div className="w-7 text-[10px] font-mono font-bold text-emerald-400 text-center py-1 rounded bg-emerald-950/40 border border-emerald-500/30">
-                          K
-                        </div>
-                        <div className="flex-1 grid grid-cols-4 gap-1">
-                          {[0, 1, 2, 3].map((bIdx) => (
-                            <div key={`kick-beat-${bIdx}`} className="grid grid-cols-4 gap-0.5">
-                              {[0, 1, 2, 3].map((sIdx) => {
-                                const stepNum = bIdx * 4 + sIdx;
-                                const state = kickSteps[stepNum];
-                                const isCurrent = currentPlaybackStep === stepNum;
+                        {/* Fila 3: Kick / Bombo (K) */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-7 text-[10px] font-mono font-bold text-emerald-400 text-center py-1 rounded bg-emerald-950/40 border border-emerald-500/30 flex-shrink-0">
+                            K
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {gridConfig.beatGroups.map((group, gIdx) => (
+                              <div
+                                key={`kick-group-${group.beatNumber}-${gIdx}`}
+                                className="flex items-center gap-0.5 p-0.5 rounded bg-slate-950/40 border border-white/5"
+                              >
+                                {group.steps.map((step) => {
+                                  const stepNum = step.stepIndex;
+                                  const state = currentMeasureData?.kick?.[stepNum] || 'off';
+                                  const isCurrent =
+                                    currentPlaybackStep !== null &&
+                                    Math.floor(currentPlaybackStep / gridConfig.totalSteps) === activeMeasureTab &&
+                                    currentPlaybackStep % gridConfig.totalSteps === stepNum;
 
-                                return (
-                                  <button
-                                    key={`kick-${stepNum}`}
-                                    type="button"
-                                    onClick={() => handleToggleKick(stepNum)}
-                                    className={`h-6 rounded text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-pointer border ${
-                                      isCurrent
-                                        ? 'ring-1 ring-amber-400 shadow-[0_0_6px_#f59e0b]'
-                                        : ''
-                                    } ${
-                                      state === 'normal'
-                                        ? 'bg-emerald-500/35 border-emerald-400 text-emerald-200'
+                                  return (
+                                    <button
+                                      key={`kick-${stepNum}`}
+                                      type="button"
+                                      onClick={() => handleToggleKick(stepNum)}
+                                      className={`w-6 h-6 rounded text-[10px] font-mono font-bold flex items-center justify-center transition-all cursor-pointer border flex-shrink-0 ${
+                                        isCurrent ? 'ring-1 ring-amber-400 shadow-[0_0_6px_#f59e0b]' : ''
+                                      } ${
+                                        state === 'normal'
+                                          ? 'bg-emerald-500/35 border-emerald-400 text-emerald-200'
+                                          : state === 'accent'
+                                          ? 'bg-emerald-500 border-white text-black font-black shadow-[0_0_8px_rgba(16,185,129,0.6)]'
+                                          : 'bg-slate-900 border-white/10 hover:border-white/30 text-gray-700'
+                                      }`}
+                                      title={`Kick Paso ${stepNum + 1}: ${state}`}
+                                    >
+                                      {state === 'normal'
+                                        ? 'K'
                                         : state === 'accent'
-                                        ? 'bg-emerald-500 border-white text-black font-black shadow-[0_0_8px_rgba(16,185,129,0.6)]'
-                                        : 'bg-slate-900 border-white/10 hover:border-white/30 text-gray-700'
-                                    }`}
-                                    title={`Paso ${stepNum + 1}: ${state}`}
-                                  >
-                                    {state === 'normal'
-                                      ? 'K'
-                                      : state === 'accent'
-                                      ? '>K'
-                                      : '·'}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ))}
+                                        ? '>K'
+                                        : '·'}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Guía de clicks */}
-                    <div className="pt-1 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-gray-500">
+                    {/* Guía de Clicks y Estado */}
+                    <div className="pt-1 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-gray-500 flex-wrap gap-1">
                       <span>Clic para ciclar: normal → ghost (•) → acento &gt;</span>
-                      <span className="text-cyan-400">16 pasos (4/4)</span>
+                      <span className="text-cyan-400 font-bold">
+                        {matrixTimeSignature} | {gridConfig.totalSteps} pasos
+                        {matrixMeasuresCount === 2 ? ` (Editando Compás ${activeMeasureTab + 1})` : ''}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -900,7 +1656,11 @@ export default function SaveGrooveModal({
                   <div className="flex items-center justify-between text-gray-300">
                     <span className="font-bold text-cyan-400">Origen de Secuencia:</span>
                     <span className="text-gray-400">
-                      {originMode === 'matrix' ? 'Mini Matriz (16 pasos)' : `Compás C${saveSourceMeasureIndex + 1}`}
+                      {originMode === 'matrix'
+                        ? `Mini Matriz (${matrixTimeSignature}, ${gridConfig.totalSteps} pasos${
+                            matrixMeasuresCount === 2 ? ' × 2 compases' : ''
+                          })`
+                        : `Compás C${saveSourceMeasureIndex + 1}`}
                     </span>
                   </div>
 
@@ -930,16 +1690,22 @@ export default function SaveGrooveModal({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 text-[11px] text-gray-400 pt-0.5">
+                  <div className="flex items-center gap-3 text-[11px] text-gray-400 pt-0.5 flex-wrap">
                     <span>
                       Métrica:{' '}
                       <strong className="text-white">
-                        {originMode === 'matrix' ? '4/4' : `${currentTimeSignature[0]}/${currentTimeSignature[1]}`}
+                        {originMode === 'matrix' ? matrixTimeSignature : `${currentTimeSignature[0]}/${currentTimeSignature[1]}`}
+                      </strong>
+                    </span>
+                    <span>
+                      Compases:{' '}
+                      <strong className="text-purple-300">
+                        {originMode === 'matrix' ? matrixMeasuresCount : 1}
                       </strong>
                     </span>
                     {currentSwing > 0 && (
                       <span>
-                        Swing: <strong className="text-purple-300">{Math.round(currentSwing * 100)}%</strong>
+                        Swing: <strong className="text-cyan-300">{Math.round(currentSwing * 100)}%</strong>
                       </span>
                     )}
                   </div>
@@ -949,7 +1715,7 @@ export default function SaveGrooveModal({
                 <div className="space-y-1.5 flex-1 flex flex-col justify-center">
                   <div className="flex items-center justify-between text-xs font-mono">
                     <span className="font-bold text-gray-300">Previsualización en Partitura:</span>
-                    
+
                     {/* Botón Escuchar Previa */}
                     <button
                       type="button"
@@ -975,9 +1741,9 @@ export default function SaveGrooveModal({
                   </div>
 
                   {/* Lienzo Mini Score Preview */}
-                  <div className="p-2.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-center min-h-[90px] relative overflow-hidden">
+                  <div className="p-2 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-center min-h-[90px] relative overflow-hidden">
                     {activePreviewGroove ? (
-                      <MiniScorePreview groove={activePreviewGroove} width={340} height={70} />
+                      <MiniScorePreview groove={activePreviewGroove} width={360} height={70} />
                     ) : (
                       <div className="h-[70px] rounded-lg bg-slate-900/60 border border-white/5 flex items-center justify-center text-xs text-gray-500 font-mono">
                         Sin compás seleccionado
@@ -986,7 +1752,7 @@ export default function SaveGrooveModal({
                   </div>
 
                   <p className="text-[10px] font-mono text-gray-500 text-center">
-                    Renderizado reactivo con voces polifónicas, acentos y notas fantasma
+                    Renderizado reactivo con armadura de clave, métrica y agrupación de compases
                   </p>
                 </div>
               </div>
