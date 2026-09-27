@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   X,
   Sparkles,
   Zap,
   Play,
+  Square,
   RotateCcw,
   Sliders,
   Layers,
@@ -35,6 +36,7 @@ import {
 } from '@/types/drum';
 import { RUDIMENTS_DATA } from '@/lib/rudimentsData';
 import { GROOVES_DATA } from '@/lib/groovesData';
+import MiniScorePreview from './MiniScorePreview';
 
 export interface BlockSubdivisionDef {
   value: number; // 1, 2, 3, 4, 5, 6, 8
@@ -247,6 +249,214 @@ interface WorkoutBuilderModalProps {
   onPlayHit?: (pieceId: DrumPieceId) => void;
 }
 
+// ========================================================
+// Memoized List Item Components for Silky Smooth Scrolling
+// ========================================================
+
+interface RudimentCardItemProps {
+  rudiment: RudimentItem;
+  isSelected: boolean;
+  isPlaying: boolean;
+  onSelect: (rud: RudimentItem) => void;
+  onPlayPreview: (rud: RudimentItem) => void;
+}
+
+const RudimentCardItem = React.memo(function RudimentCardItem({
+  rudiment,
+  isSelected,
+  isPlaying,
+  onSelect,
+  onPlayPreview,
+}: RudimentCardItemProps) {
+  return (
+    <div
+      onClick={() => onSelect(rudiment)}
+      className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+        isSelected
+          ? 'bg-purple-500/20 border-purple-400 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400'
+          : 'bg-slate-950/60 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
+      }`}
+    >
+      {/* Cabecera de la tarjeta: Nombre, Badge, Botón Play Preview, Checkbox/Radio */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <span className="font-bold text-xs text-white truncate" title={rudiment.name}>
+            {rudiment.name}
+          </span>
+          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+            {rudiment.category}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlayPreview(rudiment);
+            }}
+            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+              isPlaying
+                ? 'bg-purple-500 text-white border-purple-400 animate-pulse shadow-[0_0_8px_rgba(168,85,247,0.6)]'
+                : 'bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white border-white/10'
+            }`}
+            title={isPlaying ? 'Detener preview' : 'Escuchar rudimento'}
+          >
+            {isPlaying ? (
+              <Square className="w-3 h-3 fill-current" />
+            ) : (
+              <Play className="w-3 h-3 fill-current ml-0.5" />
+            )}
+          </button>
+
+          <div
+            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+              isSelected
+                ? 'border-purple-400 bg-purple-400 text-black shadow-[0_0_8px_rgba(168,85,247,0.6)]'
+                : 'border-white/20 text-transparent'
+            }`}
+          >
+            <Check className="w-2.5 h-2.5 stroke-[3]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Cuerpo de la tarjeta: MiniScorePreview con fondo sutil oscuro */}
+      <div className="w-full bg-black/40 rounded border border-white/5 my-1 p-1 flex justify-center overflow-hidden">
+        <MiniScorePreview
+          rudiment={rudiment}
+          width={270}
+          height={60}
+          className="border-none bg-transparent !p-0"
+        />
+      </div>
+
+      {/* Digitación R/L y BPM */}
+      <div className="flex items-center justify-between text-[9px] font-mono text-gray-400">
+        <div className="flex items-center gap-1 overflow-x-hidden">
+          {(rudiment.sticking || []).slice(0, 12).map((st, sIdx) => (
+            <span
+              key={`st-${rudiment.id}-${sIdx}`}
+              className={`text-[8px] font-mono px-1 py-0.2 rounded font-black ${
+                st === 'R'
+                  ? 'bg-cyan-500/25 text-cyan-300'
+                  : st === 'L'
+                  ? 'bg-purple-500/25 text-purple-300'
+                  : 'bg-emerald-500/25 text-emerald-300'
+              }`}
+            >
+              {st}
+            </span>
+          ))}
+        </div>
+        {rudiment.defaultBpm && (
+          <span className="text-purple-300/80 font-bold shrink-0">
+            {rudiment.defaultBpm} BPM
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+
+interface GrooveCardItemProps {
+  groove: GroovePattern;
+  isSelected: boolean;
+  isPlaying: boolean;
+  onSelect: (grv: GroovePattern) => void;
+  onPlayPreview: (grv: GroovePattern) => void;
+}
+
+const GrooveCardItem = React.memo(function GrooveCardItem({
+  groove,
+  isSelected,
+  isPlaying,
+  onSelect,
+  onPlayPreview,
+}: GrooveCardItemProps) {
+  return (
+    <div
+      onClick={() => onSelect(groove)}
+      className={`p-2.5 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+        isSelected
+          ? 'bg-amber-500/20 border-amber-400 text-white shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-400'
+          : 'bg-slate-950/60 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
+      }`}
+    >
+      {/* Cabecera de la tarjeta: Nombre, Badge, Botón Play Preview, Checkbox/Radio */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <span className="font-bold text-xs text-white truncate" title={groove.name}>
+            {groove.name}
+          </span>
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold shrink-0">
+            {groove.timeSignature}
+          </span>
+          {groove.category && (
+            <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-gray-300 shrink-0 hidden sm:inline truncate max-w-[80px]">
+              {groove.category}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlayPreview(groove);
+            }}
+            className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+              isPlaying
+                ? 'bg-amber-500 text-black border-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]'
+                : 'bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white border-white/10'
+            }`}
+            title={isPlaying ? 'Detener preview' : 'Escuchar groove'}
+          >
+            {isPlaying ? (
+              <Square className="w-3 h-3 fill-current" />
+            ) : (
+              <Play className="w-3 h-3 fill-current ml-0.5" />
+            )}
+          </button>
+
+          <div
+            className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+              isSelected
+                ? 'border-amber-400 bg-amber-400 text-black shadow-[0_0_8px_rgba(245,158,11,0.6)]'
+                : 'border-white/20 text-transparent'
+            }`}
+          >
+            <Check className="w-2.5 h-2.5 stroke-[3]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Cuerpo de la tarjeta: MiniScorePreview con fondo sutil oscuro */}
+      <div className="w-full bg-black/40 rounded border border-white/5 my-1 p-1 flex justify-center overflow-hidden">
+        <MiniScorePreview
+          groove={groove}
+          width={270}
+          height={60}
+          className="border-none bg-transparent !p-0"
+        />
+      </div>
+
+      {/* Subcategoría y BPM */}
+      <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+        <span className="truncate">
+          {groove.subCategory ? `${groove.category} • ${groove.subCategory}` : groove.category}
+        </span>
+        {groove.suggestedBpm && (
+          <span className="text-amber-400/80 font-bold shrink-0">
+            {groove.suggestedBpm} BPM
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+
 export default function WorkoutBuilderModal({
   isOpen,
   onClose,
@@ -280,6 +490,31 @@ export default function WorkoutBuilderModal({
   ]);
 
   const [activePresetId, setActivePresetId] = useState<string | null>('phrase-3-1');
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string>('phase-1');
+
+  // Preview Loop with Web Audio / Tone.js
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
+  const previewTimersRef = useRef<NodeJS.Timeout[]>([]);
+  const isPreviewingRef = useRef<boolean>(false);
+
+  const stopPreview = useCallback(() => {
+    previewTimersRef.current.forEach((t) => clearTimeout(t));
+    previewTimersRef.current = [];
+    setPreviewingId(null);
+    isPreviewingRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopPreview();
+    };
+  }, [stopPreview]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopPreview();
+    }
+  }, [isOpen, stopPreview]);
 
   // Load user's custom patterns on mount
   useEffect(() => {
@@ -430,6 +665,153 @@ export default function WorkoutBuilderModal({
     );
   };
 
+  const handleSelectPhase = useCallback((phase: WorkoutPhase) => {
+    setSelectedPhaseId(phase.id);
+    if (phase.contentType === 'groove') {
+      setBaseLibraryTab('grooves');
+    } else {
+      setBaseLibraryTab('rudiments');
+    }
+  }, []);
+
+  const handleSelectRudiment = useCallback((rud: RudimentItem) => {
+    setSelectedRudimentId(rud.id);
+    if (rud.defaultBpm) setBpm(rud.defaultBpm);
+
+    // Sincronización con las fases:
+    // Si la fase activa seleccionada en la columna derecha es de tipo 'rudiment', actualiza su subdivisión si corresponde
+    setPhases((prevPhases) => {
+      const current = prevPhases.find((p) => p.id === selectedPhaseId);
+      if (current && current.contentType === 'rudiment') {
+        if (rud.subdivision && [1, 2, 3, 4, 5, 6, 8].includes(rud.subdivision)) {
+          return prevPhases.map((p) =>
+            p.id === current.id ? { ...p, subdivisionValue: rud.subdivision! } : p
+          );
+        }
+      }
+      return prevPhases;
+    });
+
+    // Si la fase actualmente seleccionada es 'groove', busca si hay alguna fase de tipo rudimento y actívala
+    const currentPhase = phases.find((p) => p.id === selectedPhaseId);
+    if (currentPhase && currentPhase.contentType === 'groove') {
+      const rudPhase = phases.find((p) => p.contentType === 'rudiment');
+      if (rudPhase) {
+        setSelectedPhaseId(rudPhase.id);
+      }
+    }
+  }, [phases, selectedPhaseId]);
+
+  const handleSelectGroove = useCallback((grv: GroovePattern) => {
+    setSelectedGrooveId(grv.id);
+    if (grv.suggestedBpm) setBpm(grv.suggestedBpm);
+
+    // Si la fase actualmente seleccionada es 'rudiment', busca si hay alguna fase de tipo groove y actívala
+    const currentPhase = phases.find((p) => p.id === selectedPhaseId);
+    if (currentPhase && currentPhase.contentType === 'rudiment') {
+      const grvPhase = phases.find((p) => p.contentType === 'groove');
+      if (grvPhase) {
+        setSelectedPhaseId(grvPhase.id);
+      }
+    }
+  }, [phases, selectedPhaseId]);
+
+  // Audio previews for list items
+  const handlePreviewRudiment = useCallback((rud: RudimentItem) => {
+    if (previewingId === rud.id) {
+      stopPreview();
+      return;
+    }
+    stopPreview();
+    if (!onPlayHit) return;
+
+    setPreviewingId(rud.id);
+    isPreviewingRef.current = true;
+
+    const rawSteps = rud.steps && rud.steps.length > 0
+      ? rud.steps
+      : (rud.sticking || ['R', 'L']).map((s, i) => ({
+          sticking: s,
+          accent: i === 0,
+          ghost: false,
+          flam: false,
+        }));
+
+    const sub = typeof rud.subdivision === 'number' ? rud.subdivision : 4;
+    const bpmToUse = rud.defaultBpm || 105;
+    const beatMs = (60 / bpmToUse) * 1000;
+    const stepMs = beatMs / sub;
+
+    // Play 2 cycles
+    const totalSteps = Math.min(32, rawSteps.length * 2);
+    for (let i = 0; i < totalSteps; i++) {
+      const stepDef = rawSteps[i % rawSteps.length];
+      const timer = setTimeout(() => {
+        if (!isPreviewingRef.current) return;
+        const pieceId: DrumPieceId =
+          ('kitPiece' in stepDef && stepDef.kitPiece)
+            ? (stepDef.kitPiece as DrumPieceId)
+            : (stepDef.sticking === 'K' ? 'kick' : 'snare');
+        onPlayHit(pieceId);
+        if (i === totalSteps - 1) {
+          stopPreview();
+        }
+      }, i * stepMs);
+      previewTimersRef.current.push(timer);
+    }
+  }, [previewingId, stopPreview, onPlayHit]);
+
+  const handlePreviewGroove = useCallback((grv: GroovePattern) => {
+    if (previewingId === grv.id) {
+      stopPreview();
+      return;
+    }
+    stopPreview();
+    if (!onPlayHit) return;
+
+    setPreviewingId(grv.id);
+    isPreviewingRef.current = true;
+
+    const [numStr, denStr] = grv.timeSignature.split('/');
+    const beatsCount = parseInt(numStr, 10) || 4;
+    const beatValue = parseInt(denStr, 10) || 4;
+    const bpmToUse = grv.suggestedBpm || 110;
+    const beatMs = (60 / bpmToUse) * (4 / beatValue) * 1000;
+
+    const measureTemplate = grv.measures?.[0];
+    if (!measureTemplate) return;
+
+    let currentOffsetMs = 0;
+
+    for (let bIdx = 0; bIdx < beatsCount; bIdx++) {
+      const beatTemplate = measureTemplate.beats[bIdx % measureTemplate.beats.length];
+      const subs = beatTemplate?.subdivisions || [];
+      const stepCount = subs.length > 0 ? subs.length : 4;
+      const stepMs = beatMs / stepCount;
+
+      for (let sIdx = 0; sIdx < stepCount; sIdx++) {
+        const hits = subs[sIdx] || [];
+        const scheduledTime = currentOffsetMs + sIdx * stepMs;
+
+        const timer = setTimeout(() => {
+          if (!isPreviewingRef.current) return;
+          hits.forEach((h) => {
+            const pieceId = (h.instrument === 'hihat' ? 'hihatClosed' : h.instrument) as DrumPieceId;
+            onPlayHit(pieceId);
+          });
+        }, scheduledTime);
+
+        previewTimersRef.current.push(timer);
+      }
+      currentOffsetMs += stepCount * stepMs;
+    }
+
+    const endTimer = setTimeout(() => {
+      stopPreview();
+    }, currentOffsetMs + 100);
+    previewTimersRef.current.push(endTimer);
+  }, [previewingId, stopPreview, onPlayHit]);
+
   const handleAddPhase = () => {
     if (phases.length >= 8) return;
     setActivePresetId(null);
@@ -448,12 +830,24 @@ export default function WorkoutBuilderModal({
     };
 
     setPhases((prev) => [...prev, newPhase]);
+    setSelectedPhaseId(newPhase.id);
+    if (nextType === 'groove') {
+      setBaseLibraryTab('grooves');
+    } else {
+      setBaseLibraryTab('rudiments');
+    }
   };
 
   const handleRemovePhase = (phaseId: string) => {
     if (phases.length <= 1) return;
     setActivePresetId(null);
-    setPhases((prev) => prev.filter((p) => p.id !== phaseId));
+    setPhases((prev) => {
+      const remaining = prev.filter((p) => p.id !== phaseId);
+      if (selectedPhaseId === phaseId && remaining.length > 0) {
+        setSelectedPhaseId(remaining[0].id);
+      }
+      return remaining;
+    });
   };
 
   const handleApplyPreset = (preset: WorkoutPreset) => {
@@ -466,6 +860,14 @@ export default function WorkoutBuilderModal({
       orchestration: p.orchestration,
     }));
     setPhases(newPhases);
+    if (newPhases.length > 0) {
+      setSelectedPhaseId(newPhases[0].id);
+      if (newPhases[0].contentType === 'groove') {
+        setBaseLibraryTab('grooves');
+      } else {
+        setBaseLibraryTab('rudiments');
+      }
+    }
   };
 
   // Drum sound mapping for rudiment hits with orchestration
@@ -925,139 +1327,42 @@ export default function WorkoutBuilderModal({
                   />
                 </div>
 
-                {/* Lista Scrolleable según pestaña activa */}
+                {/* Lista Scrolleable según pestaña activa con MiniScorePreview */}
                 {baseLibraryTab === 'rudiments' ? (
-                  <div className="max-h-[195px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-white/10">
-                    {filteredRudiments.map((rud) => {
-                      const isSelected = selectedRudimentId === rud.id;
-                      return (
-                        <div
-                          key={`rud-${rud.id}`}
-                          onClick={() => {
-                            setSelectedRudimentId(rud.id);
-                            if (rud.defaultBpm) setBpm(rud.defaultBpm);
-                          }}
-                          className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                            isSelected
-                              ? 'bg-purple-500/20 border-purple-400 text-white shadow-[0_0_12px_rgba(168,85,247,0.3)] ring-1 ring-purple-400'
-                              : 'bg-slate-950/60 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
-                          }`}
-                        >
-                          <div className="space-y-0.5 min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs text-white truncate">
-                                {rud.name}
-                              </span>
-                              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-white/10 text-purple-300 shrink-0">
-                                {rud.category}
-                              </span>
-                            </div>
-                            {/* Sticking preview */}
-                            <div className="flex items-center gap-1 overflow-x-hidden pt-0.5">
-                              {(rud.sticking || []).slice(0, 8).map((st, sIdx) => (
-                                <span
-                                  key={`st-${rud.id}-${sIdx}`}
-                                  className={`text-[8px] font-mono px-1 py-0.2 rounded font-black ${
-                                    st === 'R'
-                                      ? 'bg-cyan-500/25 text-cyan-300'
-                                      : st === 'L'
-                                      ? 'bg-purple-500/25 text-purple-300'
-                                      : 'bg-emerald-500/25 text-emerald-300'
-                                  }`}
-                                >
-                                  {st}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            {onPlayHit && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onPlayHit('snare');
-                                }}
-                                className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all cursor-pointer"
-                                title="Probar sonido"
-                              >
-                                <Play className="w-3 h-3 fill-current" />
-                              </button>
-                            )}
-                            <div
-                              className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                                isSelected
-                                  ? 'border-purple-400 bg-purple-400 text-black'
-                                  : 'border-white/20 text-transparent'
-                              }`}
-                            >
-                              <Check className="w-2.5 h-2.5 stroke-[3]" />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="max-h-[380px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                    {filteredRudiments.map((rud) => (
+                      <RudimentCardItem
+                        key={`rud-${rud.id}`}
+                        rudiment={rud}
+                        isSelected={selectedRudimentId === rud.id}
+                        isPlaying={previewingId === rud.id}
+                        onSelect={handleSelectRudiment}
+                        onPlayPreview={handlePreviewRudiment}
+                      />
+                    ))}
+                    {filteredRudiments.length === 0 && (
+                      <div className="py-8 text-center text-xs text-gray-500 font-mono">
+                        No se encontraron rudimentos para &quot;{patternSearch}&quot;
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="max-h-[195px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-white/10">
-                    {filteredGrooves.map((grv) => {
-                      const isSelected = selectedGrooveId === grv.id;
-                      return (
-                        <div
-                          key={`grv-${grv.id}`}
-                          onClick={() => {
-                            setSelectedGrooveId(grv.id);
-                            if (grv.suggestedBpm) setBpm(grv.suggestedBpm);
-                          }}
-                          className={`p-2 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                            isSelected
-                              ? 'bg-amber-500/20 border-amber-400 text-white shadow-[0_0_12px_rgba(245,158,11,0.3)] ring-1 ring-amber-400'
-                              : 'bg-slate-950/60 border-white/10 text-gray-300 hover:border-white/20 hover:text-white'
-                          }`}
-                        >
-                          <div className="space-y-0.5 min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs text-white truncate">
-                                {grv.name}
-                              </span>
-                              <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-bold shrink-0">
-                                {grv.timeSignature}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-gray-400 truncate">
-                              {grv.category} {grv.subCategory ? `• ${grv.subCategory}` : ''}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-1 shrink-0">
-                            {onPlayHit && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onPlayHit('hihatClosed');
-                                  onPlayHit('kick');
-                                }}
-                                className="p-1 rounded-lg bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all cursor-pointer"
-                                title="Probar sonido"
-                              >
-                                <Play className="w-3 h-3 fill-current" />
-                              </button>
-                            )}
-                            <div
-                              className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                                isSelected
-                                  ? 'border-amber-400 bg-amber-400 text-black'
-                                  : 'border-white/20 text-transparent'
-                              }`}
-                            >
-                              <Check className="w-2.5 h-2.5 stroke-[3]" />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div className="max-h-[380px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-white/10">
+                    {filteredGrooves.map((grv) => (
+                      <GrooveCardItem
+                        key={`grv-${grv.id}`}
+                        groove={grv}
+                        isSelected={selectedGrooveId === grv.id}
+                        isPlaying={previewingId === grv.id}
+                        onSelect={handleSelectGroove}
+                        onPlayPreview={handlePreviewGroove}
+                      />
+                    ))}
+                    {filteredGrooves.length === 0 && (
+                      <div className="py-8 text-center text-xs text-gray-500 font-mono">
+                        No se encontraron grooves para &quot;{patternSearch}&quot;
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1156,8 +1461,11 @@ export default function WorkoutBuilderModal({
                     return (
                       <div
                         key={`timeline-segment-${phase.id}`}
+                        onClick={() => handleSelectPhase(phase)}
                         style={{ width: `${widthPct}%` }}
-                        className={`h-full rounded-lg border px-2 flex items-center justify-between transition-all select-none relative group overflow-hidden ${
+                        className={`h-full rounded-lg border px-2 flex items-center justify-between transition-all select-none relative group overflow-hidden cursor-pointer ${
+                          selectedPhaseId === phase.id ? 'ring-2 ring-white scale-[1.02] z-10 shadow-lg' : ''
+                        } ${
                           isGroove
                             ? 'bg-amber-500/20 text-amber-300 border-amber-400/60 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
                             : `${subInfo.borderColor} ${subInfo.badgeColor}`
@@ -1207,13 +1515,20 @@ export default function WorkoutBuilderModal({
                       WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === phase.subdivisionValue) ||
                       WORKOUT_SUBDIVISION_OPTIONS[1];
 
+                    const isPhaseSelected = selectedPhaseId === phase.id;
+
                     return (
                       <div
                         key={phase.id}
-                        className={`p-3 sm:p-3.5 rounded-2xl border transition-all space-y-3 shadow-md ${
-                          isGroove
-                            ? 'border-amber-400/50 bg-amber-950/15'
-                            : `${subInfo.borderColor} bg-slate-900/80`
+                        onClick={() => handleSelectPhase(phase)}
+                        className={`p-3 sm:p-3.5 rounded-2xl border transition-all space-y-3 shadow-md cursor-pointer ${
+                          isPhaseSelected
+                            ? isGroove
+                              ? 'border-amber-400 bg-amber-950/25 ring-2 ring-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
+                              : `${subInfo.borderColor} bg-slate-900 ring-2 ring-purple-400/80 shadow-[0_0_15px_rgba(168,85,247,0.25)]`
+                            : isGroove
+                            ? 'border-amber-400/40 bg-amber-950/15 hover:border-amber-400/70'
+                            : `${subInfo.borderColor} bg-slate-900/80 hover:border-white/30`
                         }`}
                       >
                         {/* Cabecera de la Fase: Badge, Range, Content Toggle, Stepper, Delete */}
@@ -1226,13 +1541,18 @@ export default function WorkoutBuilderModal({
                             >
                               {idx + 1}
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-xs text-white font-mono">
                                 Fase {idx + 1}
                               </span>
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-cyan-300 border border-white/10">
                                 C{range.startBar} al C{range.endBar} ({phase.measuresCount} C)
                               </span>
+                              {isPhaseSelected && (
+                                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 font-bold uppercase tracking-wider animate-pulse">
+                                  Fase Activa
+                                </span>
+                              )}
                             </div>
                           </div>
 
@@ -1324,9 +1644,23 @@ export default function WorkoutBuilderModal({
                             </span>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-white/5">
-                            {/* Subdivisión Chips */}
-                            <div className="space-y-1">
+                          <div className="space-y-2.5 pt-1 border-t border-white/5">
+                            <div className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono">
+                              <div className="flex items-center gap-2 text-gray-300 truncate">
+                                <span className="text-purple-400 font-bold">Célula Técnica:</span>
+                                <span className="text-white font-bold truncate">{activeRudiment.name}</span>
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300">
+                                  {activeRudiment.category}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-gray-400 hidden sm:inline font-mono">
+                                {activeRudiment.sticking ? activeRudiment.sticking.slice(0, 16).join(' ') : ''}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {/* Subdivisión Chips */}
+                              <div className="space-y-1">
                               <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
                                 Subdivisión:
                               </span>
@@ -1384,7 +1718,8 @@ export default function WorkoutBuilderModal({
                               </div>
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
                       </div>
                     );
                   })}
