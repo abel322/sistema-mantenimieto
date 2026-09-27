@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RudimentItem, RudimentStep, GroovePattern, GrooveHit, VoicingMode, DrumPieceId } from '@/types/drum';
+import { RudimentItem, RudimentStep, GroovePattern, GrooveHit, VoicingMode, DrumPieceId, DRUM_PIECES } from '@/types/drum';
 
 export interface MiniScorePreviewProps {
   rudiment?: RudimentItem;
@@ -59,7 +59,7 @@ function MiniScorePreviewComponent({
 }: MiniScorePreviewProps) {
   // --- Case 1: Rudiment Rendering ---
   if (rudiment || (steps && steps.length > 0)) {
-    const rawSteps: RudimentStep[] = rudiment ? rudiment.steps : steps || [];
+    const rawSteps: RudimentStep[] = (steps && steps.length > 0) ? steps : rudiment ? rudiment.steps : [];
     const sub = typeof subdivision === 'number' ? subdivision : rudiment?.subdivision || 4;
     const numNotes = Math.max(1, rawSteps.length);
 
@@ -93,6 +93,7 @@ function MiniScorePreviewComponent({
         isX,
         isOpenX,
         isKick,
+        kitPiece,
         groupIndex: Math.floor(i / groupSize),
       };
     });
@@ -214,18 +215,25 @@ function MiniScorePreviewComponent({
           })}
 
           {/* Notes, Stems, Accents, Grace Notes & Sticking */}
-          {noteLayout.map(({ step, x, y, isX, isOpenX, isKick }) => {
+          {noteLayout.map(({ step, x, y, isX, isOpenX, isKick, kitPiece }) => {
             const isAccent = !!step.accent;
             const isGhost = !!step.ghost;
             const isFlam = !!step.flam;
             const isDrag = !!step.drag;
 
+            // Instrument color based on drum piece definition
+            const pieceColor = DRUM_PIECES[kitPiece as DrumPieceId]?.color || (isKick ? '#10B981' : '#38BDF8');
+
             // Sticking letter colors
             const stickingUpper = (step.sticking || '').toUpperCase();
             let stickingColor = '#94A3B8';
-            if (stickingUpper.startsWith('R')) stickingColor = '#38BDF8';
+            if (isKick || stickingUpper.startsWith('K')) stickingColor = '#10B981';
+            else if (kitPiece === 'crash' || stickingUpper.startsWith('CR')) stickingColor = '#38BDF8';
+            else if (kitPiece === 'tom1') stickingColor = '#F472B6';
+            else if (kitPiece === 'tom2') stickingColor = '#FB7185';
+            else if (kitPiece === 'floorTom') stickingColor = '#C084FC';
+            else if (stickingUpper.startsWith('R')) stickingColor = '#38BDF8';
             else if (stickingUpper.startsWith('L')) stickingColor = '#C084FC';
-            else if (stickingUpper.startsWith('K')) stickingColor = '#34D399';
             else if (stickingUpper.startsWith('B')) stickingColor = '#F59E0B';
 
             return (
@@ -233,14 +241,14 @@ function MiniScorePreviewComponent({
                 {/* Flam Grace Note */}
                 {isFlam && (
                   <g className="opacity-90">
-                    <ellipse cx={x - 7.5} cy={y + 1} rx="2.2" ry="1.6" transform={`rotate(-20 ${x - 7.5} ${y + 1})`} fill="#38BDF8" />
-                    <line x1={x - 5.5} y1={y + 1} x2={x - 5.5} y2={y - 8} stroke="#38BDF8" strokeWidth="1" />
-                    <line x1={x - 7} y1={y - 5.5} x2={x - 3.5} y2={y - 3.5} stroke="#38BDF8" strokeWidth="1" />
+                    <ellipse cx={x - 7.5} cy={y + 1} rx="2.2" ry="1.6" transform={`rotate(-20 ${x - 7.5} ${y + 1})`} fill={pieceColor} />
+                    <line x1={x - 5.5} y1={y + 1} x2={x - 5.5} y2={y - 8} stroke={pieceColor} strokeWidth="1" />
+                    <line x1={x - 7} y1={y - 5.5} x2={x - 3.5} y2={y - 3.5} stroke={pieceColor} strokeWidth="1" />
                     {/* Small grace slur curve */}
                     <path
                       d={`M ${x - 7.5} ${y + 3.5} Q ${x - 3.5} ${y + 6.5} ${x - 0.5} ${y + 3.5}`}
                       fill="none"
-                      stroke="#38BDF8"
+                      stroke={pieceColor}
                       strokeWidth="0.8"
                     />
                   </g>
@@ -249,11 +257,11 @@ function MiniScorePreviewComponent({
                 {/* Drag Double Grace Notes */}
                 {isDrag && (
                   <g className="opacity-90">
-                    <ellipse cx={x - 11} cy={y + 1} rx="2" ry="1.5" transform={`rotate(-20 ${x - 11} ${y + 1})`} fill="#38BDF8" />
-                    <line x1={x - 9.2} y1={y + 1} x2={x - 9.2} y2={y - 7.5} stroke="#38BDF8" strokeWidth="0.9" />
-                    <ellipse cx={x - 6.5} cy={y + 1} rx="2" ry="1.5" transform={`rotate(-20 ${x - 6.5} ${y + 1})`} fill="#38BDF8" />
-                    <line x1={x - 4.8} y1={y + 1} x2={x - 4.8} y2={y - 7.5} stroke="#38BDF8" strokeWidth="0.9" />
-                    <line x1={x - 11} y1={y - 5} x2={x - 4} y2={y - 3.2} stroke="#38BDF8" strokeWidth="1" />
+                    <ellipse cx={x - 11} cy={y + 1} rx="2" ry="1.5" transform={`rotate(-20 ${x - 11} ${y + 1})`} fill={pieceColor} />
+                    <line x1={x - 9.2} y1={y + 1} x2={x - 9.2} y2={y - 7.5} stroke={pieceColor} strokeWidth="0.9" />
+                    <ellipse cx={x - 6.5} cy={y + 1} rx="2" ry="1.5" transform={`rotate(-20 ${x - 6.5} ${y + 1})`} fill={pieceColor} />
+                    <line x1={x - 4.8} y1={y + 1} x2={x - 4.8} y2={y - 7.5} stroke={pieceColor} strokeWidth="0.9" />
+                    <line x1={x - 11} y1={y - 5} x2={x - 4} y2={y - 3.2} stroke={pieceColor} strokeWidth="1" />
                   </g>
                 )}
 
@@ -271,9 +279,9 @@ function MiniScorePreviewComponent({
                 {/* Notehead */}
                 {isX ? (
                   <g>
-                    {isOpenX && <circle cx={x} cy={y} r="4.2" fill="none" stroke="#38BDF8" strokeWidth="1.1" />}
-                    <line x1={x - 3} y1={y - 3} x2={x + 3} y2={y + 3} stroke="#38BDF8" strokeWidth="1.6" />
-                    <line x1={x - 3} y1={y + 3} x2={x + 3} y2={y - 3} stroke="#38BDF8" strokeWidth="1.6" />
+                    {isOpenX && <circle cx={x} cy={y} r="4.2" fill="none" stroke={pieceColor} strokeWidth="1.2" />}
+                    <line x1={x - 3} y1={y - 3} x2={x + 3} y2={y + 3} stroke={pieceColor} strokeWidth="1.8" />
+                    <line x1={x - 3} y1={y + 3} x2={x + 3} y2={y - 3} stroke={pieceColor} strokeWidth="1.8" />
                   </g>
                 ) : (
                   <g opacity={isGhost ? 0.6 : 1}>
@@ -283,7 +291,7 @@ function MiniScorePreviewComponent({
                       rx={isGhost ? 3.3 : 3.8}
                       ry={isGhost ? 2.3 : 2.7}
                       transform={`rotate(-20 ${x} ${y})`}
-                      fill={isAccent ? '#38BDF8' : '#38BDF8'}
+                      fill={pieceColor}
                     />
                     {/* Ghost Note Parentheses */}
                     {isGhost && (

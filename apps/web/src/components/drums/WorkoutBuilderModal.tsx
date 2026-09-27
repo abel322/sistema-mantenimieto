@@ -34,6 +34,8 @@ import {
   GroovePattern,
   GrooveHit,
   RudimentItem,
+  RudimentStep,
+  DRUM_PIECES,
 } from '@/types/drum';
 import { RUDIMENTS_DATA } from '@/lib/rudimentsData';
 import { GROOVES_DATA } from '@/lib/groovesData';
@@ -168,6 +170,201 @@ export function getSubdivisionDef(val: number | string): BlockSubdivisionDef {
     return WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.label === val) || WORKOUT_SUBDIVISION_OPTIONS[3];
   }
   return WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === val) || WORKOUT_SUBDIVISION_OPTIONS[3];
+}
+
+export interface OrchestrationRouteStep {
+  label: string;
+  subLabel?: string;
+  icon: string;
+  color: string;
+  badgeBg: string;
+  badgeBorder: string;
+}
+
+export function getOrchestrationRoute(orch: BlockOrchestration): {
+  title: string;
+  desc: string;
+  badgeSummary: string;
+  steps: OrchestrationRouteStep[];
+} {
+  const isSnareOnly = orch === 'snare_only' || orch === 'snare-only';
+  const isSnareKick = orch === 'snare_kick' || orch === 'snare-kick-downbeat';
+  const isTomsCascade = orch === 'toms_cascade' || orch === 'toms-cascade';
+
+  if (isSnareOnly) {
+    return {
+      title: 'Caja Sola',
+      desc: 'Práctica pura en caja / pad (manos R/L)',
+      badgeSummary: '[SD Caja] en todos los golpes',
+      steps: [
+        { label: 'SD Caja', subLabel: 'Todos los golpes', icon: '🥁', color: 'text-amber-300', badgeBg: 'bg-amber-500/20', badgeBorder: 'border-amber-500/40' },
+      ],
+    };
+  }
+
+  if (isSnareKick) {
+    return {
+      title: 'Caja + Bombo',
+      desc: 'Inyección de bombo en pulsos fuertes/acentos + Caja en golpes internos',
+      badgeSummary: '[BD Bombo / K] + [SD Caja]',
+      steps: [
+        { label: 'BD Bombo / K', subLabel: 'Tiempo 1 y 3 (Pie)', icon: '⚡', color: 'text-emerald-300', badgeBg: 'bg-emerald-500/20', badgeBorder: 'border-emerald-500/40' },
+        { label: 'SD Caja', subLabel: 'Golpes internos R/L', icon: '🥁', color: 'text-amber-300', badgeBg: 'bg-amber-500/20', badgeBorder: 'border-amber-500/40' },
+      ],
+    };
+  }
+
+  if (isTomsCascade) {
+    return {
+      title: 'Cascada Toms',
+      desc: 'Ruta melódica descendente: Caja → Tom 1 → Tom 2 → Floor Tom',
+      badgeSummary: '[SD Caja] → [T1 Tom Alto] → [T2 Tom Medio] → [FT Tom Piso]',
+      steps: [
+        { label: 'SD Caja', subLabel: 'Pulso 1', icon: '🥁', color: 'text-amber-300', badgeBg: 'bg-amber-500/20', badgeBorder: 'border-amber-500/40' },
+        { label: 'T1 Tom Alto', subLabel: 'Pulso 2', icon: '🌀', color: 'text-pink-300', badgeBg: 'bg-pink-500/20', badgeBorder: 'border-pink-500/40' },
+        { label: 'T2 Tom Medio', subLabel: 'Pulso 3', icon: '🌀', color: 'text-rose-300', badgeBg: 'bg-rose-500/20', badgeBorder: 'border-rose-500/40' },
+        { label: 'FT Tom Piso', subLabel: 'Pulso 4', icon: '🌀', color: 'text-purple-300', badgeBg: 'bg-purple-500/20', badgeBorder: 'border-purple-500/40' },
+      ],
+    };
+  }
+
+  // isFullKit
+  return {
+    title: 'Full Kit Chops',
+    desc: 'Combinación dinámica: Platillo+Bombo → Caja → Tom 1 → Floor Tom → Bombo',
+    badgeSummary: '[CR Platillo+Bombo] → [SD] → [T1] → [FT] → [K]',
+    steps: [
+      { label: 'CR Platillo+Bombo', subLabel: 'Inicio / Acentos', icon: '💥', color: 'text-sky-300', badgeBg: 'bg-sky-500/20', badgeBorder: 'border-sky-500/40' },
+      { label: 'SD', subLabel: 'Caja', icon: '🥁', color: 'text-amber-300', badgeBg: 'bg-amber-500/20', badgeBorder: 'border-amber-500/40' },
+      { label: 'T1', subLabel: 'Tom 1', icon: '🌀', color: 'text-pink-300', badgeBg: 'bg-pink-500/20', badgeBorder: 'border-pink-500/40' },
+      { label: 'FT', subLabel: 'Tom Piso', icon: '🌀', color: 'text-purple-300', badgeBg: 'bg-purple-500/20', badgeBorder: 'border-purple-500/40' },
+      { label: 'K', subLabel: 'Bombo', icon: '⚡', color: 'text-emerald-300', badgeBg: 'bg-emerald-500/20', badgeBorder: 'border-emerald-500/40' },
+    ],
+  };
+}
+
+export function getOrchestratedPreviewSteps(phase: WorkoutPhase, allRudiments: RudimentItem[]): RudimentStep[] {
+  const rudiment: RudimentItem =
+    phase.pattern && (phase.pattern.steps || phase.pattern.sticking)
+      ? (phase.pattern as RudimentItem)
+      : allRudiments.find((r) => r.id === phase.pattern?.id) || allRudiments[0] || RUDIMENTS_DATA[0];
+
+  const rawSteps: RudimentStep[] =
+    rudiment.steps && rudiment.steps.length > 0
+      ? rudiment.steps
+      : (rudiment.sticking || ['R', 'L']).map((s: string, i: number) => ({
+          sticking: s,
+          accent: i === 0,
+          ghost: false,
+          flam: false,
+        }));
+
+  const sub = phase.subdivisionValue || getSubdivisionDef(phase.subdivision || '1/16').value || 4;
+  const totalStepsInBar = Math.min(32, 4 * sub);
+  const result: RudimentStep[] = [];
+
+  const orch = phase.orchestration;
+  const isSnareOnly = orch === 'snare_only' || orch === 'snare-only';
+  const isSnareKick = orch === 'snare_kick' || orch === 'snare-kick-downbeat';
+  const isTomsCascade = orch === 'toms_cascade' || orch === 'toms-cascade';
+  const isFullKit = orch === 'full_kit' || orch === 'full-kit-chops';
+
+  for (let stepIdx = 0; stepIdx < totalStepsInBar; stepIdx++) {
+    const bIdx = Math.floor(stepIdx / sub);
+    const sIdx = stepIdx % sub;
+    const baseStep = rawSteps[stepIdx % rawSteps.length];
+
+    if (baseStep.sticking === 'K') {
+      result.push({
+        ...baseStep,
+        sticking: 'K',
+        kitPiece: 'kick',
+      });
+      continue;
+    }
+
+    if (isSnareOnly) {
+      result.push({
+        ...baseStep,
+        kitPiece: 'snare',
+      });
+      continue;
+    }
+
+    if (isSnareKick) {
+      const isDownbeat = (bIdx === 0 || bIdx === 2) && sIdx === 0;
+      if (isDownbeat || (sIdx === 0 && baseStep.accent)) {
+        result.push({
+          ...baseStep,
+          sticking: 'K',
+          kitPiece: 'kick',
+          accent: true,
+        });
+      } else {
+        result.push({
+          ...baseStep,
+          kitPiece: 'snare',
+        });
+      }
+      continue;
+    }
+
+    if (isTomsCascade) {
+      let pieceId: DrumPieceId = 'snare';
+      if (baseStep.ghost) {
+        pieceId = 'snare';
+      } else if (bIdx === 0) {
+        pieceId = 'snare';
+      } else if (bIdx === 1) {
+        pieceId = 'tom1';
+      } else if (bIdx === 2) {
+        pieceId = 'tom2';
+      } else {
+        pieceId = 'floorTom';
+      }
+
+      const isFirstCrash = bIdx === 0 && sIdx === 0 && baseStep.accent;
+      result.push({
+        ...baseStep,
+        sticking: isFirstCrash ? 'CR' : baseStep.sticking,
+        kitPiece: isFirstCrash ? 'crash' : pieceId,
+      });
+      continue;
+    }
+
+    if (isFullKit) {
+      let pieceId: DrumPieceId = 'snare';
+      let sticking = baseStep.sticking;
+
+      if (bIdx === 0 && sIdx === 0) {
+        pieceId = 'crash';
+        sticking = 'CR';
+      } else if (baseStep.accent) {
+        pieceId = bIdx % 2 === 0 ? 'crash' : 'floorTom';
+        sticking = bIdx % 2 === 0 ? 'CR' : baseStep.sticking;
+      } else {
+        if (bIdx === 0) pieceId = 'snare';
+        else if (bIdx === 1) pieceId = (sIdx % 2 === 0) ? 'tom1' : 'snare';
+        else if (bIdx === 2) pieceId = (sIdx % 2 === 0) ? 'tom2' : 'floorTom';
+        else pieceId = (sIdx % 2 === 0) ? 'floorTom' : 'kick';
+        if (pieceId === 'kick') sticking = 'K';
+      }
+
+      result.push({
+        ...baseStep,
+        sticking,
+        kitPiece: pieceId,
+      });
+      continue;
+    }
+
+    result.push({
+      ...baseStep,
+      kitPiece: 'snare',
+    });
+  }
+
+  return result;
 }
 
 export interface WorkoutPhase {
@@ -1039,15 +1236,21 @@ export default function WorkoutBuilderModal({
     }
 
     if (isSnareKick) {
-      hits.push({
-        pieceId: 'snare',
-        accent: stepDef.accent,
-        ghost: stepDef.ghost,
-        flam: stepDef.flam,
-        sticking: stepDef.sticking,
-      });
-      if (bIdx === 0 && sIdx === 0) {
-        hits.push({ pieceId: 'kick', accent: true });
+      const isDownbeat = (bIdx === 0 || bIdx === 2) && sIdx === 0;
+      if (isDownbeat || (sIdx === 0 && stepDef.accent)) {
+        hits.push({
+          pieceId: 'kick',
+          accent: true,
+          sticking: 'K',
+        });
+      } else {
+        hits.push({
+          pieceId: 'snare',
+          accent: stepDef.accent,
+          ghost: stepDef.ghost,
+          flam: stepDef.flam,
+          sticking: stepDef.sticking,
+        });
       }
       return hits;
     }
@@ -1064,8 +1267,8 @@ export default function WorkoutBuilderModal({
       }
 
       if (bIdx === 0 && sIdx === 0 && stepDef.accent) {
-        hits.push({ pieceId: 'crash', accent: true });
-        hits.push({ pieceId: 'kick', accent: true });
+        hits.push({ pieceId: 'crash', accent: true, sticking: 'CR' });
+        hits.push({ pieceId: 'kick', accent: true, sticking: 'K' });
       }
 
       hits.push({
@@ -1079,27 +1282,43 @@ export default function WorkoutBuilderModal({
     }
 
     if (isFullKit) {
-      let pieceId: DrumPieceId = 'snare';
-      if (stepDef.ghost) {
-        pieceId = 'snare';
-      } else if (stepDef.accent) {
-        pieceId = bIdx % 2 === 0 ? 'crash' : 'floorTom';
-        if (pieceId === 'crash') {
-          hits.push({ pieceId: 'kick', accent: true });
-        }
-      } else {
-        if (bIdx === 0) pieceId = 'snare';
-        else if (bIdx === 1) pieceId = 'tom1';
-        else if (bIdx === 2) pieceId = 'tom2';
-        else pieceId = 'floorTom';
+      if (bIdx === 0 && sIdx === 0) {
+        hits.push({ pieceId: 'crash', accent: true, sticking: 'CR' });
+        hits.push({ pieceId: 'kick', accent: true, sticking: 'K' });
+        return hits;
       }
 
-      if (bIdx === 0 && sIdx === 0) {
-        if (!hits.some((h) => h.pieceId === 'crash')) {
-          hits.push({ pieceId: 'crash', accent: true });
+      if (stepDef.accent) {
+        if (bIdx % 2 === 0) {
+          hits.push({ pieceId: 'crash', accent: true, sticking: 'CR' });
+          hits.push({ pieceId: 'kick', accent: true, sticking: 'K' });
+          return hits;
+        } else {
+          hits.push({
+            pieceId: 'floorTom',
+            accent: true,
+            flam: stepDef.flam,
+            sticking: stepDef.sticking,
+          });
+          return hits;
         }
-        if (!hits.some((h) => h.pieceId === 'kick')) {
-          hits.push({ pieceId: 'kick', accent: true });
+      }
+
+      let pieceId: DrumPieceId = 'snare';
+      let sticking = stepDef.sticking;
+
+      if (bIdx === 0) {
+        pieceId = 'snare';
+      } else if (bIdx === 1) {
+        pieceId = sIdx % 2 === 0 ? 'tom1' : 'snare';
+      } else if (bIdx === 2) {
+        pieceId = sIdx % 2 === 0 ? 'tom2' : 'floorTom';
+      } else {
+        if (sIdx % 2 === 0) {
+          pieceId = 'floorTom';
+        } else {
+          pieceId = 'kick';
+          sticking = 'K';
         }
       }
 
@@ -1108,7 +1327,7 @@ export default function WorkoutBuilderModal({
         accent: stepDef.accent,
         ghost: stepDef.ghost,
         flam: stepDef.flam,
-        sticking: stepDef.sticking,
+        sticking,
       });
       return hits;
     }
@@ -1236,16 +1455,39 @@ export default function WorkoutBuilderModal({
 
               const hits = getHitsForRudimentStep(
                 stepDef,
-                progressiveOrchestration ? phase.orchestration : 'snare_only',
+                phase.orchestration,
                 bIdx,
                 sIdx
               );
+
+              // Sticking determination matching orchestration
+              let effectiveSticking = stepDef.sticking;
+              const isSnareKick = phase.orchestration === 'snare_kick' || phase.orchestration === 'snare-kick-downbeat';
+              const isTomsCascade = phase.orchestration === 'toms_cascade' || phase.orchestration === 'toms-cascade';
+              const isFullKit = phase.orchestration === 'full_kit' || phase.orchestration === 'full-kit-chops';
+
+              if (isSnareKick) {
+                const isDownbeat = (bIdx === 0 || bIdx === 2) && sIdx === 0;
+                if (isDownbeat || (sIdx === 0 && stepDef.accent)) {
+                  effectiveSticking = 'K';
+                }
+              } else if (isTomsCascade) {
+                if (bIdx === 0 && sIdx === 0 && stepDef.accent) {
+                  effectiveSticking = 'CR';
+                }
+              } else if (isFullKit) {
+                if (hits.some((h) => h.pieceId === 'crash')) {
+                  effectiveSticking = 'CR';
+                } else if (hits.some((h) => h.pieceId === 'kick') && !hits.some((h) => h.pieceId !== 'kick')) {
+                  effectiveSticking = 'K';
+                }
+              }
 
               steps.push({
                 id: `m${globalMeasureNum}-b${bIdx}-s${sIdx}`,
                 hits,
                 isRest: false,
-                sticking: stepDef.sticking,
+                sticking: effectiveSticking,
                 flam: stepDef.flam,
               });
             }
@@ -1845,131 +2087,289 @@ export default function WorkoutBuilderModal({
                         </div>
 
                         {/* Configuración Dinámica según Contenido Aislado de esta Fase */}
-                        {isGroove ? (
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActivePhaseId(phase.id);
-                              setBaseLibraryTab('grooves');
-                            }}
-                            className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono hover:border-amber-400/50 transition-colors cursor-pointer group"
-                            title="Haz clic para seleccionar otro groove en el catálogo lateral"
-                          >
-                            <div className="flex items-center gap-2 text-gray-300 truncate">
-                              <span className="text-amber-400 font-bold">Groove Asignado:</span>
-                              <span className="text-white font-bold truncate group-hover:text-amber-300 transition-colors">
-                                {phase.pattern?.name || 'Groove Base'}
-                              </span>
-                              {phase.pattern?.category && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                  {phase.pattern.category}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-amber-400/80 group-hover:text-amber-300 font-mono hidden sm:inline">
-                              Cambiar en catálogo &rarr;
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="space-y-2.5 pt-1 border-t border-white/5">
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActivePhaseId(phase.id);
-                                setBaseLibraryTab('rudiments');
-                              }}
-                              className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono hover:border-purple-400/50 transition-colors cursor-pointer group"
-                              title="Haz clic para seleccionar otro rudimento en el catálogo lateral"
-                            >
-                              <div className="flex items-center gap-2 text-gray-300 truncate">
-                                <span className="text-purple-400 font-bold">Célula Asignada:</span>
-                                <span className="text-white font-bold truncate group-hover:text-purple-300 transition-colors">
-                                  {phase.pattern?.name || 'Rudimento'}
-                                </span>
-                                {phase.pattern?.category && (
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                                    {phase.pattern.category}
+                        {isGroove ? (() => {
+                          const phaseGroove: GroovePattern =
+                            phase.pattern && phase.pattern.measures
+                              ? (phase.pattern as GroovePattern)
+                              : allGrooves.find((g) => g.id === phase.pattern?.id) || allGrooves[0] || GROOVES_DATA[0];
+                          return (
+                            <div className="space-y-2.5 pt-1 border-t border-white/5">
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivePhaseId(phase.id);
+                                  setBaseLibraryTab('grooves');
+                                }}
+                                className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono hover:border-amber-400/50 transition-colors cursor-pointer group"
+                                title="Haz clic para seleccionar otro groove en el catálogo lateral"
+                              >
+                                <div className="flex items-center gap-2 text-gray-300 truncate">
+                                  <span className="text-amber-400 font-bold">Groove Asignado:</span>
+                                  <span className="text-white font-bold truncate group-hover:text-amber-300 transition-colors">
+                                    {phaseGroove.name || 'Groove Base'}
                                   </span>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-purple-400/80 group-hover:text-purple-300 font-mono hidden sm:inline">
-                                {phase.pattern?.sticking ? phase.pattern.sticking.slice(0, 12).join(' ') : 'Cambiar en catálogo &rarr;'}
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {/* Subdivisión Chips */}
-                              <div className="space-y-1">
-                                <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
-                                  Subdivisión:
-                                </span>
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  {CHIP_SUBDIVISIONS.map((opt) => {
-                                    const isSelected =
-                                      phase.subdivision === opt.label ||
-                                      phase.subdivisionValue === opt.value;
-                                    return (
-                                      <button
-                                        key={`sub-${phase.id}-${opt.value}`}
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setActivePhaseId(phase.id);
-                                          updatePhase(phase.id, {
-                                            subdivision: opt.label as any,
-                                            subdivisionValue: opt.value,
-                                          });
-                                        }}
-                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border ${
-                                          isSelected
-                                            ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
-                                            : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
-                                        }`}
-                                        title={`${opt.label} (${opt.nameEs}) • ${opt.density}`}
-                                      >
-                                        {opt.label}
-                                      </button>
-                                    );
-                                  })}
+                                  {phaseGroove.category && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                      {phaseGroove.category}
+                                    </span>
+                                  )}
                                 </div>
+                                <span className="text-[10px] text-amber-400/80 group-hover:text-amber-300 font-mono hidden sm:inline">
+                                  Cambiar en catálogo &rarr;
+                                </span>
                               </div>
 
-                              {/* Orquestación Chips */}
-                              <div className="space-y-1">
-                                <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
-                                  Orquestación en Kit:
-                                </span>
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  {BLOCK_ORCHESTRATION_OPTIONS.map((orch) => {
-                                    const isSelected =
-                                      orch.aliases?.includes(phase.orchestration as any) ||
-                                      phase.orchestration === orch.id;
-                                    return (
-                                      <button
-                                        key={`orch-${phase.id}-${orch.id}`}
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setActivePhaseId(phase.id);
-                                          updatePhase(phase.id, { orchestration: orch.id });
-                                        }}
-                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
-                                          isSelected
-                                            ? 'bg-purple-500/25 text-purple-300 border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.3)] ring-1 ring-purple-400'
-                                            : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
-                                        }`}
-                                        title={orch.desc}
-                                      >
-                                        <span>{orch.icon}</span>
-                                        <span>{orch.label}</span>
-                                      </button>
-                                    );
-                                  })}
+                              <div className="p-2 rounded-xl bg-slate-950/90 border border-white/10 flex flex-col gap-1.5 shadow-inner">
+                                <div className="flex items-center justify-between text-[10px] font-mono">
+                                  <div className="flex items-center gap-1.5 text-gray-300">
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                                    <span className="font-bold text-white">Partitura del Groove</span>
+                                    <span className="text-gray-400">• Pentagrama Polifónico</span>
+                                  </div>
+                                  <span className="text-amber-400 text-[10px] font-mono">
+                                    {phaseGroove.subdivision || '1/16'} • {phaseGroove.timeSignature || '4/4'}
+                                  </span>
+                                </div>
+                                <div className="w-full flex justify-center py-1 bg-slate-950/60 rounded-lg border border-white/5">
+                                  <MiniScorePreview
+                                    groove={phaseGroove}
+                                    subdivision={phaseGroove.subdivision || '1/16'}
+                                    width={460}
+                                    height={74}
+                                    className="w-full"
+                                  />
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })() : (() => {
+                          const routeInfo = getOrchestrationRoute(phase.orchestration);
+                          const previewSteps = getOrchestratedPreviewSteps(phase, allRudiments);
+                          return (
+                            <div className="space-y-2.5 pt-1 border-t border-white/5">
+                              {/* Célula Asignada */}
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActivePhaseId(phase.id);
+                                  setBaseLibraryTab('rudiments');
+                                }}
+                                className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono hover:border-purple-400/50 transition-colors cursor-pointer group"
+                                title="Haz clic para seleccionar otro rudimento en el catálogo lateral"
+                              >
+                                <div className="flex items-center gap-2 text-gray-300 truncate">
+                                  <span className="text-purple-400 font-bold">Célula Asignada:</span>
+                                  <span className="text-white font-bold truncate group-hover:text-purple-300 transition-colors">
+                                    {phase.pattern?.name || 'Rudimento'}
+                                  </span>
+                                  {phase.pattern?.category && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                      {phase.pattern.category}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-purple-400/80 group-hover:text-purple-300 font-mono hidden sm:inline">
+                                  {phase.pattern?.sticking ? phase.pattern.sticking.slice(0, 12).join(' ') : 'Cambiar en catálogo &rarr;'}
+                                </span>
+                              </div>
+
+                              {/* 1. FILA DE MAPEO DE INSTRUMENTOS SEGÚN ORQUESTACIÓN */}
+                              <div className="p-2.5 rounded-xl bg-slate-950/80 border border-purple-500/20 flex flex-col gap-2">
+                                <div className="flex items-center justify-between gap-2 flex-wrap text-[11px] font-mono">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-amber-400 font-bold">Mapeo Kit:</span>
+                                    <span className="text-white font-bold">{routeInfo.title}</span>
+                                    <span className="text-gray-400 text-[10px]">({routeInfo.desc})</span>
+                                  </div>
+                                  <span className="text-[10px] text-cyan-400 font-bold bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-500/30">
+                                    {routeInfo.badgeSummary}
+                                  </span>
+                                </div>
+
+                                {/* Tira de badges con ruta visual de tambores */}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {routeInfo.steps.map((step, sIdx) => (
+                                    <React.Fragment key={`orch-step-${phase.id}-${sIdx}`}>
+                                      <span
+                                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono font-bold border ${step.badgeBg} ${step.badgeBorder} ${step.color} shadow-sm`}
+                                      >
+                                        <span>{step.icon}</span>
+                                        <span>[{step.label}]</span>
+                                        {step.subLabel && <span className="opacity-70 text-[9px]">({step.subLabel})</span>}
+                                      </span>
+                                      {sIdx < routeInfo.steps.length - 1 && (
+                                        <span className="text-gray-500 font-bold text-xs">→</span>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </div>
+
+                                {/* Tira de digitación real e instrumento en cada golpe */}
+                                <div className="pt-1.5 border-t border-white/5 flex flex-col gap-1">
+                                  <div className="flex items-center justify-between text-[10px] font-mono text-gray-400">
+                                    <span className="font-semibold text-gray-300">
+                                      Distribución Real de Golpes ({previewSteps.length} notas en compás):
+                                    </span>
+                                    <span className="text-[9px] text-gray-500">Mano/Pie • Instrumento</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 overflow-x-auto py-1 custom-scrollbar">
+                                    {previewSteps.map((st, nIdx) => {
+                                      const isKick = st.sticking === 'K' || st.kitPiece === 'kick';
+                                      const isCrash = st.sticking === 'CR' || st.kitPiece === 'crash';
+                                      const pieceDef = DRUM_PIECES[st.kitPiece as DrumPieceId];
+                                      const pieceLabel =
+                                        st.kitPiece === 'snare'
+                                          ? 'SD Caja'
+                                          : st.kitPiece === 'kick'
+                                          ? 'BD Bombo'
+                                          : st.kitPiece === 'tom1'
+                                          ? 'T1 Alto'
+                                          : st.kitPiece === 'tom2'
+                                          ? 'T2 Medio'
+                                          : st.kitPiece === 'floorTom'
+                                          ? 'FT Piso'
+                                          : st.kitPiece === 'crash'
+                                          ? 'CR Platillo'
+                                          : 'SD Caja';
+
+                                      let badgeClass = 'bg-slate-900 text-gray-300 border-white/10';
+                                      let stickingDisplay = st.sticking;
+
+                                      if (isKick) {
+                                        badgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 ring-1 ring-emerald-500/30';
+                                        stickingDisplay = 'K (Pie)';
+                                      } else if (isCrash) {
+                                        badgeClass = 'bg-sky-500/20 text-sky-300 border-sky-500/40 ring-1 ring-sky-500/30';
+                                        stickingDisplay = 'CR+K';
+                                      } else if (st.kitPiece === 'tom1') {
+                                        badgeClass = 'bg-pink-500/20 text-pink-300 border-pink-500/40';
+                                      } else if (st.kitPiece === 'tom2') {
+                                        badgeClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+                                      } else if (st.kitPiece === 'floorTom') {
+                                        badgeClass = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+                                      } else {
+                                        badgeClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+                                      }
+
+                                      return (
+                                        <div
+                                          key={`note-chip-${phase.id}-${nIdx}`}
+                                          className={`flex flex-col items-center justify-center px-1.5 py-0.5 rounded border text-[9px] font-mono shrink-0 ${badgeClass} ${
+                                            st.accent ? 'font-black ring-1 ring-amber-400' : 'font-medium'
+                                          }`}
+                                          title={`Nota ${nIdx + 1}: ${stickingDisplay} en ${pieceDef?.name || st.kitPiece || 'Caja'}${
+                                            st.accent ? ' (Acento)' : ''
+                                          }`}
+                                        >
+                                          <span className="font-bold">{stickingDisplay}</span>
+                                          <span className="text-[7.5px] opacity-80 whitespace-nowrap">{pieceLabel}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 2. PARTITURA REACTIVA EN PENTAGRAMA */}
+                              <div className="p-2 rounded-xl bg-slate-950/90 border border-white/10 flex flex-col gap-1.5 shadow-inner">
+                                <div className="flex items-center justify-between text-[10px] font-mono">
+                                  <div className="flex items-center gap-1.5 text-gray-300">
+                                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                                    <span className="font-bold text-white">Partitura Reactiva</span>
+                                    <span className="text-gray-400">• Pentagrama de Percusión ({routeInfo.title})</span>
+                                  </div>
+                                  <span className="text-cyan-400 text-[10px] font-mono">
+                                    {phase.subdivision || '1/16'} • 4/4
+                                  </span>
+                                </div>
+
+                                <div className="w-full flex justify-center py-1 bg-slate-950/60 rounded-lg border border-white/5">
+                                  <MiniScorePreview
+                                    steps={previewSteps}
+                                    subdivision={phase.subdivisionValue || 4}
+                                    voicing="kit"
+                                    width={460}
+                                    height={74}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Controles de Subdivisión y Orquestación */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {/* Subdivisión Chips */}
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
+                                    Subdivisión:
+                                  </span>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {CHIP_SUBDIVISIONS.map((opt) => {
+                                      const isSelected =
+                                        phase.subdivision === opt.label ||
+                                        phase.subdivisionValue === opt.value;
+                                      return (
+                                        <button
+                                          key={`sub-${phase.id}-${opt.value}`}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActivePhaseId(phase.id);
+                                            updatePhase(phase.id, {
+                                              subdivision: opt.label as any,
+                                              subdivisionValue: opt.value,
+                                            });
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border ${
+                                            isSelected
+                                              ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
+                                              : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                                          }`}
+                                          title={`${opt.label} (${opt.nameEs}) • ${opt.density}`}
+                                        >
+                                          {opt.label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Orquestación Chips */}
+                                <div className="space-y-1">
+                                  <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
+                                    Orquestación en Kit:
+                                  </span>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {BLOCK_ORCHESTRATION_OPTIONS.map((orch) => {
+                                      const isSelected =
+                                        orch.aliases?.includes(phase.orchestration as any) ||
+                                        phase.orchestration === orch.id;
+                                      return (
+                                        <button
+                                          key={`orch-${phase.id}-${orch.id}`}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActivePhaseId(phase.id);
+                                            updatePhase(phase.id, { orchestration: orch.id });
+                                          }}
+                                          className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                            isSelected
+                                              ? 'bg-purple-500/25 text-purple-300 border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.3)] ring-1 ring-purple-400'
+                                              : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                                          }`}
+                                          title={orch.desc}
+                                        >
+                                          <span>{orch.icon}</span>
+                                          <span>{orch.label}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
