@@ -107,7 +107,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-surface-slate/70 p-1.5 rounded-full border border-slate-200/80 dark:border-white/5 transition-colors">
+          <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-slate-900/80 p-1.5 rounded-full border border-slate-200/80 dark:border-white/10 backdrop-blur-md transition-colors">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href;
@@ -115,13 +115,17 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-1.5 lg:gap-2 px-3 lg:px-4 py-2 rounded-full text-xs lg:text-sm font-medium transition-all duration-200 ${
+                  className={`group flex items-center gap-1.5 lg:gap-2 px-3 lg:px-4 py-2 rounded-full text-xs lg:text-sm transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-r from-synth-violet to-synth-indigo text-white shadow-md'
-                      : 'text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5'
+                      ? 'bg-purple-600 text-white font-semibold shadow-md'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium hover:bg-slate-200/60 dark:hover:bg-white/5'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-4 w-4 transition-colors ${
+                    isActive
+                      ? 'text-white'
+                      : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'
+                  }`} />
                   <span>{link.label}</span>
                   {link.badge && (
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-synth-cyan/20 text-synth-cyan font-bold border border-synth-cyan/30">

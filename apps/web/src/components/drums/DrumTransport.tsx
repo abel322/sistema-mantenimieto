@@ -510,12 +510,12 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenRudiments}
-              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-cyan-300 dark:border-synth-cyan/50 bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 dark:bg-gradient-to-r dark:from-purple-500/20 dark:to-cyan-500/20 dark:hover:from-purple-500/30 dark:hover:to-cyan-500/30 dark:text-synth-cyan dark:hover:text-white transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(34,211,238,0.2)] cursor-pointer"
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-cyan-300 bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 dark:bg-cyan-950/40 dark:border-cyan-500/40 dark:text-cyan-300 hover:dark:bg-cyan-900/50 transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(34,211,238,0.15)] cursor-pointer"
               title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
             >
               <span className="text-sm">🥁</span>
               <span>Rudimentos & Fills</span>
-              <span className="text-[9px] px-1 rounded bg-cyan-200 text-cyan-950 dark:bg-synth-cyan/30 dark:text-cyan-200 font-bold">Vault</span>
+              <span className="text-[9px] px-1 rounded bg-cyan-200 text-cyan-950 dark:bg-cyan-500/30 dark:text-cyan-200 font-bold">Vault</span>
             </button>
           )}
 
@@ -523,7 +523,7 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenGrooves}
-              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-amber-300 dark:border-amber-500/50 bg-amber-100/80 hover:bg-amber-200 text-amber-900 dark:bg-gradient-to-r dark:from-amber-500/20 dark:to-orange-500/20 dark:hover:from-amber-500/30 dark:hover:to-orange-500/30 dark:text-amber-300 dark:hover:text-white transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(245,158,11,0.2)] cursor-pointer"
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-amber-300 bg-amber-100/80 hover:bg-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300 hover:dark:bg-amber-900/50 transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
               title="Abrir Groove Vault (85+ ritmos clasificados)"
             >
               <span className="text-sm">⚡</span>
@@ -538,7 +538,7 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenWorkoutBuilder}
-              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-emerald-300 dark:border-emerald-500/50 bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 dark:bg-gradient-to-r dark:from-emerald-500/20 dark:to-teal-500/20 dark:hover:from-emerald-500/30 dark:hover:to-teal-500/30 dark:text-emerald-300 dark:hover:text-white transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(16,185,129,0.2)] cursor-pointer"
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-emerald-300 bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-500/40 dark:text-emerald-300 hover:dark:bg-emerald-900/50 transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(16,185,129,0.15)] cursor-pointer"
               title="Abrir Workout Builder (Generador de Rutinas y Pirámides de 8, 16 y 24 compases)"
             >
               <span className="text-sm">⚙️</span>
@@ -553,7 +553,7 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenExerciseLibrary}
-              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-purple-300 dark:border-purple-500/40 bg-purple-100/80 hover:bg-purple-200 text-purple-900 dark:bg-purple-500/15 dark:hover:bg-purple-500/25 dark:text-purple-300 dark:hover:text-white transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-purple-300 bg-purple-100/80 hover:bg-purple-200 text-purple-900 dark:bg-purple-950/40 dark:border-purple-500/40 dark:text-purple-300 hover:dark:bg-purple-900/50 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Ver mis rutinas de práctica guardadas"
             >
               <span>📁</span>
@@ -568,7 +568,7 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenSaveExercise}
-              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-bold border border-slate-200 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/40 bg-slate-100 dark:bg-white/5 hover:bg-emerald-100 dark:hover:bg-emerald-500/15 text-slate-800 dark:text-gray-300 hover:text-emerald-900 dark:hover:text-emerald-300 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-slate-200 hover:border-emerald-300 bg-slate-100 hover:bg-emerald-100 text-slate-800 hover:text-emerald-900 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200 hover:dark:bg-slate-700 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
               title="Guardar el ejercicio actual"
             >
               <span>💾</span>
@@ -582,10 +582,10 @@ export default function DrumTransport({
               <button
                 key={preset.id}
                 onClick={() => onSelectPreset(preset)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-2 cursor-pointer ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all text-left flex items-center gap-2 cursor-pointer ${
                   isSelected
-                    ? 'bg-gradient-electric text-white border-transparent shadow-glow-violet font-semibold'
-                    : 'bg-white dark:bg-[#0B0F19] border-slate-200 dark:border-white/5 text-slate-700 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20'
+                    ? 'bg-gradient-electric text-white border-transparent shadow-glow-violet'
+                    : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200 hover:dark:text-white hover:dark:border-slate-600'
                 }`}
               >
                 <span>{preset.name}</span>

@@ -837,24 +837,24 @@ export default function DrumScoreRenderer({
   return (
     <div className="relative w-full rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 p-5 shadow-inner dark:shadow-glass overflow-hidden select-none">
       {/* Score Header Info Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/5 text-xs text-slate-600 dark:text-gray-400">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/5 text-xs text-slate-600 dark:text-slate-300">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-200/70 dark:bg-white/5 border border-slate-300 dark:border-white/10 font-mono text-[11px] text-cyan-800 dark:text-synth-cyan">
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-200/70 dark:bg-slate-800/80 border border-slate-300 dark:border-white/10 font-mono text-[11px] text-cyan-800 dark:text-synth-cyan">
             <span className="w-2 h-2 rounded-full bg-cyan-600 dark:bg-synth-cyan animate-pulse" />
             PERCUSSION CLEF (5-LINE STANDARD)
           </span>
-          <span className="text-slate-700 dark:text-gray-300 font-mono font-medium">
+          <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">
             {measures[0]?.timeSignature[0]}/{measures[0]?.timeSignature[1]} Meter
           </span>
           <span className="text-slate-400 dark:text-gray-500">•</span>
-          <span className="text-slate-600 dark:text-gray-400 font-mono">
+          <span className="text-slate-600 dark:text-slate-300 font-mono">
             {measures.length} {measures.length === 1 ? 'Measure' : 'Measures'}
           </span>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
           {/* Mini Floating Transport Bar (Always accessible alongside score) */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/95 dark:bg-surface-dark/95 border border-slate-200 dark:border-white/10 shadow-md select-none">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 shadow-md select-none dark:text-slate-200">
             {onTogglePlay && (
               <button
                 type="button"
@@ -884,7 +884,7 @@ export default function DrumScoreRenderer({
               <button
                 type="button"
                 onClick={handleStop}
-                className="p-1.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-rose-500/20 text-slate-600 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
+                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
                 title="Detener y volver al Compás 1"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
@@ -892,22 +892,22 @@ export default function DrumScoreRenderer({
             )}
 
             {onSetBpm && bpm && (
-              <div className="flex items-center px-1 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-mono text-xs">
+              <div className="flex items-center px-1 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 font-mono text-xs">
                 <button
                   type="button"
                   onClick={() => onSetBpm(bpm - 5)}
-                  className="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors"
+                  className="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700 rounded transition-colors"
                   title="Bajar 5 BPM"
                 >
                   -
                 </button>
                 <span className="px-1.5 text-cyan-800 dark:text-synth-cyan font-bold min-w-[50px] text-center">
-                  {bpm} <span className="text-[9px] text-slate-500 dark:text-gray-400 font-normal">BPM</span>
+                  {bpm} <span className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">BPM</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => onSetBpm(bpm + 5)}
-                  className="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors"
+                  className="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700 rounded transition-colors"
                   title="Subir 5 BPM"
                 >
                   +
@@ -922,7 +922,7 @@ export default function DrumScoreRenderer({
                 className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                   isMetronomeActive
                     ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
-                    : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title={isMetronomeActive ? 'Desactivar Metrónomo (Click)' : 'Activar Metrónomo (Click)'}
               >
@@ -937,7 +937,7 @@ export default function DrumScoreRenderer({
                 className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                   isLooping
                     ? 'bg-cyan-100 dark:bg-synth-cyan/20 border-cyan-400 dark:border-synth-cyan text-cyan-900 dark:text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
-                    : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title={isLooping ? 'Loop Activado' : 'Loop Desactivado'}
               >
@@ -948,14 +948,14 @@ export default function DrumScoreRenderer({
 
           {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous strip) */}
           {onToggleLayoutMode && (
-            <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-surface-dark/90 border border-slate-200 dark:border-white/10 select-none">
+            <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 dark:text-slate-200 select-none">
               <button
                 type="button"
                 onClick={() => onToggleLayoutMode('paginated')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   !isRunway
                     ? 'bg-gradient-electric text-white shadow-glow-violet'
-                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title="Vista Partitura: Páginas / Multilínea (2 compases por fila)"
               >
@@ -969,7 +969,7 @@ export default function DrumScoreRenderer({
                 className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   isRunway
                     ? 'bg-synth-cyan text-black shadow-glow-cyan font-extrabold'
-                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title="Modo Ensayo Horizontal: Cinta Continua / Runway con Auto-Scroll sincronizado"
               >
@@ -984,8 +984,8 @@ export default function DrumScoreRenderer({
 
           {/* Zoom Level Selector (80%, 100%, 120%) */}
           {onChangeZoomLevel && (
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-dark/90 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 select-none">
-              <span className="text-[10px] text-slate-500 dark:text-gray-500 px-1 font-semibold">ZOOM:</span>
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 select-none">
+              <span className="text-[10px] text-slate-500 dark:text-slate-300 px-1 font-semibold">ZOOM:</span>
               {[0.8, 1.0, 1.2].map((z) => (
                 <button
                   key={`zoom-btn-${z}`}
@@ -994,7 +994,7 @@ export default function DrumScoreRenderer({
                   className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
                     zoomLevel === z
                       ? 'bg-synth-cyan text-black shadow-glow-cyan'
-                      : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10'
+                      : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700'
                   }`}
                 >
                   {Math.round(z * 100)}%
@@ -1004,8 +1004,8 @@ export default function DrumScoreRenderer({
           )}
 
           {/* Synchronized Beat Flash Counter (Cyan on 1, Violet on 2, 3, 4) */}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-mono text-[11px]">
-            <span className="text-slate-500 dark:text-gray-400 text-[10px] mr-1">PULSO:</span>
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 font-mono text-[11px]">
+            <span className="text-slate-500 dark:text-slate-300 text-[10px] mr-1">PULSO:</span>
             {[0, 1, 2, 3].map((b) => {
               const isCurrent = isPlaying && currentBeatFlash?.beatIndex === b;
               return (
@@ -1016,7 +1016,7 @@ export default function DrumScoreRenderer({
                       ? b === 0
                         ? 'bg-cyan-500 dark:bg-synth-cyan text-white dark:text-black shadow-[0_0_12px_#22d3ee] scale-110'
                         : 'bg-purple-600 dark:bg-synth-violet text-white shadow-[0_0_10px_#a855f7] scale-110'
-                      : 'text-slate-500 dark:text-gray-500 bg-slate-200/60 dark:bg-white/5'
+                      : 'text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/5'
                   }`}
                 >
                   T{b + 1}
@@ -1033,7 +1033,7 @@ export default function DrumScoreRenderer({
               className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
                 highlightSyncopations || isSyncopationDrill
                   ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
-                  : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-amber-900 dark:hover:text-amber-300 hover:border-amber-400'
+                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-amber-900 dark:hover:text-amber-300 hover:border-amber-400'
               }`}
               title="Resaltar visualmente notas y ligaduras sincopadas (Ámbar neón #F59E0B)"
             >
