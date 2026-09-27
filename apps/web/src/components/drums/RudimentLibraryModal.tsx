@@ -1029,16 +1029,16 @@ export default function RudimentLibraryModal({
       {/* MODAL / DRAWER: CREAR / GUARDAR RUDIMENTO EN VAULT             */}
       {/* ============================================================== */}
       {isSaveModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg rounded-3xl bg-[#0B0F19] border border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.2)] p-6 space-y-5 overflow-hidden">
-            {/* Modal Title */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-[#0B0F19] border border-white/10 shadow-2xl overflow-hidden">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-b border-white/10 p-4 flex justify-between items-center">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
                   <Bookmark className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Crear / Guardar Rudimento en Vault</h3>
+                  <h3 className="text-base font-bold text-white leading-tight">Crear / Guardar Rudimento en Vault</h3>
                   <p className="text-xs text-gray-400 font-mono">
                     Guarda patrones, diddles o fills personalizados en la base de datos
                   </p>
@@ -1053,267 +1053,292 @@ export default function RudimentLibraryModal({
               </button>
             </div>
 
-            <form onSubmit={handleSaveRudimentSubmit} className="space-y-4">
-              {/* Rudiment Name */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                  Nombre del Rudimento / Fill *
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  placeholder="Ej: Mi Paradiddle Invertido, Linear Gospel Chop 6..."
-                  value={saveName}
-                  onChange={(e) => setSaveName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
-                />
-              </div>
+            {/* Form wrapping body + sticky footer */}
+            <form onSubmit={handleSaveRudimentSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Form Body: scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Columna 1 (Inputs de configuración) */}
+                  <div className="space-y-3.5">
+                    {/* Nombre */}
+                    <div>
+                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                        Nombre del Rudimento / Fill *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        placeholder="Ej: Mi Paradiddle Invertido, Linear Gospel Chop 6..."
+                        value={saveName}
+                        onChange={(e) => setSaveName(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+                      />
+                    </div>
 
-              {/* Category, Difficulty & Subdivision Grid */}
-              <div className="grid grid-cols-3 gap-2.5">
-                {/* Category */}
-                <div>
-                  <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                    Categoría
-                  </label>
-                  <select
-                    value={saveCategory}
-                    onChange={(e) => setSaveCategory(e.target.value as RudimentCategory)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
-                  >
-                    <option value="custom">Mis Rudimentos</option>
-                    <option value="diddles">Diddles</option>
-                    <option value="rolls">Rolls</option>
-                    <option value="flams">Flams</option>
-                    <option value="drags">Drags</option>
-                    <option value="linear-chops">Chops & Fills</option>
-                  </select>
-                </div>
+                    {/* Categoría, Dificultad y Subdivisión en 1 fila de 3 selects */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                          Categoría
+                        </label>
+                        <select
+                          value={saveCategory}
+                          onChange={(e) => setSaveCategory(e.target.value as RudimentCategory)}
+                          className="w-full px-2 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+                        >
+                          <option value="custom">Mis Rudimentos</option>
+                          <option value="diddles">Diddles</option>
+                          <option value="rolls">Rolls</option>
+                          <option value="flams">Flams</option>
+                          <option value="drags">Drags</option>
+                          <option value="linear-chops">Chops & Fills</option>
+                        </select>
+                      </div>
 
-                {/* Difficulty */}
-                <div>
-                  <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                    Dificultad
-                  </label>
-                  <select
-                    value={saveDifficulty}
-                    onChange={(e) => setSaveDifficulty(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
-                  >
-                    <option value="Principiante">Principiante</option>
-                    <option value="Intermedio">Intermedio</option>
-                    <option value="Avanzado">Avanzado</option>
-                    <option value="Virtuoso">Virtuoso</option>
-                  </select>
-                </div>
+                      <div>
+                        <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                          Dificultad
+                        </label>
+                        <select
+                          value={saveDifficulty}
+                          onChange={(e) => setSaveDifficulty(e.target.value)}
+                          className="w-full px-2 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+                        >
+                          <option value="Principiante">Principiante</option>
+                          <option value="Intermedio">Intermedio</option>
+                          <option value="Avanzado">Avanzado</option>
+                          <option value="Virtuoso">Virtuoso</option>
+                        </select>
+                      </div>
 
-                {/* Subdivision */}
-                <div>
-                  <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                    Subdivisión
-                  </label>
-                  <select
-                    value={saveSubdivision}
-                    onChange={(e) => setSaveSubdivision(Number(e.target.value))}
-                    className="w-full px-2.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
-                  >
-                    <option value={4}>1/16 (Semicorchea)</option>
-                    <option value={2}>1/8 (Corchea)</option>
-                    <option value={3}>3:2 (Tresillo)</option>
-                    <option value={6}>6:4 (Seisillo)</option>
-                    <option value={8}>1/32 (Fusa)</option>
-                  </select>
-                </div>
-              </div>
+                      <div>
+                        <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                          Subdivisión
+                        </label>
+                        <select
+                          value={saveSubdivision}
+                          onChange={(e) => setSaveSubdivision(Number(e.target.value))}
+                          className="w-full px-2 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+                        >
+                          <option value={4}>1/16</option>
+                          <option value={2}>1/8</option>
+                          <option value={3}>3:2</option>
+                          <option value={6}>6:4</option>
+                          <option value={8}>1/32</option>
+                        </select>
+                      </div>
+                    </div>
 
-              {/* Origin Mode Toggle Tabs */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                  Modo de Entrada / Origen
-                </label>
-                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setSaveOriginMode('score')}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      saveOriginMode === 'score'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-sm'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <Target className="w-3.5 h-3.5" />
-                    <span>Capturar de Partitura</span>
-                  </button>
+                    {/* Modo de Origen */}
+                    <div>
+                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                        Modo de Entrada / Origen
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900 rounded-xl border border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setSaveOriginMode('score')}
+                          className={`py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            saveOriginMode === 'score'
+                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 shadow-sm'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          <Target className="w-3.5 h-3.5" />
+                          <span>Capturar de Partitura</span>
+                        </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setSaveOriginMode('manual')}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      saveOriginMode === 'manual'
-                        ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50 shadow-sm'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <Keyboard className="w-3.5 h-3.5" />
-                    <span>Digitación Manual</span>
-                  </button>
-                </div>
-              </div>
+                        <button
+                          type="button"
+                          onClick={() => setSaveOriginMode('manual')}
+                          className={`py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            saveOriginMode === 'manual'
+                              ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50 shadow-sm'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          <Keyboard className="w-3.5 h-3.5" />
+                          <span>Digitación Manual</span>
+                        </button>
+                      </div>
+                    </div>
 
-              {/* Score Capture Configuration */}
-              {saveOriginMode === 'score' && (
-                <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 space-y-2.5">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="text-gray-400">Ámbito de Captura:</span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setSaveScope('beat')}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all cursor-pointer ${
-                          saveScope === 'beat'
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold'
-                            : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        1 Pulso / Tiempo
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSaveScope('measure')}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all cursor-pointer ${
-                          saveScope === 'measure'
-                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold'
-                            : 'text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        Compás Completo
-                      </button>
+                    {/* Configuración de Captura de Partitura */}
+                    {saveOriginMode === 'score' && (
+                      <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-gray-400">Ámbito:</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setSaveScope('beat')}
+                              className={`px-2 py-0.5 rounded-lg text-[11px] font-mono transition-all cursor-pointer ${
+                                saveScope === 'beat'
+                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold'
+                                  : 'text-gray-400 hover:text-white'
+                              }`}
+                            >
+                              1 Pulso
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSaveScope('measure')}
+                              className={`px-2 py-0.5 rounded-lg text-[11px] font-mono transition-all cursor-pointer ${
+                                saveScope === 'measure'
+                                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold'
+                                  : 'text-gray-400 hover:text-white'
+                              }`}
+                            >
+                              Compás Completo
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
+                          <span className="text-gray-400">Compás:</span>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: totalMeasures }, (_, i) => (
+                              <button
+                                key={`save-rud-m-${i}`}
+                                type="button"
+                                onClick={() => setSaveSourceMeasureIndex(i)}
+                                className={`px-2 py-0.5 rounded-md border text-[11px] transition-all cursor-pointer ${
+                                  saveSourceMeasureIndex === i
+                                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
+                                    : 'border-white/10 text-gray-400 hover:text-white'
+                                }`}
+                              >
+                                C{i + 1}
+                              </button>
+                            ))}
+                          </div>
+
+                          {saveScope === 'beat' && (
+                            <>
+                              <span className="text-gray-400 ml-1">Pulso:</span>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: totalBeats }, (_, i) => (
+                                  <button
+                                    key={`save-rud-b-${i}`}
+                                    type="button"
+                                    onClick={() => setSaveSourceBeatIndex(i)}
+                                    className={`px-2 py-0.5 rounded-md border text-[11px] transition-all cursor-pointer ${
+                                      saveSourceBeatIndex === i
+                                        ? 'bg-purple-500/20 border-purple-400 text-purple-300 font-bold'
+                                        : 'border-white/10 text-gray-400 hover:text-white'
+                                    }`}
+                                  >
+                                    T{i + 1}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Descripción Opcional (reducida a 2 filas) */}
+                    <div>
+                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1">
+                        Descripción (Opcional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Comentario sobre la digitación, velocidad o técnica..."
+                        value={saveDescription}
+                        onChange={(e) => setSaveDescription(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all resize-none"
+                      />
                     </div>
                   </div>
 
-                  {/* Measure & Beat select pills */}
-                  <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
-                    <span className="text-gray-400">Compás:</span>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalMeasures }, (_, i) => (
-                        <button
-                          key={`save-rud-m-${i}`}
-                          type="button"
-                          onClick={() => setSaveSourceMeasureIndex(i)}
-                          className={`px-2 py-0.5 rounded-md border text-[11px] transition-all cursor-pointer ${
-                            saveSourceMeasureIndex === i
-                              ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-bold'
-                              : 'border-white/10 text-gray-400 hover:text-white'
-                          }`}
-                        >
-                          C{i + 1}
-                        </button>
-                      ))}
-                    </div>
-
-                    {saveScope === 'beat' && (
-                      <>
-                        <span className="text-gray-400 ml-2">Pulso:</span>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: totalBeats }, (_, i) => (
+                  {/* Columna 2 (Digitación y Previsualización) */}
+                  <div className="space-y-3.5 flex flex-col justify-between">
+                    {/* Digitación Manual / Estado de Captura */}
+                    {saveOriginMode === 'manual' ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <label className="font-bold text-gray-300">
+                            Digitación R/L
+                          </label>
+                          <span className="text-[10px] text-gray-500">
+                            &gt;R (acento), (L) (ghost), fR (flam)
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          value={manualStickingText}
+                          onChange={(e) => setManualStickingText(e.target.value)}
+                          placeholder="R L R R L R L L"
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-cyan-300 font-mono text-sm tracking-widest focus:outline-none focus:border-purple-400 transition-all"
+                        />
+                        {/* Quick token insertion buttons */}
+                        <div className="flex items-center gap-1 flex-wrap pt-0.5 text-[10px] font-mono">
+                          <span className="text-gray-500">Insertar:</span>
+                          {['R', 'L', 'K', '>R', '>L', '(R)', '(L)', 'fR', 'fL', 'dR', 'dL'].map((tok) => (
                             <button
-                              key={`save-rud-b-${i}`}
+                              key={tok}
                               type="button"
-                              onClick={() => setSaveSourceBeatIndex(i)}
-                              className={`px-2 py-0.5 rounded-md border text-[11px] transition-all cursor-pointer ${
-                                saveSourceBeatIndex === i
-                                  ? 'bg-purple-500/20 border-purple-400 text-purple-300 font-bold'
-                                  : 'border-white/10 text-gray-400 hover:text-white'
-                              }`}
+                              onClick={() => {
+                                setManualStickingText((prev) =>
+                                  prev ? `${prev.trim()} ${tok}` : tok
+                                );
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-slate-800 border border-white/10 text-gray-300 hover:text-cyan-300 hover:border-cyan-400 transition-all cursor-pointer"
                             >
-                              T{i + 1}
+                              {tok}
                             </button>
                           ))}
                         </div>
-                      </>
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-slate-900/60 border border-white/10 text-xs font-mono space-y-1">
+                        <div className="flex items-center justify-between text-gray-300">
+                          <span className="font-bold text-cyan-400">Origen de Partitura:</span>
+                          <span className="text-gray-400">
+                            {saveScope === 'beat'
+                              ? `Compás ${saveSourceMeasureIndex + 1} • Tiempo ${saveSourceBeatIndex + 1}`
+                              : `Compás ${saveSourceMeasureIndex + 1} Completo`}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-400">
+                          Se han capturado {livePreviewSteps.length} notas con sus acentos, notas fantasma y asignación de instrumentos.
+                        </p>
+                      </div>
                     )}
-                  </div>
-                </div>
-              )}
 
-              {/* Manual Sticking Text Input */}
-              {saveOriginMode === 'manual' && (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-mono">
-                    <label className="font-bold text-gray-300">
-                      Digitación R/L (Letras separadas por espacio)
-                    </label>
-                    <span className="text-[10px] text-gray-500">
-                      Usa &gt;R (acento), (L) (ghost), fR (flam), dR (drag)
-                    </span>
+                    {/* Previsualización en Partitura */}
+                    <div className="space-y-1.5 flex-1 flex flex-col justify-center">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="font-bold text-gray-300">Previsualización en Partitura:</span>
+                        <span className="text-[10px] text-cyan-400 font-mono">
+                          {livePreviewSteps.length} notas • Sub: 1/{saveSubdivision}
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-center min-h-[90px]">
+                        <MiniScorePreview
+                          rudiment={livePreviewRudiment}
+                          voicing={voicing}
+                          width={340}
+                          height={70}
+                        />
+                      </div>
+                      <p className="text-[10px] font-mono text-gray-500 text-center">
+                        Renderizado dinámico de notación según voicing ({voicing === 'kit' ? 'Kit / Chops' : 'Caja Sola'})
+                      </p>
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    value={manualStickingText}
-                    onChange={(e) => setManualStickingText(e.target.value)}
-                    placeholder="R L R R L R L L"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-cyan-300 font-mono text-sm tracking-widest focus:outline-none focus:border-purple-400 transition-all"
-                  />
-                  {/* Quick token insertion buttons */}
-                  <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[10px] font-mono">
-                    <span className="text-gray-500">Insertar rápido:</span>
-                    {['R', 'L', 'K', '>R', '>L', '(R)', '(L)', 'fR', 'fL', 'dR', 'dL'].map((tok) => (
-                      <button
-                        key={tok}
-                        type="button"
-                        onClick={() => {
-                          setManualStickingText((prev) =>
-                            prev ? `${prev.trim()} ${tok}` : tok
-                          );
-                        }}
-                        className="px-2 py-0.5 rounded-md bg-slate-800 border border-white/10 text-gray-300 hover:text-cyan-300 hover:border-cyan-400 transition-all cursor-pointer"
-                      >
-                        {tok}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Real-time MiniScorePreview */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5 flex items-center justify-between">
-                  <span>Previsualización en Partitura</span>
-                  <span className="text-[10px] text-cyan-400 font-normal">
-                    {livePreviewSteps.length} notas • Sub: 1/{saveSubdivision}
-                  </span>
-                </label>
-                <div className="flex justify-center">
-                  <MiniScorePreview
-                    rudiment={livePreviewRudiment}
-                    voicing={voicing}
-                    width={280}
-                    height={70}
-                  />
                 </div>
               </div>
 
-              {/* Description Input */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                  Descripción (Opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Comentario sobre la digitación, velocidad o técnica..."
-                  value={saveDescription}
-                  onChange={(e) => setSaveDescription(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+              {/* Sticky Footer */}
+              <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 p-4 flex justify-end items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIsSaveModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-mono text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono"
                 >
                   Cancelar
                 </button>
@@ -1321,11 +1346,11 @@ export default function RudimentLibraryModal({
                 <button
                   type="submit"
                   disabled={isSaving || !saveName.trim() || livePreviewSteps.length === 0}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-black font-bold text-xs font-mono transition-all flex items-center gap-2 cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold shadow-lg hover:brightness-110 flex items-center gap-2 cursor-pointer text-xs font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? (
                     <>
-                      <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       <span>Guardando...</span>
                     </>
                   ) : (

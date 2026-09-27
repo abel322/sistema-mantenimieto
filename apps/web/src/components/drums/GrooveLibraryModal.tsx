@@ -963,16 +963,16 @@ export default function GrooveLibraryModal({
       {/* MODAL / DRAWER: GUARDAR GROOVE ACTUAL EN VAULT                  */}
       {/* ============================================================== */}
       {isSaveModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg rounded-3xl bg-[#0B0F19] border border-cyan-500/30 shadow-[0_0_50px_rgba(6,182,212,0.2)] p-6 space-y-5 overflow-hidden">
-            {/* Modal Title */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-[#0B0F19] border border-white/10 shadow-2xl overflow-hidden">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-b border-white/10 p-4 flex justify-between items-center">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
                   <Bookmark className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Guardar Groove Actual en Vault</h3>
+                  <h3 className="text-base font-bold text-white leading-tight">Guardar Groove Actual en Vault</h3>
                   <p className="text-xs text-gray-400 font-mono">
                     Captura el ritmo del secuenciador y almacénalo en la nube
                   </p>
@@ -987,126 +987,158 @@ export default function GrooveLibraryModal({
               </button>
             </div>
 
-            <form onSubmit={handleSaveSubmit} className="space-y-4">
-              {/* Name Input */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                  Nombre del Groove *
-                </label>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  placeholder="Ej: Funk Sincopado en C1, Ghost Pocket..."
-                  value={saveName}
-                  onChange={(e) => setSaveName(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
-                />
-              </div>
+            {/* Form wrapping body + sticky footer */}
+            <form onSubmit={handleSaveSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Form Body: scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Columna 1 (Configuración de Entrada) */}
+                  <div className="space-y-3.5">
+                    {/* Name Input */}
+                    <div>
+                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                        Nombre del Groove *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        placeholder="Ej: Funk Sincopado en C1, Ghost Pocket..."
+                        value={saveName}
+                        onChange={(e) => setSaveName(e.target.value)}
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
+                      />
+                    </div>
 
-              {/* Genre & Difficulty Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Category / Genre */}
-                <div>
-                  <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                    Género / Categoría
-                  </label>
-                  <select
-                    value={saveGenre}
-                    onChange={(e) => setSaveGenre(e.target.value as GrooveCategory)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
-                  >
-                    <option value="Mis Grooves">Mis Grooves (Personal)</option>
-                    <option value="Rock & Metal">Rock & Metal</option>
-                    <option value="Funk & Gospel">Funk & Gospel</option>
-                    <option value="Hip-Hop & Electronic">Hip-Hop & Electronic</option>
-                    <option value="Latin & World">Latin & World</option>
-                    <option value="Jazz & Blues">Jazz & Blues</option>
-                    <option value="Prog & Odd-Meter">Prog & Odd-Meter</option>
-                  </select>
-                </div>
+                    {/* Genre & Difficulty Grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Category / Genre */}
+                      <div>
+                        <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                          Género / Categoría
+                        </label>
+                        <select
+                          value={saveGenre}
+                          onChange={(e) => setSaveGenre(e.target.value as GrooveCategory)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+                        >
+                          <option value="Mis Grooves">Mis Grooves (Personal)</option>
+                          <option value="Rock & Metal">Rock & Metal</option>
+                          <option value="Funk & Gospel">Funk & Gospel</option>
+                          <option value="Hip-Hop & Electronic">Hip-Hop & Electronic</option>
+                          <option value="Latin & World">Latin & World</option>
+                          <option value="Jazz & Blues">Jazz & Blues</option>
+                          <option value="Prog & Odd-Meter">Prog & Odd-Meter</option>
+                        </select>
+                      </div>
 
-                {/* Difficulty */}
-                <div>
-                  <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                    Dificultad
-                  </label>
-                  <select
-                    value={saveDifficulty}
-                    onChange={(e) => setSaveDifficulty(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
-                  >
-                    <option value="Principiante">Principiante</option>
-                    <option value="Intermedio">Intermedio</option>
-                    <option value="Avanzado">Avanzado</option>
-                    <option value="Virtuoso">Virtuoso</option>
-                  </select>
-                </div>
-              </div>
+                      {/* Difficulty */}
+                      <div>
+                        <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                          Dificultad
+                        </label>
+                        <select
+                          value={saveDifficulty}
+                          onChange={(e) => setSaveDifficulty(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
+                        >
+                          <option value="Principiante">Principiante</option>
+                          <option value="Intermedio">Intermedio</option>
+                          <option value="Avanzado">Avanzado</option>
+                          <option value="Virtuoso">Virtuoso</option>
+                        </select>
+                      </div>
+                    </div>
 
-              {/* Source Measure Selection */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                  Compás de Origen a Capturar
-                </label>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {Array.from({ length: totalMeasures }, (_, i) => {
-                    const isSelected = saveSourceMeasureIndex === i;
-                    return (
-                      <button
-                        key={`save-src-m-${i}`}
-                        type="button"
-                        onClick={() => setSaveSourceMeasureIndex(i)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
-                          isSelected
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                            : 'bg-slate-900 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
-                        }`}
-                      >
-                        Compás C{i + 1}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                    {/* Source Measure Selection */}
+                    <div>
+                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
+                        Compás de Origen a Capturar
+                      </label>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {Array.from({ length: totalMeasures }, (_, i) => {
+                          const isSelected = saveSourceMeasureIndex === i;
+                          return (
+                            <button
+                              key={`save-src-m-${i}`}
+                              type="button"
+                              onClick={() => setSaveSourceMeasureIndex(i)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
+                                isSelected
+                                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                                  : 'bg-slate-900 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                              }`}
+                            >
+                              Compás C{i + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-              {/* Instant Mini Score Preview */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5 flex items-center justify-between">
-                  <span>Previsualización en Partitura</span>
-                  <span className="text-[10px] text-cyan-400 font-normal">
-                    {currentTimeSignature[0]}/{currentTimeSignature[1]} • {currentBpm} BPM
-                  </span>
-                </label>
-                {livePreviewGroove ? (
-                  <MiniScorePreview groove={livePreviewGroove} width={280} height={70} />
-                ) : (
-                  <div className="h-[70px] rounded-lg bg-slate-900/60 border border-white/5 flex items-center justify-center text-xs text-gray-500 font-mono">
-                    Sin compás seleccionado
+                    {/* Description Input (Textarea reducido a 2 filas) */}
+                    <div>
+                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1">
+                        Descripción (Opcional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Notas sobre el groove, instrumentación o tempo sugerido..."
+                        value={saveDescription}
+                        onChange={(e) => setSaveDescription(e.target.value)}
+                        className="w-full px-3.5 py-1.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all resize-none"
+                      />
+                    </div>
                   </div>
-                )}
+
+                  {/* Columna 2 (Previsualización y Detalles) */}
+                  <div className="space-y-3.5 flex flex-col justify-between">
+                    {/* Resumen de Métrica */}
+                    <div className="p-3 rounded-xl bg-slate-900/60 border border-white/10 text-xs font-mono space-y-1">
+                      <div className="flex items-center justify-between text-gray-300">
+                        <span className="font-bold text-cyan-400">Origen de Secuencia:</span>
+                        <span className="text-gray-400">Compás C{saveSourceMeasureIndex + 1}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-gray-400 pt-1">
+                        <span>Métrica: <strong className="text-white">{currentTimeSignature[0]}/{currentTimeSignature[1]}</strong></span>
+                        <span>Tempo: <strong className="text-amber-300">{currentBpm} BPM</strong></span>
+                        {currentSwing > 0 && (
+                          <span>Swing: <strong className="text-purple-300">{Math.round(currentSwing * 100)}%</strong></span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Previsualización en Partitura */}
+                    <div className="space-y-1.5 flex-1 flex flex-col justify-center">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="font-bold text-gray-300">Previsualización en Partitura:</span>
+                        <span className="text-[10px] text-cyan-400 font-mono">
+                          Polifonía Completa (Hi-Hat / Snare / Kick)
+                        </span>
+                      </div>
+                      <div className="p-2.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-center min-h-[90px]">
+                        {livePreviewGroove ? (
+                          <MiniScorePreview groove={livePreviewGroove} width={340} height={70} />
+                        ) : (
+                          <div className="h-[70px] rounded-lg bg-slate-900/60 border border-white/5 flex items-center justify-center text-xs text-gray-500 font-mono">
+                            Sin compás seleccionado
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-mono text-gray-500 text-center">
+                        Renderizado fiel con voces polifónicas, acentos y notas fantasma
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Description Input */}
-              <div>
-                <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                  Descripción (Opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Notas sobre el groove, instrumentación o tempo sugerido..."
-                  value={saveDescription}
-                  onChange={(e) => setSaveDescription(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all"
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/10">
+              {/* Sticky Footer */}
+              <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 p-4 flex justify-end items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIsSaveModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-mono text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono"
                 >
                   Cancelar
                 </button>
@@ -1114,11 +1146,11 @@ export default function GrooveLibraryModal({
                 <button
                   type="submit"
                   disabled={isSaving || !saveName.trim()}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-black font-bold text-xs font-mono transition-all flex items-center gap-2 cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold shadow-lg hover:brightness-110 flex items-center gap-2 cursor-pointer text-xs font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSaving ? (
                     <>
-                      <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       <span>Guardando...</span>
                     </>
                   ) : (
