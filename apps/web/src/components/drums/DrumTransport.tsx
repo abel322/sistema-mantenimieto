@@ -455,8 +455,8 @@ export default function DrumTransport({
 
           {/* Bottom Row: Measure Switcher if multiple measures exist - Scrollable */}
           {measuresCount > 1 && (
-            <div className="max-w-[260px] md:max-w-xs overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex items-center gap-1 py-0.5 px-1 bg-slate-100 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-              <span className="text-[10px] font-mono text-slate-500 dark:text-gray-400 px-1 font-semibold flex-shrink-0">IR A:</span>
+            <div className="max-w-[260px] md:max-w-xs overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex items-center gap-1 py-0.5 px-1 bg-slate-100 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-white/10">
+              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-300 px-1 font-semibold flex-shrink-0">IR A:</span>
               <div className="flex items-center gap-1 flex-nowrap">
                 {Array.from({ length: measuresCount }).map((_, idx) => {
                   const isCurrent = selectedMeasureIndex === idx;
@@ -465,10 +465,10 @@ export default function DrumTransport({
                       <button
                         type="button"
                         onClick={() => onSelectMeasureIndex?.(idx)}
-                        className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        className={`font-mono text-xs cursor-pointer flex items-center gap-1 transition-colors ${
                           isCurrent
-                            ? 'bg-synth-cyan text-black shadow-glow-cyan'
-                            : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                            ? 'bg-cyan-500 text-slate-950 font-bold px-2 py-0.5 rounded shadow-glow-cyan'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:text-cyan-300 dark:hover:bg-white/10 px-2 py-0.5 rounded'
                         }`}
                         title={`Seleccionar Compás ${idx + 1}`}
                       >

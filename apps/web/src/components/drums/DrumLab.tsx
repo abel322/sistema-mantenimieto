@@ -461,13 +461,13 @@ export default function DrumLab() {
           </button>
 
           {/* View Layout Mode Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-surface-card p-1.5 rounded-2xl border border-slate-200 dark:border-white/10">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/80">
             <button
               onClick={() => setViewMode('both')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'both'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Vista Completa
@@ -477,7 +477,7 @@ export default function DrumLab() {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'score'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Partitura VexFlow
@@ -487,7 +487,7 @@ export default function DrumLab() {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'grid'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Matriz DAW

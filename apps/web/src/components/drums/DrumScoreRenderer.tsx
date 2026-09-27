@@ -1140,7 +1140,11 @@ export default function DrumScoreRenderer({
                           onSelectStep(mIdx, 0, 0);
                           if (seekToStep) seekToStep(mIdx, 0, 0);
                         }}
-                        className="bg-cyan-100/90 border border-cyan-300/80 text-cyan-900 dark:bg-cyan-950/40 dark:border-cyan-500/30 dark:text-cyan-400 font-bold text-xs px-1.5 py-0.5 rounded hover:bg-cyan-200 dark:hover:bg-cyan-900/60 transition-colors cursor-pointer shadow-xs"
+                        className={`text-xs px-1.5 py-0.5 rounded transition-all cursor-pointer border select-none ${
+                          isPlayingHere || selectedMeasureIndex === mIdx
+                            ? 'bg-cyan-100 border-cyan-400 text-cyan-950 font-bold dark:bg-cyan-950/80 dark:border-cyan-400 dark:text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.25)]'
+                            : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400 hover:text-slate-900 dark:bg-slate-900/90 dark:border-slate-700/80 dark:text-slate-200 font-medium hover:dark:border-slate-500 hover:dark:text-white backdrop-blur-sm'
+                        }`}
                         title={`Compás ${mIdx + 1} (Clic para enfocar / reproducir)`}
                       >
                         C{mIdx + 1}
@@ -1231,12 +1235,10 @@ export default function DrumScoreRenderer({
                     <button
                       type="button"
                       onClick={() => onSelectStep(mIdx, 0, 0)}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 border select-none ${
-                        isMeasurePlaying
-                          ? 'bg-cyan-100 dark:bg-synth-cyan/30 border-cyan-400 dark:border-synth-cyan text-cyan-900 dark:text-synth-cyan shadow-[0_0_10px_rgba(34,211,238,0.4)] ring-1 ring-synth-cyan'
-                          : isMeasureSelected
-                          ? 'bg-cyan-50 dark:bg-synth-cyan/20 border-cyan-300 dark:border-synth-cyan/60 text-cyan-900 dark:text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
-                          : 'bg-white/95 dark:bg-surface-dark/90 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20'
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition-all cursor-pointer flex items-center gap-1 border select-none ${
+                        isMeasurePlaying || isMeasureSelected
+                          ? 'bg-cyan-100 border border-cyan-400 text-cyan-950 font-semibold shadow-[0_0_12px_rgba(34,211,238,0.25)] dark:bg-cyan-950/80 dark:border-cyan-400 dark:text-cyan-300 dark:shadow-[0_0_12px_rgba(34,211,238,0.25)]'
+                          : 'bg-white border border-slate-300 text-slate-700 hover:border-slate-400 hover:text-slate-900 dark:bg-slate-900/90 dark:border-slate-700/80 dark:text-slate-200 font-medium hover:dark:border-slate-500 hover:dark:text-white backdrop-blur-sm'
                       }`}
                       title={`Compás ${mIdx + 1} (Clic para enfocar)`}
                     >
@@ -1250,7 +1252,7 @@ export default function DrumScoreRenderer({
                           e.stopPropagation();
                           onRemoveMeasure(mIdx);
                         }}
-                        className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-surface-dark/95 hover:bg-rose-500/25 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
+                        className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-white border border-slate-300 text-slate-400 hover:border-slate-400 hover:text-rose-600 dark:bg-slate-900/90 dark:border-slate-700/80 dark:text-slate-300 hover:dark:border-rose-500/40 hover:dark:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                         title={`Eliminar Compás C${mIdx + 1}`}
                       >
                         <X className="w-3 h-3" />

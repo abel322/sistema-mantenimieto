@@ -40,7 +40,7 @@ export default function DrumSequencerGrid({
           <span className="font-mono text-xs uppercase tracking-wider text-cyan-800 dark:text-synth-cyan font-bold">
             DAW DRUM MATRIX & SUBDIVISION LANES
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 font-mono font-medium">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 font-mono font-medium">
             Compás {measureIndex + 1}
           </span>
         </div>
