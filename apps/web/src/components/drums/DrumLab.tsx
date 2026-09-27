@@ -804,17 +804,19 @@ export default function DrumLab() {
       />
 
       {/* Workout / Routine Builder Modal */}
-      <WorkoutBuilderModal
-        isOpen={isWorkoutBuilderOpen}
-        onClose={() => setIsWorkoutBuilderOpen(false)}
-        onGenerateWorkout={(routine) => {
-          audio.stop();
-          score.loadScoreData(routine.measures, [4, 4], 'workout-routine', 0, 0, 0);
-          audio.setBpm(routine.bpm);
-          setScoreLayoutMode('runway');
-        }}
-        onPlayHit={audio.playHit}
-      />
+      {isWorkoutBuilderOpen && (
+        <WorkoutBuilderModal
+          isOpen={isWorkoutBuilderOpen}
+          onClose={() => setIsWorkoutBuilderOpen(false)}
+          onGenerateWorkout={(routine) => {
+            audio.stop();
+            score.loadScoreData(routine.measures, [4, 4], 'workout-routine', 0, 0, 0);
+            audio.setBpm(routine.bpm);
+            setScoreLayoutMode('runway');
+          }}
+          onPlayHit={audio.playHit}
+        />
+      )}
 
       {/* Mobile Floating Action Button (Quick Vaults & Tools Drawer) */}
       <div

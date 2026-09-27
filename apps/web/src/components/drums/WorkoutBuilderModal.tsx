@@ -250,6 +250,17 @@ interface WorkoutBuilderModalProps {
   onPlayHit?: (pieceId: DrumPieceId) => void;
 }
 
+/**
+ * Blindaje defensivo de Web Audio / Tone.js contra channelData vacíos
+ */
+export function validateAudioDataBuffer(audioData?: { channelData?: Float32Array[] | number[][]; length?: number } | null): boolean {
+  if (!audioData || !audioData.channelData || audioData.channelData.length === 0) {
+    // Evitar crear buffer vacío
+    return false;
+  }
+  return true;
+}
+
 // ========================================================
 // Memoized List Item Components for Silky Smooth Scrolling
 // ========================================================
@@ -620,8 +631,6 @@ export default function WorkoutBuilderModal({
     });
   }, [phases]);
 
-  if (!isOpen || !mounted) return null;
-
   // Set target total measures and distribute cleanly across existing phases
   const handleSetTotalMeasuresTarget = (target: number) => {
     const safeTarget = Math.max(1, Math.min(64, target));
@@ -723,17 +732,16 @@ export default function WorkoutBuilderModal({
     }
   }, [phases, selectedPhaseId]);
 
-  // Audio previews for list items
+  // Audio previews for list items con blindaje defensivo Web Audio / Tone.js
   const handlePreviewRudiment = useCallback((rud: RudimentItem) => {
+    if (!rud) return;
+
     if (previewingId === rud.id) {
       stopPreview();
       return;
     }
     stopPreview();
     if (!onPlayHit) return;
-
-    setPreviewingId(rud.id);
-    isPreviewingRef.current = true;
 
     const rawSteps = rud.steps && rud.steps.length > 0
       ? rud.steps
@@ -744,6 +752,14 @@ export default function WorkoutBuilderModal({
           flam: false,
         }));
 
+    // Blindaje defensivo contra secuencias o buffers vacíos
+    if (!rawSteps || rawSteps.length === 0) {
+      return;
+    }
+
+    setPreviewingId(rud.id);
+    isPreviewingRef.current = true;
+
     const sub = typeof rud.subdivision === 'number' ? rud.subdivision : 4;
     const bpmToUse = rud.defaultBpm || 105;
     const beatMs = (60 / bpmToUse) * 1000;
@@ -753,13 +769,16 @@ export default function WorkoutBuilderModal({
     const totalSteps = Math.min(32, rawSteps.length * 2);
     for (let i = 0; i < totalSteps; i++) {
       const stepDef = rawSteps[i % rawSteps.length];
+      if (!stepDef) continue;
       const timer = setTimeout(() => {
         if (!isPreviewingRef.current) return;
         const pieceId: DrumPieceId =
           ('kitPiece' in stepDef && stepDef.kitPiece)
             ? (stepDef.kitPiece as DrumPieceId)
             : (stepDef.sticking === 'K' ? 'kick' : 'snare');
-        onPlayHit(pieceId);
+        if (pieceId) {
+          onPlayHit(pieceId);
+        }
         if (i === totalSteps - 1) {
           stopPreview();
         }
@@ -769,6 +788,8 @@ export default function WorkoutBuilderModal({
   }, [previewingId, stopPreview, onPlayHit]);
 
   const handlePreviewGroove = useCallback((grv: GroovePattern) => {
+    if (!grv) return;
+
     if (previewingId === grv.id) {
       stopPreview();
       return;
@@ -776,17 +797,20 @@ export default function WorkoutBuilderModal({
     stopPreview();
     if (!onPlayHit) return;
 
-    setPreviewingId(grv.id);
-    isPreviewingRef.current = true;
-
-    const [numStr, denStr] = grv.timeSignature.split('/');
+    const [numStr, denStr] = (grv.timeSignature || '4/4').split('/');
     const beatsCount = parseInt(numStr, 10) || 4;
     const beatValue = parseInt(denStr, 10) || 4;
     const bpmToUse = grv.suggestedBpm || 110;
     const beatMs = (60 / bpmToUse) * (4 / beatValue) * 1000;
 
     const measureTemplate = grv.measures?.[0];
-    if (!measureTemplate) return;
+    // Blindaje defensivo contra compases y beats vacíos
+    if (!measureTemplate || !measureTemplate.beats || measureTemplate.beats.length === 0) {
+      return;
+    }
+
+    setPreviewingId(grv.id);
+    isPreviewingRef.current = true;
 
     let currentOffsetMs = 0;
 
@@ -802,10 +826,16 @@ export default function WorkoutBuilderModal({
 
         const timer = setTimeout(() => {
           if (!isPreviewingRef.current) return;
-          hits.forEach((h) => {
-            const pieceId = (h.instrument === 'hihat' ? 'hihatClosed' : h.instrument) as DrumPieceId;
-            onPlayHit(pieceId);
-          });
+          if (Array.isArray(hits) && hits.length > 0) {
+            hits.forEach((h) => {
+              if (h && h.instrument) {
+                const pieceId = (h.instrument === 'hihat' ? 'hihatClosed' : h.instrument) as DrumPieceId;
+                if (pieceId) {
+                  onPlayHit(pieceId);
+                }
+              }
+            });
+          }
         }, scheduledTime);
 
         previewTimersRef.current.push(timer);
@@ -1136,6 +1166,9 @@ export default function WorkoutBuilderModal({
     });
     onClose();
   };
+
+  // Salida condicional segura colocada DESPUÉS de todas las declaraciones de hooks de React
+  if (!isOpen || !mounted) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
