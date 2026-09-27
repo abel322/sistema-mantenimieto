@@ -31,6 +31,7 @@ import {
   convertDrumMeasureToGrooveMeasures,
 } from '@/lib/groovesData';
 import MiniScorePreview from './MiniScorePreview';
+import SaveGrooveModal from './SaveGrooveModal';
 
 interface GrooveLibraryModalProps {
   isOpen: boolean;
@@ -86,12 +87,6 @@ export default function GrooveLibraryModal({
 
   // Save Modal Dialog State
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
-  const [saveName, setSaveName] = useState('');
-  const [saveGenre, setSaveGenre] = useState<GrooveCategory>('Mis Grooves');
-  const [saveDifficulty, setSaveDifficulty] = useState<string>('Intermedio');
-  const [saveSourceMeasureIndex, setSaveSourceMeasureIndex] = useState<number>(selectedMeasureIndex);
-  const [saveDescription, setSaveDescription] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
 
   const previewTimersRef = useRef<NodeJS.Timeout[]>([]);
   const isPreviewingRef = useRef(false);
@@ -135,10 +130,7 @@ export default function GrooveLibraryModal({
       });
   }, []);
 
-  // Update source measure when selectedMeasureIndex changes
-  useEffect(() => {
-    setSaveSourceMeasureIndex(Math.max(0, Math.min(totalMeasures - 1, selectedMeasureIndex)));
-  }, [selectedMeasureIndex, totalMeasures]);
+
 
   // Combined Grooves list (Custom grooves first)
   const allGrooves = useMemo(() => {
@@ -368,81 +360,8 @@ export default function GrooveLibraryModal({
     setTimeout(() => setInsertedNotice(null), 3000);
   };
 
-  // Prepare Live Preview for the Save Dialog
-  const liveSourceMeasure: DrumMeasure | undefined =
-    currentMeasures && currentMeasures[saveSourceMeasureIndex]
-      ? currentMeasures[saveSourceMeasureIndex]
-      : currentMeasures?.[0];
-
-  const livePreviewGroove: GroovePattern | null = useMemo(() => {
-    if (!liveSourceMeasure) return null;
-    const { measures: capturedMeasures, subdivision } = convertDrumMeasureToGrooveMeasures(liveSourceMeasure);
-    return {
-      id: 'save-modal-live-preview',
-      name: saveName.trim() || 'Nuevo Groove Personalizado',
-      category: saveGenre,
-      subCategory: 'Creado por Mí',
-      difficulty: saveDifficulty as any,
-      suggestedBpm: currentBpm,
-      timeSignature: `${currentTimeSignature[0]}/${currentTimeSignature[1]}` as any,
-      swingRatio: currentSwing,
-      measuresCount: 1,
-      subdivision: subdivision as any,
-      description: saveDescription.trim() || 'Groove capturado directamente desde la partitura.',
-      isCustom: true,
-      measures: capturedMeasures,
-    };
-  }, [liveSourceMeasure, saveName, saveGenre, saveDifficulty, currentBpm, currentTimeSignature, currentSwing, saveDescription]);
-
-  // Handle Save Groove Form Submission
-  const handleSaveSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!saveName.trim() || !liveSourceMeasure) return;
-
-    setIsSaving(true);
-    const { measures: capturedMeasures, subdivision } = convertDrumMeasureToGrooveMeasures(liveSourceMeasure);
-    const tempId = `custom-${Date.now()}`;
-    const timeSigStr = `${currentTimeSignature[0]}/${currentTimeSignature[1]}`;
-
-    const payload = {
-      name: saveName.trim(),
-      genre: saveGenre,
-      subCategory: 'Creado por Mí',
-      difficulty: saveDifficulty,
-      suggestedBpm: currentBpm,
-      timeSignature: timeSigStr,
-      swingRatio: currentSwing,
-      measuresCount: 1,
-      subdivision,
-      description: saveDescription.trim() || 'Groove capturado en Sonora Drum Lab.',
-      measures: capturedMeasures,
-    };
-
-    let savedItem: GroovePattern = {
-      id: tempId,
-      ...payload,
-      category: saveGenre,
-      isCustom: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    try {
-      const res = await fetch('/api/grooves', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.groove) {
-          savedItem = data.groove;
-        }
-      }
-    } catch (err) {
-      console.warn('Database save failed, keeping in localStorage backup.', err);
-    }
-
+  // Handle Groove Saved Callback
+  const handleSaveSuccess = (savedItem: GroovePattern) => {
     setCustomGrooves((prev) => {
       const updated = [savedItem, ...prev.filter((g) => g.id !== savedItem.id)];
       try {
@@ -450,9 +369,6 @@ export default function GrooveLibraryModal({
       } catch (err) {}
       return updated;
     });
-
-    setIsSaving(false);
-    setIsSaveModalOpen(false);
     setSelectedCategory('Mis Grooves');
     setInsertedNotice(`¡"${savedItem.name}" guardado exitosamente en tu Groove Vault!`);
     setTimeout(() => setInsertedNotice(null), 4000);
@@ -486,23 +402,17 @@ export default function GrooveLibraryModal({
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Save Current Groove Button */}
-              {currentMeasures && currentMeasures.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSaveName(`Mi Ritmo C${selectedMeasureIndex + 1}`);
-                    setSaveSourceMeasureIndex(selectedMeasureIndex);
-                    setIsSaveModalOpen(true);
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/25 via-purple-500/25 to-pink-500/25 hover:from-cyan-500/35 hover:via-purple-500/35 hover:to-pink-500/35 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.2)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
-                  title="Capturar y guardar el compás actual de tu partitura en el Groove Vault"
-                >
-                  <Plus className="w-4 h-4 text-cyan-400" />
-                  <span className="hidden sm:inline">+ Guardar Groove Actual en Vault</span>
-                  <span className="sm:hidden">+ Guardar</span>
-                </button>
-              )}
+              {/* Save / Create Groove Button */}
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/25 via-purple-500/25 to-pink-500/25 hover:from-cyan-500/35 hover:via-purple-500/35 hover:to-pink-500/35 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.2)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                title="Capturar o diseñar un groove en la mini matriz para el Groove Vault"
+              >
+                <Plus className="w-4 h-4 text-cyan-400" />
+                <span className="hidden sm:inline">+ Guardar / Crear Groove</span>
+                <span className="sm:hidden">+ Crear</span>
+              </button>
 
               <button
                 onClick={onClose}
@@ -751,14 +661,12 @@ export default function GrooveLibraryModal({
                 <button
                   type="button"
                   onClick={() => {
-                    setSaveName(`Mi Ritmo C${selectedMeasureIndex + 1}`);
-                    setSaveSourceMeasureIndex(selectedMeasureIndex);
                     setIsSaveModalOpen(true);
                   }}
                   className="mt-3 px-3 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs font-mono font-bold hover:bg-cyan-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Guardar el compás actual ahora</span>
+                  <span>Crear o guardar groove ahora</span>
                 </button>
               ) : (
                 <button
@@ -960,211 +868,20 @@ export default function GrooveLibraryModal({
       </div>
 
       {/* ============================================================== */}
-      {/* MODAL / DRAWER: GUARDAR GROOVE ACTUAL EN VAULT                  */}
+      {/* MODAL: GUARDAR / CREAR GROOVE EN VAULT (SaveGrooveModal)        */}
       {/* ============================================================== */}
-      {isSaveModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-[#0B0F19] border border-white/10 shadow-2xl overflow-hidden">
-            {/* Sticky Header */}
-            <div className="sticky top-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-b border-white/10 p-4 flex justify-between items-center">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
-                  <Bookmark className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-white leading-tight">Guardar Groove Actual en Vault</h3>
-                  <p className="text-xs text-gray-400 font-mono">
-                    Captura el ritmo del secuenciador y almacénalo en la nube
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsSaveModalOpen(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Form wrapping body + sticky footer */}
-            <form onSubmit={handleSaveSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Form Body: scrollable */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Columna 1 (Configuración de Entrada) */}
-                  <div className="space-y-3.5">
-                    {/* Name Input */}
-                    <div>
-                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                        Nombre del Groove *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        autoFocus
-                        placeholder="Ej: Funk Sincopado en C1, Ghost Pocket..."
-                        value={saveName}
-                        onChange={(e) => setSaveName(e.target.value)}
-                        className="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all"
-                      />
-                    </div>
-
-                    {/* Genre & Difficulty Grid */}
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* Category / Genre */}
-                      <div>
-                        <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                          Género / Categoría
-                        </label>
-                        <select
-                          value={saveGenre}
-                          onChange={(e) => setSaveGenre(e.target.value as GrooveCategory)}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
-                        >
-                          <option value="Mis Grooves">Mis Grooves (Personal)</option>
-                          <option value="Rock & Metal">Rock & Metal</option>
-                          <option value="Funk & Gospel">Funk & Gospel</option>
-                          <option value="Hip-Hop & Electronic">Hip-Hop & Electronic</option>
-                          <option value="Latin & World">Latin & World</option>
-                          <option value="Jazz & Blues">Jazz & Blues</option>
-                          <option value="Prog & Odd-Meter">Prog & Odd-Meter</option>
-                        </select>
-                      </div>
-
-                      {/* Difficulty */}
-                      <div>
-                        <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                          Dificultad
-                        </label>
-                        <select
-                          value={saveDifficulty}
-                          onChange={(e) => setSaveDifficulty(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-white/15 text-white text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all cursor-pointer"
-                        >
-                          <option value="Principiante">Principiante</option>
-                          <option value="Intermedio">Intermedio</option>
-                          <option value="Avanzado">Avanzado</option>
-                          <option value="Virtuoso">Virtuoso</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Source Measure Selection */}
-                    <div>
-                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1.5">
-                        Compás de Origen a Capturar
-                      </label>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {Array.from({ length: totalMeasures }, (_, i) => {
-                          const isSelected = saveSourceMeasureIndex === i;
-                          return (
-                            <button
-                              key={`save-src-m-${i}`}
-                              type="button"
-                              onClick={() => setSaveSourceMeasureIndex(i)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer border ${
-                                isSelected
-                                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                                  : 'bg-slate-900 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
-                              }`}
-                            >
-                              Compás C{i + 1}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Description Input (Textarea reducido a 2 filas) */}
-                    <div>
-                      <label className="block text-xs font-mono font-bold text-gray-300 mb-1">
-                        Descripción (Opcional)
-                      </label>
-                      <textarea
-                        rows={2}
-                        placeholder="Notas sobre el groove, instrumentación o tempo sugerido..."
-                        value={saveDescription}
-                        onChange={(e) => setSaveDescription(e.target.value)}
-                        className="w-full px-3.5 py-1.5 rounded-xl bg-slate-900 border border-white/15 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all resize-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Columna 2 (Previsualización y Detalles) */}
-                  <div className="space-y-3.5 flex flex-col justify-between">
-                    {/* Resumen de Métrica */}
-                    <div className="p-3 rounded-xl bg-slate-900/60 border border-white/10 text-xs font-mono space-y-1">
-                      <div className="flex items-center justify-between text-gray-300">
-                        <span className="font-bold text-cyan-400">Origen de Secuencia:</span>
-                        <span className="text-gray-400">Compás C{saveSourceMeasureIndex + 1}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-[11px] text-gray-400 pt-1">
-                        <span>Métrica: <strong className="text-white">{currentTimeSignature[0]}/{currentTimeSignature[1]}</strong></span>
-                        <span>Tempo: <strong className="text-amber-300">{currentBpm} BPM</strong></span>
-                        {currentSwing > 0 && (
-                          <span>Swing: <strong className="text-purple-300">{Math.round(currentSwing * 100)}%</strong></span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Previsualización en Partitura */}
-                    <div className="space-y-1.5 flex-1 flex flex-col justify-center">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="font-bold text-gray-300">Previsualización en Partitura:</span>
-                        <span className="text-[10px] text-cyan-400 font-mono">
-                          Polifonía Completa (Hi-Hat / Snare / Kick)
-                        </span>
-                      </div>
-                      <div className="p-2.5 rounded-xl bg-slate-900/90 border border-white/10 flex items-center justify-center min-h-[90px]">
-                        {livePreviewGroove ? (
-                          <MiniScorePreview groove={livePreviewGroove} width={340} height={70} />
-                        ) : (
-                          <div className="h-[70px] rounded-lg bg-slate-900/60 border border-white/5 flex items-center justify-center text-xs text-gray-500 font-mono">
-                            Sin compás seleccionado
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-[10px] font-mono text-gray-500 text-center">
-                        Renderizado fiel con voces polifónicas, acentos y notas fantasma
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sticky Footer */}
-              <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 p-4 flex justify-end items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsSaveModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={isSaving || !saveName.trim()}
-                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold shadow-lg hover:brightness-110 flex items-center gap-2 cursor-pointer text-xs font-mono disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Guardando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Cloud className="w-4 h-4 fill-current" />
-                      <span>Confirmar y Guardar en la Nube</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <SaveGrooveModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        onSaveSuccess={handleSaveSuccess}
+        onPlayHit={onPlayHit}
+        currentMeasures={currentMeasures}
+        totalMeasures={totalMeasures}
+        selectedMeasureIndex={selectedMeasureIndex}
+        currentBpm={currentBpm}
+        currentTimeSignature={currentTimeSignature}
+        currentSwing={currentSwing}
+      />
     </div>
   );
 }
