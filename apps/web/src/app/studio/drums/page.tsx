@@ -9,9 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function DrumLabPage() {
-  return (
-    <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-x-hidden">
-      <DrumLab />
-    </main>
-  );
+  return <DrumLab />;
 }

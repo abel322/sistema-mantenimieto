@@ -405,331 +405,333 @@ export default function DrumLab() {
   const isCurrentSelectionRest = !score.selectedStep || !!score.selectedStep.isRest || currentStepHits.length === 0;
 
   return (
-    <div className="w-full min-w-0 space-y-6 box-border">
-      {/* Studio Header Bar */}
-      <div className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
-        <div className="max-w-2xl min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="p-1.5 rounded-lg bg-gradient-electric text-white shadow-glow-violet">
-              <Headphones className="w-4 h-4" />
-            </span>
-            <span className="text-xs font-mono uppercase tracking-widest text-synth-cyan font-bold">
-              SONORA PERCUSSION LAB
-            </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono font-semibold border border-emerald-500/20">
-              Web Audio 2.0 • Tone.js
-            </span>
+    <div className="min-h-screen bg-[#060913] text-white flex flex-col items-center w-full">
+      <div className="w-full max-w-6xl xl:max-w-7xl mx-auto px-6 py-6 flex flex-col gap-6">
+        {/* 1. Encabezado con Título y Botones */}
+        <div className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-white/10">
+          <div className="max-w-2xl min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="p-1.5 rounded-lg bg-gradient-electric text-white shadow-glow-violet">
+                <Headphones className="w-4 h-4" />
+              </span>
+              <span className="text-xs font-mono uppercase tracking-widest text-synth-cyan font-bold">
+                SONORA PERCUSSION LAB
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono font-semibold border border-emerald-500/20">
+                Web Audio 2.0 • Tone.js
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight break-words">
+              Sonora Drum Lab - Interactive Percussion Studio & Polyrhythmic Sequencer
+            </h1>
+            <p className="text-xs text-gray-400 mt-1">
+              Editor ágil de batería en clave de percusión estándar con soporte para tresillos, quintillos, seisillos y reproducción sincronizada en tiempo real.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight break-words">
-            Sonora Drum Lab - Interactive Percussion Studio & Polyrhythmic Sequencer
-          </h1>
-          <p className="text-xs text-gray-400 mt-1">
-            Editor ágil de batería en clave de percusión estándar con soporte para tresillos, quintillos, seisillos y reproducción sincronizada en tiempo real.
-          </p>
-        </div>
 
-        {/* Header Actions: Routines, Rudiments Vault & View Mode Selector */}
-        <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-          {/* Save Exercise Button */}
-          <button
-            type="button"
-            onClick={() => setIsSaveExerciseOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-100/90 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200 hover:dark:bg-slate-700 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
-            title="Guardar el ejercicio actual como rutina de práctica"
-          >
-            <Save className="w-3.5 h-3.5 text-emerald-700 dark:text-slate-300" />
-            <span>Guardar Ejercicio</span>
-          </button>
-
-          {/* Exercise Library (Mis Rutinas) Button */}
-          <button
-            type="button"
-            onClick={() => setIsExerciseLibraryOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-100/80 hover:bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-950/40 dark:border-purple-500/40 dark:text-purple-300 hover:dark:bg-purple-900/50 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
-            title="Ver mis rutinas de práctica guardadas"
-          >
-            <FolderOpen className="w-3.5 h-3.5 text-purple-700 dark:text-purple-300" />
-            <span>Mis Rutinas</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-500/30 dark:text-purple-200 dark:border-transparent font-bold">
-              {storage.exercises.length}
-            </span>
-          </button>
-
-          {/* Rudiments & Fills Vault Button */}
-          <button
-            type="button"
-            onClick={() => setIsRudimentsOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 border border-cyan-300 dark:bg-cyan-950/40 dark:border-cyan-500/40 dark:text-cyan-300 hover:dark:bg-cyan-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(34,211,238,0.25)] cursor-pointer whitespace-nowrap flex-shrink-0"
-            title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
-          >
-            <span className="text-base">🥁</span>
-            <span>Rudimentos & Fills</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-cyan-200 text-cyan-950 dark:bg-cyan-500/30 dark:text-cyan-200 uppercase font-mono font-bold">
-              Vault
-            </span>
-          </button>
-
-          {/* Groove Vault Button */}
-          <button
-            type="button"
-            onClick={() => setIsGroovesOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-300 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300 hover:dark:bg-amber-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer whitespace-nowrap flex-shrink-0"
-            title="Abrir Groove Vault (85+ patrones listos para tocar)"
-          >
-            <span className="text-base">⚡</span>
-            <span>Groove Vault</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-200 text-amber-950 dark:bg-amber-500/30 dark:text-amber-200 uppercase font-mono font-bold">
-              85+
-            </span>
-          </button>
-
-          {/* View Layout Mode Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
+          {/* Header Actions: Routines, Rudiments Vault & View Mode Selector */}
+          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+            {/* Save Exercise Button */}
             <button
-              onClick={() => setViewMode('both')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                viewMode === 'both'
-                  ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              type="button"
+              onClick={() => setIsSaveExerciseOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-100/90 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200 hover:dark:bg-slate-700 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
+              title="Guardar el ejercicio actual como rutina de práctica"
             >
-              Vista Completa
+              <Save className="w-3.5 h-3.5 text-emerald-700 dark:text-slate-300" />
+              <span>Guardar Ejercicio</span>
             </button>
+
+            {/* Exercise Library (Mis Rutinas) Button */}
             <button
-              onClick={() => setViewMode('score')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                viewMode === 'score'
-                  ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              type="button"
+              onClick={() => setIsExerciseLibraryOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-100/80 hover:bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-950/40 dark:border-purple-500/40 dark:text-purple-300 hover:dark:bg-purple-900/50 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
+              title="Ver mis rutinas de práctica guardadas"
             >
-              Partitura
+              <FolderOpen className="w-3.5 h-3.5 text-purple-700 dark:text-purple-300" />
+              <span>Mis Rutinas</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-500/30 dark:text-purple-200 dark:border-transparent font-bold">
+                {storage.exercises.length}
+              </span>
             </button>
+
+            {/* Rudiments & Fills Vault Button */}
             <button
-              onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                viewMode === 'grid'
-                  ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              type="button"
+              onClick={() => setIsRudimentsOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 border border-cyan-300 dark:bg-cyan-950/40 dark:border-cyan-500/40 dark:text-cyan-300 hover:dark:bg-cyan-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(34,211,238,0.25)] cursor-pointer whitespace-nowrap flex-shrink-0"
+              title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
             >
-              DAW
+              <span className="text-base">🥁</span>
+              <span>Rudimentos & Fills</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-cyan-200 text-cyan-950 dark:bg-cyan-500/30 dark:text-cyan-200 uppercase font-mono font-bold">
+                Vault
+              </span>
             </button>
-          </div>
-        </div>
-      </div>
 
-      {/* 1. Master Transport Bar (Play/Stop/BPM/Presets/Meter) - Sticky Floating Bar */}
-      <div className={`sticky top-2 z-30 w-full box-border rounded-2xl ${isAnyModalOpen ? 'hidden sm:block' : ''}`}>
-        <DrumTransport
-          isPlaying={audio.isPlaying}
-          bpm={audio.bpm}
-          isMetronomeActive={audio.isMetronomeActive}
-          metronomeMode={audio.metronomeMode}
-          metronomeVolume={audio.metronomeVolume}
-          isSyncopationDrill={audio.isSyncopationDrill}
-          currentBeatFlash={audio.currentBeatFlash}
-          isLooping={audio.isLooping}
-          timeSignature={score.timeSignature}
-          activePresetId={score.activePresetId}
-          measuresCount={score.measures.length}
-          selectedMeasureIndex={score.selectedMeasureIndex}
-          savedExercisesCount={storage.exercises.length}
-          onTogglePlay={handleTogglePlay}
-          onStop={audio.stop}
-          onSetBpm={audio.setBpm}
-          onToggleMetronome={audio.toggleMetronome}
-          onSetMetronomeMode={audio.setMetronomeMode}
-          onSetMetronomeVolume={audio.setMetronomeVolume}
-          onToggleSyncopationDrill={audio.toggleSyncopationDrill}
-          onToggleLoop={audio.toggleLoop}
-          onSelectPreset={handleSelectPreset}
-          onSetTimeSignature={score.setTimeSignature}
-          onAddMeasure={score.addMeasure}
-          onRemoveMeasure={score.removeMeasure}
-          onClearMeasure={score.clearMeasure}
-          onSelectMeasureIndex={(idx) => {
-            score.selectStep(idx, 0, 0);
-            audio.seekToStep(idx, 0, 0);
-          }}
-          onOpenRudiments={() => setIsRudimentsOpen(true)}
-          onOpenGrooves={() => setIsGroovesOpen(true)}
-          onOpenWorkoutBuilder={() => setIsWorkoutBuilderOpen(true)}
-          onOpenSaveExercise={() => setIsSaveExerciseOpen(true)}
-          onOpenExerciseLibrary={() => setIsExerciseLibraryOpen(true)}
-        />
-      </div>
+            {/* Groove Vault Button */}
+            <button
+              type="button"
+              onClick={() => setIsGroovesOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-300 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300 hover:dark:bg-amber-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer whitespace-nowrap flex-shrink-0"
+              title="Abrir Groove Vault (85+ patrones listos para tocar)"
+            >
+              <span className="text-base">⚡</span>
+              <span>Groove Vault</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-200 text-amber-950 dark:bg-amber-500/30 dark:text-amber-200 uppercase font-mono font-bold">
+                85+
+              </span>
+            </button>
 
-      {/* 2. Rapid Subdivision & Dynamics Bar */}
-      <DrumSubdivisionBar
-        selectedBeatIndex={score.selectedBeatIndex}
-        selectedMeasureIndex={score.selectedMeasureIndex}
-        measuresCount={score.measures.length}
-        currentSubdivision={score.selectedBeat?.subdivision || 4}
-        isTuplet={score.selectedBeat?.isTuplet}
-        hasAccent={currentHasAccent}
-        hasGhost={currentHasGhost}
-        hasHits={currentStepHits.length > 0}
-        isAccentMode={score.isAccentMode}
-        isGhostMode={score.isGhostMode}
-        isRest={isCurrentSelectionRest}
-        isSyncopated={!!score.selectedStep?.isSyncopated}
-        isTied={!!score.selectedStep?.tiedToNext || !!score.selectedStep?.tiedFromPrev}
-        highlightSyncopations={highlightSyncopations || audio.isSyncopationDrill}
-        onChangeSubdivision={(sub) => score.changeBeatSubdivision(sub)}
-        onToggleAccent={handleToggleAccent}
-        onToggleGhost={handleToggleGhost}
-        onToggleRest={handleToggleRest}
-        onToggleSyncopate={handleToggleSyncopate}
-        onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
-        onClearStep={handleClearStep}
-        onClearMeasure={score.clearMeasure}
-        onRemoveMeasure={() => score.removeMeasure(score.selectedMeasureIndex)}
-        onOpenLegend={() => setIsLegendOpen(true)}
-      />
-
-      {/* 3. Percussion Score View (VexFlow Standard 5-line Clef) */}
-      {(viewMode === 'both' || viewMode === 'score') && (
-        <section className="w-full box-border space-y-2">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-300 px-1 font-mono">
-            <span className="flex items-center gap-1.5 text-cyan-800 dark:text-synth-cyan">
-              <Music className="w-4 h-4" />
-              MÓDULO 1: PARTITURA DE BATERÍA VEXFLOW (5 LÍNEAS & TUPLETS)
-            </span>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous Strip) */}
-              <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 dark:text-slate-200 select-none">
-                <button
-                  type="button"
-                  onClick={() => setScoreLayoutMode('paginated')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    scoreLayoutMode === 'paginated'
-                      ? 'bg-gradient-electric text-white shadow-glow-violet'
-                      : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Vista Partitura: Páginas / Multilínea (2 compases por fila)"
-                >
-                  <span>⊞</span>
-                  <span>Páginas</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setScoreLayoutMode('runway')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    scoreLayoutMode === 'runway'
-                      ? 'bg-synth-cyan text-black shadow-glow-cyan font-extrabold'
-                      : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                  title="Modo Ensayo Horizontal: Cinta Continua / Runway con Auto-Scroll sincronizado"
-                >
-                  <span>⇄</span>
-                  <span>Modo Runway</span>
-                  {scoreLayoutMode === 'runway' && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-                  )}
-                </button>
-              </div>
-
-              {/* Zoom Controls (80%, 100%, 120%) */}
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 select-none">
-                <span className="text-[10px] text-slate-500 dark:text-slate-300 px-1 font-semibold">ZOOM:</span>
-                {[0.8, 1.0, 1.2].map((z) => (
-                  <button
-                    key={`zoom-lab-${z}`}
-                    type="button"
-                    onClick={() => setZoomLevel(z)}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
-                      zoomLevel === z
-                        ? 'bg-synth-cyan text-black shadow-glow-cyan'
-                        : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {Math.round(z * 100)}%
-                  </button>
-                ))}
-              </div>
+            {/* View Layout Mode Selector */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
+              <button
+                onClick={() => setViewMode('both')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  viewMode === 'both'
+                    ? 'bg-gradient-electric text-white shadow-glow-violet'
+                    : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Vista Completa
+              </button>
+              <button
+                onClick={() => setViewMode('score')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  viewMode === 'score'
+                    ? 'bg-gradient-electric text-white shadow-glow-violet'
+                    : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Partitura
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  viewMode === 'grid'
+                    ? 'bg-gradient-electric text-white shadow-glow-violet'
+                    : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                DAW
+              </button>
             </div>
           </div>
+        </div>
 
-          <DrumScoreRenderer
-            measures={score.measures}
-            selectedMeasureIndex={score.selectedMeasureIndex}
-            selectedBeatIndex={score.selectedBeatIndex}
-            selectedStepIndex={score.selectedStepIndex}
-            playhead={audio.playhead}
+        {/* 2. Barra de Transporte */}
+        <div className={`sticky top-2 z-30 w-full box-border rounded-2xl ${isAnyModalOpen ? 'hidden sm:block' : ''}`}>
+          <DrumTransport
             isPlaying={audio.isPlaying}
-            highlightSyncopations={highlightSyncopations}
+            bpm={audio.bpm}
+            isMetronomeActive={audio.isMetronomeActive}
+            metronomeMode={audio.metronomeMode}
+            metronomeVolume={audio.metronomeVolume}
             isSyncopationDrill={audio.isSyncopationDrill}
             currentBeatFlash={audio.currentBeatFlash}
-            layoutMode={scoreLayoutMode}
-            onToggleLayoutMode={setScoreLayoutMode}
-            zoomLevel={zoomLevel}
-            onChangeZoomLevel={setZoomLevel}
-            onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
-            onSelectStep={(m, b, s) => {
-              score.selectStep(m, b, s);
-              audio.seekToStep(m, b, s);
-            }}
-            onTogglePiece={handleTogglePiece}
-            onRemoveMeasure={score.removeMeasure}
-            getTransportSeconds={audio.getTransportSeconds}
-            seekToSeconds={audio.seekToSeconds}
-            seekToStep={audio.seekToStep}
-            bpm={audio.bpm}
-            onSetBpm={audio.setBpm}
+            isLooping={audio.isLooping}
+            timeSignature={score.timeSignature}
+            activePresetId={score.activePresetId}
+            measuresCount={score.measures.length}
+            selectedMeasureIndex={score.selectedMeasureIndex}
+            savedExercisesCount={storage.exercises.length}
             onTogglePlay={handleTogglePlay}
             onStop={audio.stop}
-            isMetronomeActive={audio.isMetronomeActive}
+            onSetBpm={audio.setBpm}
             onToggleMetronome={audio.toggleMetronome}
-            isLooping={audio.isLooping}
+            onSetMetronomeMode={audio.setMetronomeMode}
+            onSetMetronomeVolume={audio.setMetronomeVolume}
+            onToggleSyncopationDrill={audio.toggleSyncopationDrill}
             onToggleLoop={audio.toggleLoop}
+            onSelectPreset={handleSelectPreset}
+            onSetTimeSignature={score.setTimeSignature}
+            onAddMeasure={score.addMeasure}
+            onRemoveMeasure={score.removeMeasure}
+            onClearMeasure={score.clearMeasure}
+            onSelectMeasureIndex={(idx) => {
+              score.selectStep(idx, 0, 0);
+              audio.seekToStep(idx, 0, 0);
+            }}
+            onOpenRudiments={() => setIsRudimentsOpen(true)}
+            onOpenGrooves={() => setIsGroovesOpen(true)}
+            onOpenWorkoutBuilder={() => setIsWorkoutBuilderOpen(true)}
+            onOpenSaveExercise={() => setIsSaveExerciseOpen(true)}
+            onOpenExerciseLibrary={() => setIsExerciseLibraryOpen(true)}
           />
-        </section>
-      )}
-
-      {/* 4. DAW Matrix & Subdivision Lane View */}
-      {(viewMode === 'both' || viewMode === 'grid') && (
-        <section className="w-full box-border space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-400 px-1 font-mono">
-            <span className="flex items-center gap-1.5 text-synth-violet">
-              <Sliders className="w-4 h-4" />
-              MÓDULO 2: SECUENCIADOR MULTIPISTA & EDITOR DE POLIRRITMIAS
-            </span>
-            <span>9 Pistas • Modulación Métrica • Resaltado Síncopas Ámbar</span>
-          </div>
-
-          <DrumSequencerGrid
-            measure={score.selectedMeasure}
-            measureIndex={score.selectedMeasureIndex}
-            selectedBeatIndex={score.selectedBeatIndex}
-            selectedStepIndex={score.selectedStepIndex}
-            playhead={audio.playhead}
-            isPlaying={audio.isPlaying}
-            highlightSyncopations={highlightSyncopations}
-            onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
-            onSelectStep={score.selectStep}
-            onTogglePiece={handleTogglePiece}
-            onPreviewHit={handlePreviewHit}
-          />
-        </section>
-      )}
-
-      {/* Hardware & Web Audio Specs Footer Banner */}
-      <div className="p-4 rounded-xl bg-surface-card/60 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400 shadow-glass">
-        <div className="flex items-center gap-2">
-          <Info className="w-4 h-4 text-synth-cyan flex-shrink-0" />
-          <span>
-            Motor de percusión sintetizado vía Tone.js (MembraneSynth + NoiseSynth) a 48kHz con latencia ultra baja y cero dependencias externas de CORS.
-          </span>
         </div>
-        <div className="flex items-center gap-4 font-mono text-[11px]">
-          <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            AUDIO ENGINE: ACTIVE
-          </span>
-          <span>LATENCY: &lt; 5MS</span>
+
+        {/* 3. Runway de Partitura / Pentagramas */}
+        {(viewMode === 'both' || viewMode === 'score') && (
+          <section className="w-full box-border space-y-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-300 px-1 font-mono">
+              <span className="flex items-center gap-1.5 text-cyan-800 dark:text-synth-cyan">
+                <Music className="w-4 h-4" />
+                MÓDULO 1: PARTITURA DE BATERÍA VEXFLOW (5 LÍNEAS & TUPLETS)
+              </span>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous Strip) */}
+                <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 dark:text-slate-200 select-none">
+                  <button
+                    type="button"
+                    onClick={() => setScoreLayoutMode('paginated')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      scoreLayoutMode === 'paginated'
+                        ? 'bg-gradient-electric text-white shadow-glow-violet'
+                        : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Vista Partitura: Páginas / Multilínea (2 compases por fila)"
+                  >
+                    <span>⊞</span>
+                    <span>Páginas</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setScoreLayoutMode('runway')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      scoreLayoutMode === 'runway'
+                        ? 'bg-synth-cyan text-black shadow-glow-cyan font-extrabold'
+                        : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                    title="Modo Ensayo Horizontal: Cinta Continua / Runway con Auto-Scroll sincronizado"
+                  >
+                    <span>⇄</span>
+                    <span>Modo Runway</span>
+                    {scoreLayoutMode === 'runway' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Zoom Controls (80%, 100%, 120%) */}
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 select-none">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-300 px-1 font-semibold">ZOOM:</span>
+                  {[0.8, 1.0, 1.2].map((z) => (
+                    <button
+                      key={`zoom-lab-${z}`}
+                      type="button"
+                      onClick={() => setZoomLevel(z)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
+                        zoomLevel === z
+                          ? 'bg-synth-cyan text-black shadow-glow-cyan'
+                          : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {Math.round(z * 100)}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <DrumScoreRenderer
+              measures={score.measures}
+              selectedMeasureIndex={score.selectedMeasureIndex}
+              selectedBeatIndex={score.selectedBeatIndex}
+              selectedStepIndex={score.selectedStepIndex}
+              playhead={audio.playhead}
+              isPlaying={audio.isPlaying}
+              highlightSyncopations={highlightSyncopations}
+              isSyncopationDrill={audio.isSyncopationDrill}
+              currentBeatFlash={audio.currentBeatFlash}
+              layoutMode={scoreLayoutMode}
+              onToggleLayoutMode={setScoreLayoutMode}
+              zoomLevel={zoomLevel}
+              onChangeZoomLevel={setZoomLevel}
+              onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
+              onSelectStep={(m, b, s) => {
+                score.selectStep(m, b, s);
+                audio.seekToStep(m, b, s);
+              }}
+              onTogglePiece={handleTogglePiece}
+              onRemoveMeasure={score.removeMeasure}
+              getTransportSeconds={audio.getTransportSeconds}
+              seekToSeconds={audio.seekToSeconds}
+              seekToStep={audio.seekToStep}
+              bpm={audio.bpm}
+              onSetBpm={audio.setBpm}
+              onTogglePlay={handleTogglePlay}
+              onStop={audio.stop}
+              isMetronomeActive={audio.isMetronomeActive}
+              onToggleMetronome={audio.toggleMetronome}
+              isLooping={audio.isLooping}
+              onToggleLoop={audio.toggleLoop}
+            />
+          </section>
+        )}
+
+        {/* 4. Panel de Figura / Subdivisión */}
+        <DrumSubdivisionBar
+          selectedBeatIndex={score.selectedBeatIndex}
+          selectedMeasureIndex={score.selectedMeasureIndex}
+          measuresCount={score.measures.length}
+          currentSubdivision={score.selectedBeat?.subdivision || 4}
+          isTuplet={score.selectedBeat?.isTuplet}
+          hasAccent={currentHasAccent}
+          hasGhost={currentHasGhost}
+          hasHits={currentStepHits.length > 0}
+          isAccentMode={score.isAccentMode}
+          isGhostMode={score.isGhostMode}
+          isRest={isCurrentSelectionRest}
+          isSyncopated={!!score.selectedStep?.isSyncopated}
+          isTied={!!score.selectedStep?.tiedToNext || !!score.selectedStep?.tiedFromPrev}
+          highlightSyncopations={highlightSyncopations || audio.isSyncopationDrill}
+          onChangeSubdivision={(sub) => score.changeBeatSubdivision(sub)}
+          onToggleAccent={handleToggleAccent}
+          onToggleGhost={handleToggleGhost}
+          onToggleRest={handleToggleRest}
+          onToggleSyncopate={handleToggleSyncopate}
+          onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
+          onClearStep={handleClearStep}
+          onClearMeasure={score.clearMeasure}
+          onRemoveMeasure={() => score.removeMeasure(score.selectedMeasureIndex)}
+          onOpenLegend={() => setIsLegendOpen(true)}
+        />
+
+        {/* 5. Matriz DAW / Resto de módulos */}
+        {(viewMode === 'both' || viewMode === 'grid') && (
+          <section className="w-full box-border space-y-2">
+            <div className="flex items-center justify-between text-xs text-gray-400 px-1 font-mono">
+              <span className="flex items-center gap-1.5 text-synth-violet">
+                <Sliders className="w-4 h-4" />
+                MÓDULO 2: SECUENCIADOR MULTIPISTA & EDITOR DE POLIRRITMIAS
+              </span>
+              <span>9 Pistas • Modulación Métrica • Resaltado Síncopas Ámbar</span>
+            </div>
+
+            <DrumSequencerGrid
+              measure={score.selectedMeasure}
+              measureIndex={score.selectedMeasureIndex}
+              selectedBeatIndex={score.selectedBeatIndex}
+              selectedStepIndex={score.selectedStepIndex}
+              playhead={audio.playhead}
+              isPlaying={audio.isPlaying}
+              highlightSyncopations={highlightSyncopations}
+              onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
+              onSelectStep={score.selectStep}
+              onTogglePiece={handleTogglePiece}
+              onPreviewHit={handlePreviewHit}
+            />
+          </section>
+        )}
+
+        {/* Hardware & Web Audio Specs Footer Banner */}
+        <div className="p-4 rounded-xl bg-surface-card/60 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400 shadow-glass">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4 text-synth-cyan flex-shrink-0" />
+            <span>
+              Motor de percusión sintetizado vía Tone.js (MembraneSynth + NoiseSynth) a 48kHz con latencia ultra baja y cero dependencias externas de CORS.
+            </span>
+          </div>
+          <div className="flex items-center gap-4 font-mono text-[11px]">
+            <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              AUDIO ENGINE: ACTIVE
+            </span>
+            <span>LATENCY: &lt; 5MS</span>
+          </div>
         </div>
       </div>
 
