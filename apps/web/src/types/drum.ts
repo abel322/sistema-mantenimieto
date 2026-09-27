@@ -225,7 +225,7 @@ export interface DrumStep {
 
 export type VoicingMode = 'snare' | 'kit';
 
-export type RudimentCategory = 'rolls' | 'diddles' | 'flams' | 'drags' | 'linear-chops';
+export type RudimentCategory = 'rolls' | 'diddles' | 'flams' | 'drags' | 'linear-chops' | 'custom' | string;
 
 export interface RudimentStep {
   sticking: 'R' | 'L' | 'K' | 'B' | string; // Right hand, Left hand, Kick, Both
@@ -242,7 +242,7 @@ export interface RudimentItem {
   id: string;
   name: string;
   category: RudimentCategory;
-  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado';
+  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Virtuoso' | string;
   description: string;
   subdivision: number; // 4 (16th), 3 (triplet 3:2), 6 (sextuplet 6:4), 2 (8th), 5 (quintuplet 5:4), 8 (32nd)
   defaultBpm: number;
@@ -250,6 +250,9 @@ export interface RudimentItem {
   tags: string[];
   sticking?: string[];
   kitVoicing?: DrumPieceId[];
+  isCustom?: boolean;
+  userId?: string;
+  createdAt?: string;
 }
 
 export interface DrumBeat {

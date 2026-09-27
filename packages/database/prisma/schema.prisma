@@ -183,3 +183,22 @@ model CustomGroove {
   @@index([userId])
   @@map("custom_grooves")
 }
+
+model CustomRudiment {
+  id          String   @id @default(cuid())
+  userId      String?  @default("student-demo")
+  name        String
+  category    String   // 'Rolls' | 'Diddles' | 'Flams' | 'Drags' | 'Chops & Fills' | 'Mis Rudimentos'
+  difficulty  String   @default("Intermedio")
+  subdivision String   @default("1/16") // '1/8' | '1/16' | '1/32' | '3:2' | '6:4'
+  sticking    String[] // Array con digitación: ["R", "L", "R", "R"]
+  hits        Json     // Detalle de notas: instrument, hand, accent, ghost, flam
+  kitVoicing  Json?    // Distribución alternativa para modo Kit / Chops
+  description String?
+  isCustom    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("custom_rudiments")
+}
+

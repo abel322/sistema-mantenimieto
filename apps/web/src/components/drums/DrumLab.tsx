@@ -721,6 +721,7 @@ export default function DrumLab() {
         beatsPerMeasure={score.timeSignature[0]}
         selectedMeasureIndex={score.selectedMeasureIndex}
         selectedBeatIndex={score.selectedBeatIndex}
+        currentMeasures={score.measures}
         onBatchInsert={score.batchInsertRudiment}
         onFillMeasuresBatch={score.fillMeasuresWithRudiment}
         onInsertInBeat={score.insertRudimentAtBeat}

@@ -48,6 +48,14 @@ export const RUDIMENT_CATEGORIES: {
     badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
     description: 'Hertas, combinaciones manos-bombo estilo Gospel, Bonham y Funk lineal.',
   },
+  {
+    id: 'custom',
+    name: 'Mis Rudimentos & Fills',
+    label: 'Mis Rudimentos',
+    color: 'text-violet-400',
+    badge: 'bg-gradient-to-r from-violet-500/20 to-cyan-500/20 text-cyan-300 border-violet-500/40',
+    description: 'Rudimentos, patrones y fills personalizados creados por ti.',
+  },
 ];
 
 export const RUDIMENTS_DATA: RudimentItem[] = [
