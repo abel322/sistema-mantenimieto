@@ -193,7 +193,7 @@ export default function DrumScoreRenderer({
           const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
           const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
           const measureX = 20 + colIndex * currentMeasureWidth;
-          const measureY = 25 + rowIndex * rowHeight;
+          const measureY = (isRunway ? 34 : 25) + rowIndex * rowHeight;
 
           // Create percussion stave with high-contrast lines
           const stave = new Stave(measureX, measureY, currentMeasureWidth);
@@ -209,10 +209,12 @@ export default function DrumScoreRenderer({
             stave.addTimeSignature(`${beatsCount}/${beatValue}`);
           }
 
-          // Measure section badge (e.g., C1, C2...)
-          try {
-            stave.setSection(`C${mIdx + 1}`, 0);
-          } catch (_) {}
+          // Measure section badge (e.g., C1, C2...) (in Paginated mode only, since Runway mode has it integrated in the ruler)
+          if (!isRunway) {
+            try {
+              stave.setSection(`C${mIdx + 1}`, 0);
+            } catch (_) {}
+          }
 
           stave.setContext(context).draw();
 
@@ -1111,7 +1113,7 @@ export default function DrumScoreRenderer({
             <div
               ref={timelineRulerRef}
               onMouseDown={handleTimelineMouseDown}
-              className="absolute top-0 left-0 right-0 h-6 bg-slate-200/90 dark:bg-surface-dark/95 border-b border-slate-300 dark:border-white/10 rounded-t-xl overflow-hidden cursor-crosshair select-none z-25 group/timeline shadow-inner"
+              className="absolute top-0 left-0 right-0 h-7 bg-slate-100 border-b border-slate-200 dark:bg-slate-900/90 dark:border-b dark:border-white/10 backdrop-blur-sm rounded-t-xl overflow-hidden cursor-crosshair select-none z-25 group/timeline shadow-inner"
               title="Línea de Tiempo Runway: Haz clic o arrastra para situar el cursor / reproducir desde aquí"
             >
               {measures.map((m, mIdx) => {
@@ -1122,27 +1124,57 @@ export default function DrumScoreRenderer({
                 return (
                   <div
                     key={`timeline-bar-${mIdx}`}
-                    className={`absolute inset-y-0 border-r flex items-center text-[10px] font-mono transition-colors ${
+                    className={`absolute inset-y-0 border-r flex items-center text-xs font-mono transition-colors group/timeline-bar ${
                       isPlayingHere
-                        ? 'border-cyan-500/60 bg-cyan-500/20 text-cyan-900 dark:text-cyan-200'
-                        : 'border-slate-300/80 dark:border-white/15 text-slate-600 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/5'
+                        ? 'border-cyan-500/40 bg-cyan-500/10'
+                        : 'border-slate-300 dark:border-white/10 hover:bg-slate-200/50 dark:hover:bg-white/[0.03]'
                     }`}
                     style={{ left: `${measureX}px`, width: `${currentMeasureWidth}px` }}
                   >
-                    <span className="px-1.5 font-bold text-cyan-800 dark:text-synth-cyan text-[10px]">C{mIdx + 1}</span>
-                    <div className="flex-1 flex h-full">
+                    {/* Marcador de compás (C1, C2, C3...) integrado en la esquina superior izquierda */}
+                    <div className="flex items-center gap-1 pl-1.5 pr-2 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectStep(mIdx, 0, 0);
+                          if (seekToStep) seekToStep(mIdx, 0, 0);
+                        }}
+                        className="bg-cyan-100/90 border border-cyan-300/80 text-cyan-900 dark:bg-cyan-950/40 dark:border-cyan-500/30 dark:text-cyan-400 font-bold text-xs px-1.5 py-0.5 rounded hover:bg-cyan-200 dark:hover:bg-cyan-900/60 transition-colors cursor-pointer shadow-xs"
+                        title={`Compás ${mIdx + 1} (Clic para enfocar / reproducir)`}
+                      >
+                        C{mIdx + 1}
+                      </button>
+
+                      {measures.length > 1 && onRemoveMeasure && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveMeasure(mIdx);
+                          }}
+                          className="opacity-0 group-hover/timeline-bar:opacity-100 p-0.5 rounded hover:bg-rose-500/20 text-slate-400 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 transition-opacity cursor-pointer"
+                          title={`Eliminar Compás C${mIdx + 1}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Números de pulso (1, 2, 3, 4) y separadores sutiles */}
+                    <div className="flex-1 flex h-full items-center">
                       {Array.from({ length: beatsCount }).map((_, bIdx) => {
                         const isCurrentBeat = isPlayingHere && playhead.beatIndex === bIdx;
                         return (
                           <div
                             key={`tick-${mIdx}-${bIdx}`}
-                            className={`flex-1 border-r border-slate-300/50 dark:border-white/5 flex items-center justify-center text-[9px] transition-colors ${
+                            className={`flex-1 h-full border-r border-slate-200 dark:border-white/5 flex items-center justify-center transition-all ${
                               isCurrentBeat
-                                ? 'bg-cyan-500/30 text-slate-900 dark:text-white font-bold'
-                                : 'text-slate-500 dark:text-gray-500 hover:text-slate-900 dark:hover:text-white hover:bg-cyan-500/10'
+                                ? 'bg-cyan-500/20 dark:bg-cyan-500/25 text-cyan-900 dark:text-cyan-300 font-bold text-sm scale-110 shadow-xs'
+                                : 'text-slate-500 dark:text-slate-400 font-mono text-xs hover:text-slate-900 dark:hover:text-white hover:bg-cyan-500/10'
                             }`}
                           >
-                            {bIdx + 1}
+                            <span>{bIdx + 1}</span>
                           </div>
                         );
                       })}
@@ -1161,7 +1193,7 @@ export default function DrumScoreRenderer({
             const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
             const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
             const measureX = 20 + colIndex * currentMeasureWidth;
-            const measureY = 25 + rowIndex * rowHeight;
+            const measureY = (isRunway ? 34 : 25) + rowIndex * rowHeight;
             const isMeasureSelected = selectedMeasureIndex === mIdx;
             const isMeasurePlaying = isPlaying && playhead.measureIndex === mIdx;
 
@@ -1173,13 +1205,13 @@ export default function DrumScoreRenderer({
                     className="absolute rounded-2xl pointer-events-none transition-all duration-150 z-5 border-2 border-synth-cyan/80 bg-gradient-to-b from-synth-cyan/[0.08] via-synth-violet/[0.04] to-transparent shadow-[0_0_24px_rgba(34,211,238,0.3),inset_0_0_12px_rgba(34,211,238,0.1)] animate-pulse-subtle"
                     style={{
                       left: `${measureX + 2}px`,
-                      top: `${measureY - 16}px`,
+                      top: isRunway ? '30px' : `${measureY - 16}px`,
                       width: `${currentMeasureWidth - 4}px`,
-                      height: `${rowHeight + 6}px`,
+                      height: isRunway ? `${rowHeight}px` : `${rowHeight + 6}px`,
                     }}
                   >
                     {isRunway && (
-                      <div className="absolute top-1 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-synth-cyan/25 border border-synth-cyan/60 text-[9px] font-mono text-cyan-200 shadow-[0_0_8px_#22d3ee]">
+                      <div className="absolute top-1.5 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-synth-cyan/25 border border-synth-cyan/60 text-[9px] font-mono text-cyan-200 shadow-[0_0_8px_#22d3ee]">
                         <span className="w-1.5 h-1.5 rounded-full bg-synth-cyan animate-ping" />
                         <span className="font-bold">ON RUNWAY</span>
                       </div>
@@ -1187,43 +1219,45 @@ export default function DrumScoreRenderer({
                   </div>
                 )}
 
-                {/* Measure Section Badge with Contextual Delete Action */}
-                <div
-                  className="group/stave-hdr absolute z-25 flex items-center gap-1 transition-all"
-                  style={{
-                    left: `${measureX + (colIndex === 0 ? 32 : 12)}px`,
-                    top: `${measureY - 14}px`,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => onSelectStep(mIdx, 0, 0)}
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 border select-none ${
-                      isMeasurePlaying
-                        ? 'bg-cyan-100 dark:bg-synth-cyan/30 border-cyan-400 dark:border-synth-cyan text-cyan-900 dark:text-synth-cyan shadow-[0_0_10px_rgba(34,211,238,0.4)] ring-1 ring-synth-cyan'
-                        : isMeasureSelected
-                        ? 'bg-cyan-50 dark:bg-synth-cyan/20 border-cyan-300 dark:border-synth-cyan/60 text-cyan-900 dark:text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
-                        : 'bg-white/95 dark:bg-surface-dark/90 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20'
-                    }`}
-                    title={`Compás ${mIdx + 1} (Clic para enfocar)`}
+                {/* Measure Section Badge with Contextual Delete Action (Paginated Mode only) */}
+                {!isRunway && (
+                  <div
+                    className="group/stave-hdr absolute z-25 flex items-center gap-1 transition-all"
+                    style={{
+                      left: `${measureX + (colIndex === 0 ? 32 : 12)}px`,
+                      top: `${measureY - 14}px`,
+                    }}
                   >
-                    <span>Compás {mIdx + 1}</span>
-                  </button>
-
-                  {measures.length > 1 && onRemoveMeasure && (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveMeasure(mIdx);
-                      }}
-                      className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-surface-dark/95 hover:bg-rose-500/25 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
-                      title={`Eliminar Compás C${mIdx + 1}`}
+                      onClick={() => onSelectStep(mIdx, 0, 0)}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 border select-none ${
+                        isMeasurePlaying
+                          ? 'bg-cyan-100 dark:bg-synth-cyan/30 border-cyan-400 dark:border-synth-cyan text-cyan-900 dark:text-synth-cyan shadow-[0_0_10px_rgba(34,211,238,0.4)] ring-1 ring-synth-cyan'
+                          : isMeasureSelected
+                          ? 'bg-cyan-50 dark:bg-synth-cyan/20 border-cyan-300 dark:border-synth-cyan/60 text-cyan-900 dark:text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
+                          : 'bg-white/95 dark:bg-surface-dark/90 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20'
+                      }`}
+                      title={`Compás ${mIdx + 1} (Clic para enfocar)`}
                     >
-                      <X className="w-3 h-3" />
+                      <span>Compás {mIdx + 1}</span>
                     </button>
-                  )}
-                </div>
+
+                    {measures.length > 1 && onRemoveMeasure && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveMeasure(mIdx);
+                        }}
+                        className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-surface-dark/95 hover:bg-rose-500/25 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
+                        title={`Eliminar Compás C${mIdx + 1}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </React.Fragment>
             );
           })}
