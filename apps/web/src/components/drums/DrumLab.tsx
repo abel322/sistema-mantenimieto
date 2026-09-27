@@ -35,6 +35,7 @@ export default function DrumLab() {
   const [isGroovesOpen, setIsGroovesOpen] = useState(false);
   const [isSaveExerciseOpen, setIsSaveExerciseOpen] = useState(false);
   const [isExerciseLibraryOpen, setIsExerciseLibraryOpen] = useState(false);
+  const [highlightSyncopations, setHighlightSyncopations] = useState(false);
 
   const audio = useDrumAudio();
   const score = useDrumScore('classic-rock');
@@ -134,6 +135,16 @@ export default function DrumLab() {
   const handleClearStep = useCallback(() => {
     score.clearStep();
   }, [score]);
+
+  // Unified handler for Síncopa / Push [S]
+  const handleToggleSyncopate = useCallback(() => {
+    score.toggleSyncopate();
+  }, [score]);
+
+  // Toggle pedagogical highlight for syncopated rhythms
+  const handleToggleHighlightSyncopations = useCallback(() => {
+    setHighlightSyncopations((prev) => !prev);
+  }, []);
 
   // Toggle play/pause
   const handleTogglePlay = useCallback(() => {
@@ -243,6 +254,13 @@ export default function DrumLab() {
 
       // Quick drum piece insertions:
       // K = Kick, S = Snare, H = Hi-Hat, C = Crash, R = Ride, T = Tom alto, M = Tom medio, F = Floor Tom
+      // Síncopa / Push: Shift+S or P
+      if ((e.shiftKey && key === 'S') || key === 'P') {
+        e.preventDefault();
+        handleToggleSyncopate();
+        return;
+      }
+
       if (key === 'K') {
         e.preventDefault();
         handleTogglePiece('kick');
@@ -348,6 +366,7 @@ export default function DrumLab() {
     handleToggleAccent,
     handleToggleGhost,
     handleToggleRest,
+    handleToggleSyncopate,
     handleClearStep,
     score,
   ]);
@@ -514,10 +533,15 @@ export default function DrumLab() {
         isAccentMode={score.isAccentMode}
         isGhostMode={score.isGhostMode}
         isRest={isCurrentSelectionRest}
+        isSyncopated={!!score.selectedStep?.isSyncopated}
+        isTied={!!score.selectedStep?.tiedToNext || !!score.selectedStep?.tiedFromPrev}
+        highlightSyncopations={highlightSyncopations}
         onChangeSubdivision={(sub) => score.changeBeatSubdivision(sub)}
         onToggleAccent={handleToggleAccent}
         onToggleGhost={handleToggleGhost}
         onToggleRest={handleToggleRest}
+        onToggleSyncopate={handleToggleSyncopate}
+        onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
         onClearStep={handleClearStep}
         onClearMeasure={score.clearMeasure}
         onRemoveMeasure={() => score.removeMeasure(score.selectedMeasureIndex)}
@@ -532,7 +556,7 @@ export default function DrumLab() {
               <Music className="w-4 h-4" />
               MÓDULO 1: PARTITURA DE BATERÍA VEXFLOW (5 LÍNEAS & TUPLETS)
             </span>
-            <span>Clave Percusión • Playhead Láser • Edición Directa</span>
+            <span>Clave Percusión • Playhead Láser • Ligaduras & Síncopas</span>
           </div>
 
           <DrumScoreRenderer
@@ -542,6 +566,8 @@ export default function DrumLab() {
             selectedStepIndex={score.selectedStepIndex}
             playhead={audio.playhead}
             isPlaying={audio.isPlaying}
+            highlightSyncopations={highlightSyncopations}
+            onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
             onSelectStep={score.selectStep}
             onTogglePiece={handleTogglePiece}
             onRemoveMeasure={score.removeMeasure}
@@ -557,7 +583,7 @@ export default function DrumLab() {
               <Sliders className="w-4 h-4" />
               MÓDULO 2: SECUENCIADOR MULTIPISTA & EDITOR DE POLIRRITMIAS
             </span>
-            <span>9 Pistas • Modulación Métrica • Síntesis Sonora Tone.js</span>
+            <span>9 Pistas • Modulación Métrica • Resaltado Síncopas Ámbar</span>
           </div>
 
           <DrumSequencerGrid
@@ -567,6 +593,8 @@ export default function DrumLab() {
             selectedStepIndex={score.selectedStepIndex}
             playhead={audio.playhead}
             isPlaying={audio.isPlaying}
+            highlightSyncopations={highlightSyncopations}
+            onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
             onSelectStep={score.selectStep}
             onTogglePiece={handleTogglePiece}
             onPreviewHit={handlePreviewHit}

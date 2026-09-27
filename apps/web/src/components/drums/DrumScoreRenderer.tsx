@@ -12,6 +12,8 @@ interface DrumScoreRendererProps {
   selectedStepIndex: number;
   playhead: PlayheadPosition;
   isPlaying: boolean;
+  highlightSyncopations?: boolean;
+  onToggleHighlightSyncopations?: () => void;
   onSelectStep: (mIdx: number, bIdx: number, sIdx: number) => void;
   onTogglePiece?: (pieceId: DrumPieceId) => void;
   onRemoveMeasure?: (index: number) => void;
@@ -33,6 +35,8 @@ export default function DrumScoreRenderer({
   selectedStepIndex,
   playhead,
   isPlaying,
+  highlightSyncopations = false,
+  onToggleHighlightSyncopations,
   onSelectStep,
   onRemoveMeasure,
 }: DrumScoreRendererProps) {
@@ -92,6 +96,7 @@ export default function DrumScoreRenderer({
           Modifier,
           GraceNote,
           GraceNoteGroup,
+          StaveTie,
         } = vf as any;
         const Glyphs = (vf as any).Glyphs || {};
 
@@ -105,6 +110,7 @@ export default function DrumScoreRenderer({
         context.setStrokeStyle('#94A3B8'); // Slate 400
 
         const recordedPositions: NoteXPosition[] = [];
+        const allRenderedNotes: any[] = [];
 
         measures.forEach((measure, mIdx) => {
           const [beatsCount, beatValue] = measure.timeSignature;
@@ -304,13 +310,33 @@ export default function DrumScoreRenderer({
                   }
                 }
 
-                // Note styling (cyan/violet neon vibe)
-                staveNote.setStyle({ fillStyle: '#38BDF8', strokeStyle: '#38BDF8' });
+                // Note styling (amber neon if syncopated and highlighted, else cyan)
+                const isStepSyncopated =
+                  step.isSyncopated ||
+                  step.tiedToNext ||
+                  step.tiedFromPrev ||
+                  (step.hits && step.hits.some((h: any) => h.isSyncopated || h.tiedToNext));
+
+                const noteColor = highlightSyncopations && isStepSyncopated ? '#F59E0B' : '#38BDF8';
+                staveNote.setStyle({ fillStyle: noteColor, strokeStyle: noteColor });
+                if (staveNote.noteHeads) {
+                  staveNote.noteHeads.forEach((nh: any) => {
+                    nh.setStyle({ fillStyle: noteColor, strokeStyle: noteColor });
+                  });
+                }
               }
 
               beatNotes.push(staveNote);
               measureNotes.push(staveNote);
               stepMapping.push({ bIdx, sIdx, note: staveNote });
+              allRenderedNotes.push({
+                mIdx,
+                bIdx,
+                sIdx,
+                note: staveNote,
+                step,
+                isRest,
+              });
             });
 
             // Handle Tuplets (3:2, 5:4, 6:4, 7:4, 9:8)
@@ -396,6 +422,43 @@ export default function DrumScoreRenderer({
           }
         });
 
+        // ---------------------------------------------------------
+        // Rhythmic Prolongation Ties (StaveTie)
+        // ---------------------------------------------------------
+        for (let i = 0; i < allRenderedNotes.length; i++) {
+          const currentEntry = allRenderedNotes[i];
+          const isTied =
+            currentEntry.step.tiedToNext ||
+            (currentEntry.step.hits && currentEntry.step.hits.some((h: any) => h.tiedToNext));
+
+          if (isTied) {
+            const nextEntry = allRenderedNotes[i + 1];
+            if (nextEntry && !nextEntry.isRest) {
+              try {
+                const tie = new StaveTie({
+                  first_note: currentEntry.note,
+                  last_note: nextEntry.note,
+                  firstNote: currentEntry.note,
+                  lastNote: nextEntry.note,
+                  first_indices: [0],
+                  last_indices: [0],
+                  firstIndexes: [0],
+                  lastIndexes: [0],
+                });
+
+                const tieColor = highlightSyncopations ? '#F59E0B' : '#38BDF8';
+                try {
+                  tie.setStyle({ fillStyle: tieColor, strokeStyle: tieColor });
+                } catch (_) {}
+
+                tie.setContext(context).draw();
+              } catch (tieErr) {
+                console.warn('VexFlow StaveTie draw error:', tieErr);
+              }
+            }
+          }
+        }
+
         if (!isCancelled) {
           setNotePositions(recordedPositions);
         }
@@ -412,7 +475,7 @@ export default function DrumScoreRenderer({
     return () => {
       isCancelled = true;
     };
-  }, [measures, totalWidth, totalHeight, measuresPerRow, currentMeasureWidth, rowHeight]);
+  }, [measures, totalWidth, totalHeight, measuresPerRow, currentMeasureWidth, rowHeight, highlightSyncopations]);
 
   // Find position of active playhead step
   const activePlayheadPos = useMemo(() => {
@@ -471,10 +534,36 @@ export default function DrumScoreRenderer({
           </span>
         </div>
 
-        <div className="flex items-center gap-4 text-[11px] font-mono">
+        <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
+          {/* Pedagogical Toggle Switch for Syncopations */}
+          {onToggleHighlightSyncopations && (
+            <button
+              type="button"
+              onClick={onToggleHighlightSyncopations}
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
+                highlightSyncopations
+                  ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
+                  : 'bg-white/5 border-white/10 text-gray-400 hover:text-amber-300 hover:border-amber-500/40'
+              }`}
+              title="Resaltar visualmente notas y ligaduras sincopadas (Ámbar neón #F59E0B)"
+            >
+              <span className="text-sm">𝄐</span>
+              <span>Destacar Síncopas</span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  highlightSyncopations ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
+                }`}
+              />
+            </button>
+          )}
+
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
             <span className="text-gray-300">Active Hit</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+            <span className="text-amber-300 font-semibold">𝄐 Síncopa / Tie</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-amber-400 font-bold text-xs">&gt;</span>
@@ -490,6 +579,21 @@ export default function DrumScoreRenderer({
           </div>
         </div>
       </div>
+
+      {/* Syncopation Pedagogical Info Banner */}
+      {highlightSyncopations && (
+        <div className="mt-3 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-[11px] font-mono text-amber-200">
+          <div className="flex items-center gap-2">
+            <span className="text-base">𝄐</span>
+            <span>
+              <strong>Modo Pedagógico Activo:</strong> Cabezas de nota y ligaduras en <strong>ámbar neón (#F59E0B)</strong> muestran cómo el ritmo desplaza los acentos a contratiempo y esquiva el impacto en los tiempos fuertes.
+            </span>
+          </div>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold uppercase">
+            Sincopado
+          </span>
+        </div>
+      )}
 
       {/* Main Score Scroll Container */}
       <div className="relative overflow-x-auto overflow-y-hidden py-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -640,6 +744,18 @@ export default function DrumScoreRenderer({
           {selectedBeat?.isTuplet && (
             <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-mono font-bold">
               Tuplet {selectedBeat.tupletRatio ? `${selectedBeat.tupletRatio[0]}:${selectedBeat.tupletRatio[1]}` : ''}
+            </span>
+          )}
+          {(selectedStep?.tiedToNext || selectedStep?.tiedFromPrev || selectedStep?.isSyncopated) && (
+            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold flex items-center gap-1">
+              <span>𝄐</span>
+              <span>
+                {selectedStep.tiedToNext
+                  ? 'Ligada (Tie →)'
+                  : selectedStep.tiedFromPrev
+                  ? 'Ligada (← Tied)'
+                  : 'Síncopa'}
+              </span>
             </span>
           )}
         </div>

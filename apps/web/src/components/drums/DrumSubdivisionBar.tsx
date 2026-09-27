@@ -16,10 +16,15 @@ interface DrumSubdivisionBarProps {
   isAccentMode?: boolean;
   isGhostMode?: boolean;
   isRest?: boolean;
+  isSyncopated?: boolean;
+  isTied?: boolean;
+  highlightSyncopations?: boolean;
   onChangeSubdivision: (sub: number) => void;
   onToggleAccent: () => void;
   onToggleGhost: () => void;
   onToggleRest: () => void;
+  onToggleSyncopate?: () => void;
+  onToggleHighlightSyncopations?: () => void;
   onClearStep: () => void;
   onClearMeasure: () => void;
   onRemoveMeasure?: () => void;
@@ -38,10 +43,15 @@ export default function DrumSubdivisionBar({
   isAccentMode,
   isGhostMode,
   isRest,
+  isSyncopated,
+  isTied,
+  highlightSyncopations,
   onChangeSubdivision,
   onToggleAccent,
   onToggleGhost,
   onToggleRest,
+  onToggleSyncopate,
+  onToggleHighlightSyncopations,
   onClearStep,
   onClearMeasure,
   onRemoveMeasure,
@@ -189,6 +199,50 @@ export default function DrumSubdivisionBar({
           <span>Silencio [Z]</span>
           {isRest && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse ml-0.5" />}
         </button>
+
+        {/* Syncopate / Anticipate Push Button */}
+        {onToggleSyncopate && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onToggleSyncopate}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
+              isSyncopated || isTied
+                ? 'bg-amber-500/25 border-amber-400 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] ring-1 ring-amber-400'
+                : 'bg-surface-slate border-white/10 text-gray-300 hover:border-amber-500/40 hover:text-amber-300'
+            }`}
+            title="𝄐 Síncopa / Anticipar: Desplaza el golpe una subdivisión hacia atrás (al contratiempo) y lo liga hacia adelante, silenciando el pulso fuerte [Atajo: S o Shift+S / P]"
+          >
+            <span className="text-base leading-none">𝄐</span>
+            <span>Síncopa / Push [S]</span>
+            {(isSyncopated || isTied) && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse ml-0.5" />
+            )}
+          </button>
+        )}
+
+        {/* Pedagogical Switch: Destacar Sincopas */}
+        {onToggleHighlightSyncopations && (
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onToggleHighlightSyncopations}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
+              highlightSyncopations
+                ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
+                : 'bg-surface-slate border-white/10 text-gray-400 hover:text-amber-300 hover:border-amber-500/40'
+            }`}
+            title="Activar switch pedagógico para destacar visualmente notas sincopadas y ligaduras en partitura y secuenciador"
+          >
+            <span className="text-sm">𝄐</span>
+            <span className="hidden sm:inline">Destacar Síncopas</span>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                highlightSyncopations ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
+              }`}
+            />
+          </button>
+        )}
 
         {/* Clear & Delete Options Popover Menu */}
         <div className="relative" ref={trashMenuRef}>

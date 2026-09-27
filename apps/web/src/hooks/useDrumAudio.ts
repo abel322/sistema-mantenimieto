@@ -401,6 +401,7 @@ export function useDrumAudio() {
       loopEventIdsRef.current = [];
 
       let totalMeasureTime = 0;
+      let tiedPiecesFromPrev = new Set<string>();
 
       measures.forEach((measure, mIdx) => {
         const [beatsCount, beatValue] = measure.timeSignature;
@@ -428,11 +429,28 @@ export function useDrumAudio() {
           beat.steps.forEach((step, sIdx) => {
             const stepTime = beatStartTime + sIdx * stepDuration;
 
+            // Determine which hits are tied into this step from previous
+            const currentTiedFromPrev = new Set(tiedPiecesFromPrev);
+
+            // Prepare tied pieces for the next step
+            tiedPiecesFromPrev = new Set<string>();
+            if (step.tiedToNext && step.hits) {
+              step.hits.forEach((h) => tiedPiecesFromPrev.add(h.pieceId));
+            } else if (step.hits) {
+              step.hits.forEach((h) => {
+                if (h.tiedToNext) tiedPiecesFromPrev.add(h.pieceId);
+              });
+            }
+
             Tone.Transport.schedule((time: number) => {
               // Trigger hits for this step only if NOT a rest
               if (!step.isRest && step.hits && step.hits.length > 0) {
                 step.hits.forEach((hit) => {
-                  playHit(hit.pieceId, hit.accent, hit.ghost, time);
+                  // Omit hit if tied from previous to simulate rhythmic prolongation (letting cymbals sustain or percussive suspension)
+                  const isTied = step.tiedFromPrev || currentTiedFromPrev.has(hit.pieceId);
+                  if (!isTied) {
+                    playHit(hit.pieceId, hit.accent, hit.ghost, time);
+                  }
                 });
               }
 

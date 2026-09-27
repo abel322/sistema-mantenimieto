@@ -207,6 +207,8 @@ export interface DrumHit {
   sticking?: 'R' | 'L' | 'K' | 'B' | string;
   flam?: boolean;
   drag?: boolean;
+  tiedToNext?: boolean;
+  isSyncopated?: boolean;
 }
 
 export interface DrumStep {
@@ -216,6 +218,9 @@ export interface DrumStep {
   sticking?: 'R' | 'L' | 'K' | 'B' | string;
   flam?: boolean;
   drag?: boolean;
+  tiedToNext?: boolean;
+  tiedFromPrev?: boolean;
+  isSyncopated?: boolean;
 }
 
 export type VoicingMode = 'snare' | 'kit';
@@ -362,6 +367,8 @@ export interface GroovePattern {
   measuresCount: 1 | 2;
   description: string;
   subdivision: '1/8' | '1/16' | '1/32' | '3:2' | '6:4' | '5:4' | '7:4';
+  isSyncopated?: boolean;
+  tags?: string[];
   measures: Array<{
     beats: Array<{
       subdivisions: Array<Array<{

@@ -47,10 +47,22 @@ export default function GrooveLibraryModal({
 
   const [selectedCategory, setSelectedCategory] = useState<GrooveCategory | 'all'>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
+  const [onlySyncopated, setOnlySyncopated] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [insertedNotice, setInsertedNotice] = useState<string | null>(null);
+
+  // Live count of syncopated groove patterns
+  const syncopatedCount = useMemo(() => {
+    return GROOVES_DATA.filter(
+      (g) =>
+        g.isSyncopated ||
+        g.tags?.includes('Sincopado') ||
+        g.description.toLowerCase().includes('síncopa') ||
+        g.description.toLowerCase().includes('sincopad')
+    ).length;
+  }, []);
 
   // Target measure multi-selection (e.g. [0] or [0, 1, 2, 3])
   const [selectedMeasures, setSelectedMeasures] = useState<number[]>([selectedMeasureIndex]);
@@ -107,9 +119,19 @@ export default function GrooveLibraryModal({
     }
   };
 
-  // Filter grooves by category, difficulty, search query (name, subcategory, timeSignature, bpm, description)
+  // Filter grooves by category, difficulty, syncopation and search query
   const filteredGrooves = useMemo(() => {
     return GROOVES_DATA.filter((item) => {
+      const isItemSyncopated =
+        item.isSyncopated ||
+        item.tags?.includes('Sincopado') ||
+        item.description.toLowerCase().includes('síncopa') ||
+        item.description.toLowerCase().includes('sincopad');
+
+      if (onlySyncopated && !isItemSyncopated) {
+        return false;
+      }
+
       const matchesCategory =
         selectedCategory === 'all' || item.category === selectedCategory;
 
@@ -125,16 +147,17 @@ export default function GrooveLibraryModal({
         item.timeSignature.toLowerCase().includes(query) ||
         item.description.toLowerCase().includes(query) ||
         item.suggestedBpm.toString().includes(query) ||
-        item.difficulty.toLowerCase().includes(query);
+        item.difficulty.toLowerCase().includes(query) ||
+        (item.tags && item.tags.some((t) => t.toLowerCase().includes(query)));
 
       return matchesCategory && matchesDifficulty && matchesSearch;
     });
-  }, [selectedCategory, selectedDifficulty, searchQuery]);
+  }, [selectedCategory, selectedDifficulty, searchQuery, onlySyncopated]);
 
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedDifficulty, searchQuery]);
+  }, [selectedCategory, selectedDifficulty, searchQuery, onlySyncopated]);
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredGrooves.length / ITEMS_PER_PAGE));
@@ -386,9 +409,12 @@ export default function GrooveLibraryModal({
           {/* Category Tabs with Live Counts */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => {
+                setSelectedCategory('all');
+                setOnlySyncopated(false);
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all whitespace-nowrap cursor-pointer ${
-                selectedCategory === 'all'
+                selectedCategory === 'all' && !onlySyncopated
                   ? 'bg-amber-500 text-black shadow-glow-amber'
                   : 'bg-surface-slate border border-white/5 text-gray-400 hover:text-white'
               }`}
@@ -396,13 +422,38 @@ export default function GrooveLibraryModal({
               Todos ({GROOVES_DATA.length})
             </button>
 
+            {/* Sincopado Dedicated Filter Button */}
+            <button
+              onClick={() => setOnlySyncopated((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border cursor-pointer ${
+                onlySyncopated
+                  ? 'bg-amber-500 text-black border-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] font-black'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:border-amber-400 hover:bg-amber-500/20'
+              }`}
+              title="Filtrar patrones sincopados característicos (Bossa Nova, Funk syncopations, Partido Alto, Latin Clave, Offbeat pushes)"
+            >
+              <span className="text-sm">𝄐</span>
+              <span>Sincopados</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                  onlySyncopated ? 'bg-black/20 text-black' : 'bg-amber-500/25 text-amber-200'
+                }`}
+              >
+                {syncopatedCount}
+              </span>
+              {onlySyncopated && <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />}
+            </button>
+
             {GROOVE_CATEGORIES.map((cat) => {
               const count = GROOVES_DATA.filter((g) => g.category === cat.id).length;
-              const isSelected = selectedCategory === cat.id;
+              const isSelected = selectedCategory === cat.id && !onlySyncopated;
               return (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
+                  onClick={() => {
+                    setSelectedCategory(cat.id);
+                    setOnlySyncopated(false);
+                  }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 whitespace-nowrap border cursor-pointer ${
                     isSelected
                       ? `${cat.badge} shadow-lg font-black`
@@ -468,6 +519,12 @@ export default function GrooveLibraryModal({
                             >
                               {catMeta?.label}
                             </span>
+                            {(groove.isSyncopated || groove.tags?.includes('Sincopado')) && (
+                              <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold flex items-center gap-1 shadow-sm">
+                                <span>𝄐</span>
+                                <span>Sincopado</span>
+                              </span>
+                            )}
                             {groove.subCategory && (
                               <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-white/5 text-gray-300">
                                 {groove.subCategory}

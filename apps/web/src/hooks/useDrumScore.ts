@@ -439,6 +439,169 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]
   );
 
+  // Toggle Tie (Ligadura de prolongación) directly on the active step
+  const toggleTie = useCallback(
+    (
+      mIdx?: number,
+      bIdx?: number,
+      sIdx?: number
+    ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      const stepIndex = typeof sIdx === 'number' ? sIdx : selectedStepIndex;
+
+      setMeasures((prev) => {
+        const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
+        const targetMeasure = next[measureIndex];
+        if (!targetMeasure) return prev;
+        const targetBeat = targetMeasure.beats[beatIndex];
+        if (!targetBeat) return prev;
+        const targetStep = targetBeat.steps[stepIndex];
+        if (!targetStep) return prev;
+
+        const newTiedState = !targetStep.tiedToNext;
+        targetStep.tiedToNext = newTiedState;
+        targetStep.hits.forEach((h) => {
+          h.tiedToNext = newTiedState;
+        });
+
+        // Find next step to mark tiedFromPrev
+        let nextStep: DrumStep | null = null;
+        if (stepIndex < targetBeat.steps.length - 1) {
+          nextStep = targetBeat.steps[stepIndex + 1];
+        } else if (beatIndex < targetMeasure.beats.length - 1) {
+          nextStep = targetMeasure.beats[beatIndex + 1]?.steps[0] || null;
+        } else if (measureIndex < next.length - 1) {
+          nextStep = next[measureIndex + 1]?.beats[0]?.steps[0] || null;
+        }
+
+        if (nextStep) {
+          nextStep.tiedFromPrev = newTiedState;
+          if (newTiedState && nextStep.hits.length === 0 && targetStep.hits.length > 0) {
+            // Replicate hit destination note for visual tie notation
+            nextStep.hits = targetStep.hits.map((h) => ({
+              ...h,
+              tiedToNext: false,
+              isSyncopated: true,
+            }));
+            nextStep.isRest = false;
+          }
+        }
+
+        return next;
+      });
+      setActivePresetId(null);
+    },
+    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]
+  );
+
+  // Syncopate / Anticipate [S]: Shifts hit one subdivision earlier (offbeat push) and ties forward
+  const toggleSyncopate = useCallback(
+    (
+      mIdx?: number,
+      bIdx?: number,
+      sIdx?: number
+    ) => {
+      const measureIndex = typeof mIdx === 'number' ? mIdx : selectedMeasureIndex;
+      const beatIndex = typeof bIdx === 'number' ? bIdx : selectedBeatIndex;
+      const stepIndex = typeof sIdx === 'number' ? sIdx : selectedStepIndex;
+
+      setMeasures((prev) => {
+        const next = JSON.parse(JSON.stringify(prev)) as DrumMeasure[];
+        const targetMeasure = next[measureIndex];
+        if (!targetMeasure) return prev;
+        const targetBeat = targetMeasure.beats[beatIndex];
+        if (!targetBeat) return prev;
+        const targetStep = targetBeat.steps[stepIndex];
+        if (!targetStep) return prev;
+
+        // Determine the previous subdivision step
+        let prevM = measureIndex;
+        let prevB = beatIndex;
+        let prevS = stepIndex - 1;
+
+        if (prevS < 0) {
+          if (prevB > 0) {
+            prevB = beatIndex - 1;
+            prevS = (targetMeasure.beats[prevB]?.steps.length || 1) - 1;
+          } else if (prevM > 0) {
+            prevM = measureIndex - 1;
+            const pm = next[prevM];
+            prevB = pm.beats.length - 1;
+            prevS = (pm.beats[prevB]?.steps.length || 1) - 1;
+          } else {
+            // At the very beginning of the score (Measure 1, Beat 1, Step 1)
+            // Anticipate to the upbeat of the current beat (e.g. step 1 or last step)
+            prevB = 0;
+            prevS = Math.max(1, targetBeat.steps.length - 1);
+          }
+        }
+
+        const prevMeasureObj = next[prevM];
+        const prevBeatObj = prevMeasureObj?.beats[prevB];
+        const prevStep = prevBeatObj?.steps[prevS];
+
+        if (!prevStep) return prev;
+
+        // Toggle logic: If target is already tied from previous, revert back to straight
+        if (targetStep.tiedFromPrev && prevStep.tiedToNext) {
+          prevStep.tiedToNext = false;
+          prevStep.isSyncopated = false;
+          prevStep.hits = [];
+          prevStep.isRest = true;
+
+          targetStep.tiedFromPrev = false;
+          targetStep.isSyncopated = false;
+          targetStep.isRest = false;
+          targetStep.hits.forEach((h) => {
+            h.tiedToNext = false;
+            h.isSyncopated = false;
+          });
+          return next;
+        }
+
+        // Apply Syncopation / Push:
+        const hitsToPush: DrumHit[] =
+          targetStep.hits.length > 0
+            ? targetStep.hits.map((h) => ({
+                ...h,
+                tiedToNext: true,
+                isSyncopated: true,
+              }))
+            : [
+                {
+                  pieceId: beatIndex % 2 === 1 ? 'snare' : 'kick',
+                  accent: isAccentMode,
+                  ghost: isGhostMode,
+                  tiedToNext: true,
+                  isSyncopated: true,
+                },
+              ];
+
+        // 1. Upbeat / Anticipated note receives the hit and ties to next
+        prevStep.hits = hitsToPush;
+        prevStep.isRest = false;
+        prevStep.tiedToNext = true;
+        prevStep.isSyncopated = true;
+
+        // 2. Downbeat / Strong pulse is tied from previous (attack silenced in audio, tied in VexFlow)
+        targetStep.hits = hitsToPush.map((h) => ({
+          ...h,
+          tiedToNext: false,
+          isSyncopated: true,
+        }));
+        targetStep.tiedFromPrev = true;
+        targetStep.isSyncopated = true;
+        targetStep.isRest = false;
+
+        return next;
+      });
+
+      setActivePresetId(null);
+    },
+    [selectedMeasureIndex, selectedBeatIndex, selectedStepIndex, isAccentMode, isGhostMode]
+  );
+
   // Clear entire measure
   const clearMeasure = useCallback(
     (mIdx?: number) => {
@@ -745,6 +908,8 @@ export function useDrumScore(initialPresetId: string = 'classic-rock') {
     toggleAccent,
     toggleGhost,
     toggleRest,
+    toggleTie,
+    toggleSyncopate,
     clearStep,
     clearMeasure,
     addMeasure,

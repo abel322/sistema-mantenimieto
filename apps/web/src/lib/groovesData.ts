@@ -190,6 +190,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Offbeat pushes'],
     description: 'Estilo Seattle 90s (Nirvana/Soundgarden): bombos arrastrados a contratiempo y crash acentuando el ataque.',
     measures: [
       m([
@@ -416,6 +418,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations', 'Pocket'],
     description: 'Clyde Stubblefield (James Brown): el beat más sampleado de la historia con ghost notes dinámicas y hi-hat abierto.',
     measures: [
       m([
@@ -436,6 +440,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations'],
     description: 'La cuna del funk: síncopa de bombo anticipada y caja respondiendo con precisión milimétrica.',
     measures: [
       m([
@@ -456,6 +462,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations', 'Linear'],
     description: 'David Garibaldi: fraseo lineal donde nunca suenan dos instrumentos a la vez en la misma semicorchea.',
     measures: [
       m([
@@ -476,6 +484,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations'],
     description: 'Zigaboo Modeliste (The Meters): síncopa de New Orleans con caja sincopada y charles arrastrado con swing.',
     measures: [
       m([
@@ -496,6 +506,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations', 'Displaced'],
     description: 'Desplazamiento rítmico: la caja se adelanta una semicorchea (al "e" o "&") rompiendo la expectativa.',
     measures: [
       m([
@@ -516,6 +528,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations', 'Pocket'],
     description: 'Groove de bolsillo lineal K-H-S-H fluido y bailable con acentos selectivos en charles y caja.',
     measures: [
       m([
@@ -536,6 +550,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations'],
     description: 'Tapiz continuo de notas fantasma en caja que rellenan todas las semicorcheas entre bombo y charles.',
     measures: [
       m([
@@ -556,6 +572,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations'],
     description: 'Acentos dinámicos en la primera semicorchea de cada negra en el charles (> . . . > . . .).',
     measures: [
       m([
@@ -563,6 +581,50 @@ export const GROOVES_DATA: GroovePattern[] = [
         [[sa(), ha()], [h()], [h()], [h()]],
         [[k(), ha()], [h()], [k(), h()], [h()]],
         [[sa(), ha()], [h()], [k(), h()], [ho()]],
+      ]),
+    ],
+  },
+  {
+    id: 'funk-syncopated-push',
+    name: 'Funk 16th Syncopated Push',
+    category: 'Funk & Gospel',
+    subCategory: 'Offbeat Pushes',
+    difficulty: 'Intermedio',
+    suggestedBpm: 106,
+    timeSignature: '4/4',
+    measuresCount: 1,
+    subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Funk syncopations', 'Offbeat pushes'],
+    description: 'Anticipación sincopada pura: el bombo empuja la última semicorchea del tiempo 2 y 4 ligando hacia adelante sobre el tiempo fuerte.',
+    measures: [
+      m([
+        [[k(true), h()], [h()], [h()], [h()]],
+        [[sa(), h()], [h()], [h()], [k(true), ho()]],
+        [[h()], [h()], [k(), h()], [h()]],
+        [[sa(), h()], [h()], [h()], [k(true), ho()]],
+      ]),
+    ],
+  },
+  {
+    id: 'offbeat-pushes-classic',
+    name: 'Offbeat Pushes & Anticipations',
+    category: 'Funk & Gospel',
+    subCategory: 'Offbeat Pushes',
+    difficulty: 'Avanzado',
+    suggestedBpm: 112,
+    timeSignature: '4/4',
+    measuresCount: 1,
+    subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Offbeat pushes'],
+    description: 'Patrón pedagógico de acentuación sincopada: golpes en los contratiempos (& y a) con silencios y ligaduras sobre los pulsos 1 y 3.',
+    measures: [
+      m([
+        [[k(true), cr()], [h()], [sa(), h()], [h()]],
+        [[h()], [k(), h()], [sa(), ho()], [k(true)]],
+        [[cr()], [h()], [sa(), h()], [h()]],
+        [[h()], [k(), h()], [sa(), ho()], [k(true)]],
       ]),
     ],
   },
@@ -924,6 +986,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     measuresCount: 1,
     subdivision: '1/16',
     swingRatio: 0.42,
+    isSyncopated: true,
+    tags: ['Sincopado', 'Offbeat pushes', 'UK Garage'],
     description: 'Ritmo saltarín británico con swing marcado, kick sincopado que evita el tiempo 3 y caja elegante.',
     measures: [
       m([
@@ -988,6 +1052,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Bossa Nova', 'Brazilian'],
     description: 'Helô Pinheiro / Jobim: clave de bossa en aro de caja, bombo en síncopa suave y charles de pie en 2 y 4.',
     measures: [
       m([
@@ -1028,6 +1094,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Partido Alto', 'Brazilian'],
     description: 'Síncopa tradicional de Río: acentos cruzados en el aro de caja y cencerro con bombo sincopado.',
     measures: [
       m([
@@ -1128,6 +1196,8 @@ export const GROOVES_DATA: GroovePattern[] = [
     timeSignature: '4/4',
     measuresCount: 1,
     subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Latin Clave', 'Afro-Cuban'],
     description: 'Clave de son 2:3 en rimshot de caja con bombo tocando el tumbao afrocubano en el tiempo 4.',
     measures: [
       m([
@@ -1135,6 +1205,28 @@ export const GROOVES_DATA: GroovePattern[] = [
         [[r()], [sa(), r()], [r()], [r()]],
         [[sa(), r()], [r()], [r()], [sa(), r()]],
         [[r()], [r()], [k(true), sa(), r()], [k()]],
+      ]),
+    ],
+  },
+  {
+    id: 'latin-clave-syncopated-push',
+    name: 'Latin Clave 3:2 Syncopated Push',
+    category: 'Latin & World',
+    subCategory: 'Afro-Cuban',
+    difficulty: 'Avanzado',
+    suggestedBpm: 108,
+    timeSignature: '4/4',
+    measuresCount: 1,
+    subdivision: '1/16',
+    isSyncopated: true,
+    tags: ['Sincopado', 'Latin Clave', 'Offbeat pushes'],
+    description: 'Clave afrocubana 3:2 con empuje sincopado (push anticipado) ligando el contratiempo del pulso 2 al tiempo 3.',
+    measures: [
+      m([
+        [[sa(), cb(true)], [cb()], [cb()], [sa(), cb()]],
+        [[cb()], [cb()], [sa(), cb(true)], [k(true), ho()]],
+        [[k(), r()], [cb()], [sa(), cb()], [cb()]],
+        [[cb()], [sa(), cb()], [k(true), cb()], [ho()]],
       ]),
     ],
   },

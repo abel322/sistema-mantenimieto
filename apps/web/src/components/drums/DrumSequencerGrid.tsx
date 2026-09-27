@@ -12,6 +12,8 @@ interface DrumSequencerGridProps {
   selectedStepIndex: number;
   playhead: PlayheadPosition;
   isPlaying: boolean;
+  highlightSyncopations?: boolean;
+  onToggleHighlightSyncopations?: () => void;
   onSelectStep: (mIdx: number, bIdx: number, sIdx: number) => void;
   onTogglePiece: (pieceId: DrumPieceId, mIdx: number, bIdx: number, sIdx: number) => void;
   onPreviewHit: (pieceId: DrumPieceId) => void;
@@ -24,6 +26,8 @@ export default function DrumSequencerGrid({
   selectedStepIndex,
   playhead,
   isPlaying,
+  highlightSyncopations = false,
+  onToggleHighlightSyncopations,
   onSelectStep,
   onTogglePiece,
   onPreviewHit,
@@ -40,7 +44,26 @@ export default function DrumSequencerGrid({
             Compás {measureIndex + 1}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-gray-400 font-mono">
+        <div className="flex items-center gap-3 text-[11px] text-gray-400 font-mono flex-wrap">
+          {onToggleHighlightSyncopations && (
+            <button
+              type="button"
+              onClick={onToggleHighlightSyncopations}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all flex items-center gap-1 border cursor-pointer select-none ${
+                highlightSyncopations
+                  ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
+                  : 'bg-white/5 border-white/10 text-gray-400 hover:text-amber-300'
+              }`}
+              title="Resaltar en ámbar neón las celdas y notas sincopadas"
+            >
+              <span>𝄐 Destacar Síncopas</span>
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  highlightSyncopations ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
+                }`}
+              />
+            </button>
+          )}
           <span className="hidden sm:inline">Click celda: Activar/Desactivar</span>
           <span className="text-gray-600 hidden sm:inline">•</span>
           <span className="text-synth-cyan">Atajos: K, S, H, C, R, T, F</span>
@@ -181,6 +204,13 @@ export default function DrumSequencerGrid({
                           const isHitActive = !!hit;
                           const isAccent = !!hit?.accent;
                           const isGhost = !!hit?.ghost;
+                          const isStepSyncopated =
+                            step.isSyncopated ||
+                            step.tiedToNext ||
+                            step.tiedFromPrev ||
+                            hit?.isSyncopated ||
+                            hit?.tiedToNext;
+                          const isVisualSyncopated = highlightSyncopations && isStepSyncopated;
 
                           const isSelectedStep =
                             isSelectedBeat && sIdx === selectedStepIndex;
@@ -200,11 +230,15 @@ export default function DrumSequencerGrid({
                               }}
                               className={`flex-1 h-9 rounded-md flex items-center justify-center relative transition-all duration-100 ${
                                 isHitActive
-                                  ? isAccent
+                                  ? isVisualSyncopated
+                                    ? 'bg-amber-400 text-black font-black shadow-[0_0_15px_rgba(245,158,11,0.7)] border-2 border-amber-200 scale-[1.04] ring-1 ring-amber-400'
+                                    : isAccent
                                     ? 'bg-amber-400 text-black font-extrabold shadow-[0_0_12px_rgba(245,158,11,0.5)] border border-amber-300 scale-[1.03]'
                                     : isGhost
                                     ? 'bg-purple-900/60 text-purple-300 border border-purple-400/50 shadow-inner'
                                     : 'border border-white/20 text-black font-bold shadow-[0_0_10px_rgba(34,211,238,0.4)]'
+                                  : isVisualSyncopated
+                                  ? 'bg-amber-500/10 border border-amber-500/30'
                                   : 'bg-surface-slate/80 hover:bg-white/10 border border-white/5'
                               } ${
                                 isSelectedStep
@@ -216,19 +250,26 @@ export default function DrumSequencerGrid({
                                   : ''
                               }`}
                               style={
-                                isHitActive && !isAccent && !isGhost
+                                isHitActive && !isAccent && !isGhost && !isVisualSyncopated
                                   ? { backgroundColor: piece.color }
                                   : {}
                               }
                               title={`${piece.name} - Tiempo ${bIdx + 1}.${sIdx + 1}${
                                 isAccent ? ' (Acento)' : isGhost ? ' (Ghost)' : ''
-                              }`}
+                              }${isStepSyncopated ? ' [𝄐 Síncopa / Tie]' : ''}`}
                             >
                               {/* Inner Hit Label */}
                               {isHitActive && (
-                                <span className="text-[10px] font-mono leading-none">
-                                  {isAccent ? '>' : isGhost ? '(g)' : piece.shortcut}
-                                </span>
+                                <div className="flex flex-col items-center justify-center leading-none">
+                                  <span className="text-[10px] font-mono font-bold leading-none">
+                                    {isAccent ? '>' : isGhost ? '(g)' : piece.shortcut}
+                                  </span>
+                                  {isVisualSyncopated && (
+                                    <span className="text-[8px] font-extrabold leading-none text-black mt-0.5">
+                                      {step.tiedToNext ? '𝄐→' : step.tiedFromPrev ? '←𝄐' : '𝄐'}
+                                    </span>
+                                  )}
+                                </div>
                               )}
 
                               {/* Playhead Sweep Beam Highlight */}
