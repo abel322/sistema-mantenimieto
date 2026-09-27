@@ -377,29 +377,29 @@ export default function GrooveLibraryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-5xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-5xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl transition-colors duration-200">
         {/* Mobile Pull Handle */}
-        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
+        <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
 
         {/* Header */}
-        <div className="p-3 sm:p-4 border-b border-white/10 bg-[#0B0F19]/95 backdrop-blur-md flex-shrink-0 space-y-2.5">
+        <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md flex-shrink-0 space-y-2.5">
           {/* Row 1: Title, Count badge, and Close Button */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-500/20 via-pink-500/20 to-synth-cyan/20 border border-amber-500/30 flex items-center justify-center shadow-glow-amber flex-shrink-0">
-                <Disc3 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-spin-slow" />
+                <Disc3 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 dark:text-amber-400 animate-spin-slow" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-white truncate">
+                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white truncate">
                     Groove Vault
                   </h2>
-                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono flex-shrink-0">
+                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 border border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-300 font-mono flex-shrink-0">
                     {allGrooves.length}
                   </span>
                 </div>
-                <p className="text-[10px] sm:text-xs text-gray-400 font-mono truncate hidden sm:block">
+                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-gray-400 font-mono truncate hidden sm:block">
                   Biblioteca profesional de ritmos divididos por estilo, métrica y sensación
                 </p>
               </div>
@@ -409,16 +409,16 @@ export default function GrooveLibraryModal({
               <button
                 type="button"
                 onClick={() => setIsSaveModalOpen(true)}
-                className="hidden sm:inline-flex px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/25 via-purple-500/25 to-pink-500/25 hover:from-cyan-500/35 hover:via-purple-500/35 hover:to-pink-500/35 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-mono font-bold transition-all items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-xl bg-cyan-100 dark:bg-gradient-to-r dark:from-cyan-500/25 dark:via-purple-500/25 dark:to-pink-500/25 hover:bg-cyan-200 dark:hover:from-cyan-500/35 dark:hover:via-purple-500/35 dark:hover:to-pink-500/35 text-cyan-900 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/40 text-xs font-mono font-bold transition-all items-center gap-1.5 cursor-pointer shadow-sm"
                 title="Capturar o diseñar un groove en la mini matriz para el Groove Vault"
               >
-                <Plus className="w-4 h-4 text-cyan-400" />
+                <Plus className="w-4 h-4 text-cyan-700 dark:text-cyan-400" />
                 <span>+ Guardar / Crear Groove</span>
               </button>
 
               <button
                 onClick={onClose}
-                className="p-1.5 sm:p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
+                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-transparent text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
                 title="Cerrar ventana"
               >
                 <X className="w-5 h-5" />
@@ -848,7 +848,7 @@ export default function GrooveLibraryModal({
         </div>
 
         {/* Footer with Pagination */}
-        <div className="p-3 sm:p-4 border-t border-white/10 bg-surface-card/60 backdrop-blur flex items-center justify-between gap-3 text-xs font-mono text-gray-400 flex-shrink-0">
+        <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-surface-card/60 backdrop-blur flex items-center justify-between gap-3 text-xs font-mono text-slate-500 dark:text-gray-400 flex-shrink-0">
           <div>
             Mostrando {paginatedGrooves.length} de {filteredGrooves.length} grooves
           </div>
@@ -858,20 +858,20 @@ export default function GrooveLibraryModal({
               <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 title="Página anterior"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <span className="px-2 text-gray-300">
+              <span className="px-2 text-slate-700 dark:text-gray-300">
                 Pág. {currentPage} / {totalPages}
               </span>
 
               <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded-lg border border-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 title="Página siguiente"
               >
                 <ChevronRight className="w-4 h-4" />

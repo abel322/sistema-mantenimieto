@@ -89,8 +89,8 @@ export default function DrumSequencerGrid({
                     key={`header-beat-${bIdx}`}
                     className={`flex-1 flex flex-col items-center py-1 px-1.5 rounded-lg border transition-all ${
                       isSelectedBeat
-                        ? 'bg-synth-cyan/10 border-synth-cyan/40 text-synth-cyan'
-                        : 'bg-white/[0.02] border-white/5 text-gray-400'
+                        ? 'bg-cyan-100 dark:bg-synth-cyan/10 border-cyan-400 dark:border-synth-cyan/40 text-cyan-900 dark:text-synth-cyan'
+                        : 'bg-slate-100 dark:bg-white/[0.02] border-slate-200 dark:border-white/5 text-slate-500 dark:text-gray-400'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full px-1 text-[10px]">
@@ -139,10 +139,10 @@ export default function DrumSequencerGrid({
                             onClick={() => onSelectStep(measureIndex, bIdx, sIdx)}
                             className={`flex-1 h-3 rounded-sm transition-all ${
                               isStepSelected
-                                ? 'bg-synth-cyan shadow-[0_0_8px_#22d3ee]'
+                                ? 'bg-cyan-500 dark:bg-synth-cyan shadow-[0_0_8px_#22d3ee]'
                                 : isPlayheadHere
-                                ? 'bg-synth-violet shadow-[0_0_8px_#7c3aed]'
-                                : 'bg-white/10 hover:bg-white/20'
+                                ? 'bg-purple-600 dark:bg-synth-violet shadow-[0_0_8px_#7c3aed]'
+                                : 'bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20'
                             }`}
                             title={`Seleccionar Tiempo ${bIdx + 1}, Subdivisión ${sIdx + 1}`}
                           />
@@ -162,24 +162,24 @@ export default function DrumSequencerGrid({
             return (
               <div
                 key={`grid-row-${pieceId}`}
-                className="flex items-center gap-1.5 group hover:bg-white/[0.02] rounded-lg p-0.5 transition-colors"
+                className="flex items-center gap-1.5 group hover:bg-black/[0.02] dark:hover:bg-white/[0.02] rounded-lg p-0.5 transition-colors"
               >
                 {/* Instrument Header Button (Triggers preview on click) */}
                 <button
                   onClick={() => onPreviewHit(pieceId)}
-                  className="w-36 flex-shrink-0 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface-slate border border-white/5 hover:border-synth-cyan/40 text-left transition-all group-hover:shadow-sm"
+                  className="w-36 flex-shrink-0 flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-surface-slate border border-slate-200 dark:border-white/5 hover:border-cyan-400 dark:hover:border-synth-cyan/40 text-left transition-all group-hover:shadow-sm"
                 >
                   <div className="flex items-center gap-1.5 truncate">
                     <span
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: piece.color }}
                     />
-                    <span className="text-xs font-semibold text-gray-200 truncate">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-gray-200 truncate">
                       {piece.shortName}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-white/10 text-gray-400 group-hover:text-synth-cyan">
+                    <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-gray-400 group-hover:text-cyan-700 dark:group-hover:text-synth-cyan">
                       [{piece.shortcut}]
                     </span>
                   </div>
@@ -195,8 +195,8 @@ export default function DrumSequencerGrid({
                         key={`row-${pieceId}-b${bIdx}`}
                         className={`flex-1 flex gap-1 p-1 rounded-lg border transition-colors ${
                           isSelectedBeat
-                            ? 'bg-synth-cyan/[0.04] border-synth-cyan/20'
-                            : 'bg-white/[0.01] border-white/5'
+                            ? 'bg-cyan-50/50 dark:bg-synth-cyan/[0.04] border-cyan-300 dark:border-synth-cyan/20'
+                            : 'bg-slate-50 dark:bg-white/[0.01] border-slate-200 dark:border-white/5'
                         }`}
                       >
                         {beat.steps.map((step, sIdx) => {
@@ -239,10 +239,10 @@ export default function DrumSequencerGrid({
                                     : 'border border-white/20 text-black font-bold shadow-[0_0_10px_rgba(34,211,238,0.4)]'
                                   : isVisualSyncopated
                                   ? 'bg-amber-500/10 border border-amber-500/30'
-                                  : 'bg-surface-slate/80 hover:bg-white/10 border border-white/5'
+                                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-surface-slate/80 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5'
                               } ${
                                 isSelectedStep
-                                  ? 'ring-2 ring-synth-cyan ring-offset-1 ring-offset-obsidian'
+                                  ? 'ring-2 ring-cyan-500 dark:ring-synth-cyan ring-offset-1 ring-offset-white dark:ring-offset-obsidian'
                                   : ''
                               } ${
                                 isPlayheadHere

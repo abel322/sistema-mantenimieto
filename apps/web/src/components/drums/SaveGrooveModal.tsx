@@ -1104,27 +1104,27 @@ export default function SaveGrooveModal({
   const currentMeasureData = matrixMeasures[activeMeasureTab] || matrixMeasures[0];
 
   return (
-    <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[92vh] sm:max-w-4xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+    <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[92vh] sm:max-w-4xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl transition-colors duration-200">
         {/* Mobile Pull Handle */}
-        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
+        <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
 
         {/* Sticky Header */}
-        <div className="sticky top-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-b border-white/10 p-3 sm:p-4 flex justify-between items-center gap-2 flex-shrink-0">
+        <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-b border-slate-200 dark:border-white/10 p-3 sm:p-4 flex justify-between items-center gap-2 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] flex-shrink-0">
-              <Bookmark className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-cyan-100 dark:bg-gradient-to-tr dark:from-cyan-500/20 dark:to-purple-500/20 border border-cyan-300 dark:border-cyan-500/40 flex items-center justify-center text-cyan-700 dark:text-cyan-300 shadow-sm dark:shadow-[0_0_15px_rgba(6,182,212,0.3)] flex-shrink-0">
+              <Bookmark className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-600 dark:text-cyan-400" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-white leading-tight truncate">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">
                   Guardar Groove en Vault
                 </h3>
-                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-semibold flex-shrink-0">
+                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-500/20 border border-cyan-300 dark:border-cyan-500/40 text-cyan-800 dark:text-cyan-300 font-semibold flex-shrink-0">
                   Personalizado
                 </span>
               </div>
-              <p className="text-[10px] sm:text-xs text-gray-400 font-mono truncate hidden sm:block">
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-gray-400 font-mono truncate hidden sm:block">
                 Captura de partitura o diseña en la mini matriz secuenciadora interactiva
               </p>
             </div>
@@ -1132,7 +1132,7 @@ export default function SaveGrooveModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 sm:p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
+            className="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-transparent text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
             title="Cerrar modal"
           >
             <X className="w-5 h-5" />
@@ -1760,14 +1760,14 @@ export default function SaveGrooveModal({
           </div>
 
           {/* Sticky Footer */}
-          <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 p-3 sm:p-4 flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="sticky bottom-0 z-10 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 p-3 sm:p-4 flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
             <button
               type="button"
               onClick={() => {
                 stopPreviewAudio();
                 onClose();
               }}
-              className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono text-center"
+              className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono text-center"
             >
               Cancelar
             </button>

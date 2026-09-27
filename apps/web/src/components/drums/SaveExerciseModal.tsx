@@ -82,22 +82,22 @@ export default function SaveExerciseModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-6 transition-colors duration-200">
         {/* Mobile Pull Handle */}
-        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-1 sm:hidden flex-shrink-0" />
+        <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full mx-auto my-1 sm:hidden flex-shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10 gap-2">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/10 gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-glow-cyan flex-shrink-0">
               <Save className="w-4 h-4 sm:w-5 sm:h-5" />
             </span>
             <div className="min-w-0">
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
                 Guardar Ejercicio / Rutina
               </h2>
-              <p className="text-[10px] sm:text-xs text-gray-400 truncate hidden sm:block">
+              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-gray-400 truncate hidden sm:block">
                 Almacena tu composición para practicarla y recuperarla en cualquier momento
               </p>
             </div>
@@ -105,7 +105,7 @@ export default function SaveExerciseModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 sm:p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer flex-shrink-0"
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-surface-slate border border-slate-200 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20 transition-all cursor-pointer flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -113,30 +113,30 @@ export default function SaveExerciseModal({
 
         {/* Stats Preview Bar */}
         <div className="grid grid-cols-4 gap-2 text-center">
-          <div className="p-2.5 rounded-xl bg-surface-slate border border-white/5">
-            <div className="text-[10px] font-mono text-gray-400">TEMPO</div>
-            <div className="text-sm font-bold text-synth-cyan font-mono">{bpm} BPM</div>
+          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-surface-slate border border-slate-200 dark:border-white/5">
+            <div className="text-[10px] font-mono text-slate-500 dark:text-gray-400">TEMPO</div>
+            <div className="text-sm font-bold text-cyan-700 dark:text-synth-cyan font-mono">{bpm} BPM</div>
           </div>
-          <div className="p-2.5 rounded-xl bg-surface-slate border border-white/5">
-            <div className="text-[10px] font-mono text-gray-400">MÉTRICA</div>
-            <div className="text-sm font-bold text-synth-violet font-mono">
+          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-surface-slate border border-slate-200 dark:border-white/5">
+            <div className="text-[10px] font-mono text-slate-500 dark:text-gray-400">MÉTRICA</div>
+            <div className="text-sm font-bold text-purple-700 dark:text-synth-violet font-mono">
               {timeSignature[0]}/{timeSignature[1]}
             </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-surface-slate border border-white/5">
-            <div className="text-[10px] font-mono text-gray-400">COMPASES</div>
-            <div className="text-sm font-bold text-amber-400 font-mono">{measures.length}</div>
+          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-surface-slate border border-slate-200 dark:border-white/5">
+            <div className="text-[10px] font-mono text-slate-500 dark:text-gray-400">COMPASES</div>
+            <div className="text-sm font-bold text-amber-600 dark:text-amber-400 font-mono">{measures.length}</div>
           </div>
-          <div className="p-2.5 rounded-xl bg-surface-slate border border-white/5">
-            <div className="text-[10px] font-mono text-gray-400">GOLPES</div>
-            <div className="text-sm font-bold text-emerald-400 font-mono">{totalHitsCount}</div>
+          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-surface-slate border border-slate-200 dark:border-white/5">
+            <div className="text-[10px] font-mono text-slate-500 dark:text-gray-400">GOLPES</div>
+            <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">{totalHitsCount}</div>
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-mono font-bold text-gray-300 uppercase mb-1.5">
+            <label className="block text-xs font-mono font-bold text-slate-700 dark:text-gray-300 uppercase mb-1.5">
               Título del Ejercicio
             </label>
             <input
@@ -145,13 +145,13 @@ export default function SaveExerciseModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ej: Práctica Paradiddle 110 BPM, Fill Gospel Compás 2..."
-              className="w-full px-4 py-2.5 rounded-xl bg-surface-dark border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-synth-cyan focus:ring-1 focus:ring-synth-cyan transition-all"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200 dark:border-white/10 text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
             />
           </div>
 
           {/* Tags Selection */}
           <div>
-            <label className="block text-xs font-mono font-bold text-gray-300 uppercase mb-2">
+            <label className="block text-xs font-mono font-bold text-slate-700 dark:text-gray-300 uppercase mb-2">
               Etiquetas / Categorías
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2.5">
@@ -164,11 +164,11 @@ export default function SaveExerciseModal({
                     onClick={() => handleToggleTag(tag)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all flex items-center gap-1 cursor-pointer border ${
                       isSelected
-                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-sm font-bold'
-                        : 'bg-surface-slate border-white/5 text-gray-400 hover:text-white'
+                        ? 'bg-cyan-100 dark:bg-cyan-500/20 border-cyan-400 text-cyan-800 dark:text-cyan-300 shadow-sm font-bold'
+                        : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/5 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    {isSelected && <Check className="w-3 h-3 text-cyan-400" />}
+                    {isSelected && <Check className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />}
                     <span>{tag}</span>
                   </button>
                 );
@@ -188,12 +188,12 @@ export default function SaveExerciseModal({
                   }
                 }}
                 placeholder="+ Agregar etiqueta personalizada..."
-                className="flex-1 px-3 py-1.5 rounded-xl bg-surface-dark border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-synth-cyan"
+                className="flex-1 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:border-cyan-500"
               />
               <button
                 type="button"
                 onClick={handleAddCustomTag}
-                className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white"
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-700 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white"
               >
                 Agregar
               </button>
@@ -201,11 +201,11 @@ export default function SaveExerciseModal({
           </div>
 
           {/* Submit Actions */}
-          <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-3">
+          <div className="pt-3 border-t border-slate-200 dark:border-white/10 flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-surface-slate border border-white/10 text-xs font-mono text-gray-400 hover:text-white transition-all cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-surface-slate border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
             >
               Cancelar
             </button>

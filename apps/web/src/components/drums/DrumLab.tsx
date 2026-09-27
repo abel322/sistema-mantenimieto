@@ -405,26 +405,26 @@ export default function DrumLab() {
   const isCurrentSelectionRest = !score.selectedStep || !!score.selectedStep.isRest || currentStepHits.length === 0;
 
   return (
-    <div className="dark w-full min-h-screen bg-[#070B14] text-slate-100 py-6 px-8 flex flex-col items-center">
-      <div className="w-full max-w-6xl mx-auto flex flex-col gap-5 px-2">
+    <div className="w-full min-h-screen bg-slate-50 dark:bg-[#070B14] text-slate-900 dark:text-slate-100 transition-colors duration-200 flex flex-col items-center">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5">
         {/* 1. Encabezado con Título y Botones */}
-        <div className="w-full flex items-center justify-between gap-4 pb-6 border-b border-white/10 flex-wrap">
+        <div className="w-full flex items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-white/10 flex-wrap">
           <div className="max-w-xl min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="p-1.5 rounded-lg bg-gradient-electric text-white shadow-glow-violet">
                 <Headphones className="w-4 h-4" />
               </span>
-              <span className="text-xs font-mono uppercase tracking-widest text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-2 py-0.5 rounded-md font-bold">
+              <span className="text-xs font-mono uppercase tracking-widest bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-500/30 px-2 py-0.5 rounded-md font-bold">
                 SONORA PERCUSSION LAB
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 font-mono font-semibold">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950/80 text-cyan-800 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-500/30 font-mono font-semibold">
                 Web Audio 2.0 • Tone.js
               </span>
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl text-white font-extrabold tracking-tight break-words">
+            <h1 className="text-2xl text-slate-900 dark:text-white font-extrabold tracking-tight break-words">
               Sonora Drum Lab - Interactive Percussion Studio & Polyrhythmic Sequencer
             </h1>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-slate-600 dark:text-slate-400 text-xs mt-1">
               Editor ágil de batería en clave de percusión estándar con soporte para tresillos, quintillos, seisillos y reproducción sincronizada en tiempo real.
             </p>
           </div>
@@ -435,10 +435,10 @@ export default function DrumLab() {
             <button
               type="button"
               onClick={() => setIsSaveExerciseOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-white/10 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:border-cyan-500 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
               title="Guardar el ejercicio actual como rutina de práctica"
             >
-              <Save className="w-3.5 h-3.5 text-slate-300" />
+              <Save className="w-3.5 h-3.5 text-slate-500 dark:text-slate-300" />
               <span>Guardar Ejercicio</span>
             </button>
 
@@ -446,12 +446,12 @@ export default function DrumLab() {
             <button
               type="button"
               onClick={() => setIsExerciseLibraryOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-950/50 hover:bg-purple-900/60 text-purple-300 border border-purple-500/40 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:border-cyan-500 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
               title="Ver mis rutinas de práctica guardadas"
             >
-              <FolderOpen className="w-3.5 h-3.5 text-purple-300" />
+              <FolderOpen className="w-3.5 h-3.5 text-purple-600 dark:text-purple-300" />
               <span>Mis Rutinas</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-purple-500/30 text-purple-200 font-bold">
+              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-purple-100 dark:bg-purple-500/30 text-purple-700 dark:text-purple-200 font-bold">
                 {storage.exercises.length}
               </span>
             </button>
@@ -460,12 +460,12 @@ export default function DrumLab() {
             <button
               type="button"
               onClick={() => setIsRudimentsOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-cyan-950/50 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-500/40 text-xs font-semibold font-mono transition-all shadow-sm shadow-[0_0_15px_rgba(34,211,238,0.2)] cursor-pointer whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:border-cyan-500 text-xs font-semibold font-mono transition-all shadow-sm cursor-pointer whitespace-nowrap flex-shrink-0"
               title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
             >
               <span className="text-base">🥁</span>
               <span>Rudimentos & Fills</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-cyan-500/30 text-cyan-200 uppercase font-mono font-bold">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-500/30 text-cyan-800 dark:text-cyan-200 uppercase font-mono font-bold">
                 Vault
               </span>
             </button>
@@ -474,24 +474,24 @@ export default function DrumLab() {
             <button
               type="button"
               onClick={() => setIsGroovesOpen(true)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-950/50 hover:bg-amber-900/60 text-amber-300 border border-amber-500/40 text-xs font-semibold font-mono transition-all shadow-sm shadow-[0_0_15px_rgba(245,158,11,0.2)] cursor-pointer whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 hover:border-cyan-500 text-xs font-semibold font-mono transition-all shadow-sm cursor-pointer whitespace-nowrap flex-shrink-0"
               title="Abrir Groove Vault (85+ patrones listos para tocar)"
             >
               <span className="text-base">⚡</span>
               <span>Groove Vault</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/30 text-amber-200 uppercase font-mono font-bold">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/30 text-amber-800 dark:text-amber-200 uppercase font-mono font-bold">
                 85+
               </span>
             </button>
 
             {/* View Layout Mode Selector */}
-            <div className="flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-white/10 flex-shrink-0">
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 flex-shrink-0">
               <button
                 onClick={() => setViewMode('both')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   viewMode === 'both'
                     ? 'bg-gradient-electric text-white shadow-glow-violet'
-                    : 'text-slate-300 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Vista Completa
@@ -501,7 +501,7 @@ export default function DrumLab() {
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   viewMode === 'score'
                     ? 'bg-gradient-electric text-white shadow-glow-violet'
-                    : 'text-slate-300 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Partitura
@@ -511,7 +511,7 @@ export default function DrumLab() {
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                   viewMode === 'grid'
                     ? 'bg-gradient-electric text-white shadow-glow-violet'
-                    : 'text-slate-300 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 DAW
@@ -718,16 +718,16 @@ export default function DrumLab() {
         )}
 
         {/* Hardware & Web Audio Specs Footer Banner */}
-        <div className="p-4 rounded-xl bg-surface-card/60 border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400 shadow-glass">
+        <div className="p-4 rounded-xl bg-white dark:bg-surface-card/60 border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600 dark:text-gray-400 shadow-sm dark:shadow-glass">
           <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-synth-cyan flex-shrink-0" />
+            <Info className="w-4 h-4 text-cyan-600 dark:text-synth-cyan flex-shrink-0" />
             <span>
               Motor de percusión sintetizado vía Tone.js (MembraneSynth + NoiseSynth) a 48kHz con latencia ultra baja y cero dependencias externas de CORS.
             </span>
           </div>
           <div className="flex items-center gap-4 font-mono text-[11px]">
-            <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
               AUDIO ENGINE: ACTIVE
             </span>
             <span>LATENCY: &lt; 5MS</span>
@@ -837,8 +837,8 @@ export default function DrumLab() {
 
         {/* Mobile Quick Menu Popover */}
         {isMobileQuickMenuOpen && (
-          <div className="absolute bottom-14 right-0 w-64 rounded-2xl bg-[#0B0F19]/95 backdrop-blur-xl border border-white/15 p-3 shadow-2xl space-y-2 animate-in fade-in slide-in-from-bottom-2">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-synth-cyan font-bold px-2 py-1 border-b border-white/10">
+          <div className="absolute bottom-14 right-0 w-64 rounded-2xl bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-xl border border-slate-200 dark:border-white/15 p-3 shadow-2xl space-y-2 animate-in fade-in slide-in-from-bottom-2 text-slate-800 dark:text-slate-100">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-cyan-800 dark:text-synth-cyan font-bold px-2 py-1 border-b border-slate-200 dark:border-white/10">
               ACCESO RÁPIDO VAULTS & TOOLS
             </div>
 
@@ -848,7 +848,7 @@ export default function DrumLab() {
                 setIsMobileQuickMenuOpen(false);
                 setIsRudimentsOpen(true);
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-500/30 text-cyan-900 dark:text-cyan-300 text-xs font-mono font-semibold text-left"
             >
               <span>🥁</span>
               <span>Rudiment Vault</span>
@@ -860,7 +860,7 @@ export default function DrumLab() {
                 setIsMobileQuickMenuOpen(false);
                 setIsGroovesOpen(true);
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs font-mono font-semibold text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-300 text-xs font-mono font-semibold text-left"
             >
               <span>⚡</span>
               <span>Groove Vault (85+)</span>
@@ -872,9 +872,9 @@ export default function DrumLab() {
                 setIsMobileQuickMenuOpen(false);
                 setIsWorkoutBuilderOpen(true);
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-semibold text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-300 text-xs font-mono font-semibold text-left"
             >
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Workout Builder</span>
             </button>
 
@@ -884,9 +884,9 @@ export default function DrumLab() {
                 setIsMobileQuickMenuOpen(false);
                 setIsExerciseLibraryOpen(true);
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-300 text-xs font-mono font-semibold text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-500/30 text-purple-900 dark:text-purple-300 text-xs font-mono font-semibold text-left"
             >
-              <FolderOpen className="w-4 h-4 text-purple-400" />
+              <FolderOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <span>Mis Rutinas ({storage.exercises.length})</span>
             </button>
 
@@ -896,9 +896,9 @@ export default function DrumLab() {
                 setIsMobileQuickMenuOpen(false);
                 setIsLegendOpen(true);
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-mono font-semibold text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 text-xs font-mono font-semibold text-left"
             >
-              <Info className="w-4 h-4 text-synth-cyan" />
+              <Info className="w-4 h-4 text-cyan-600 dark:text-synth-cyan" />
               <span>Guía de Notación</span>
             </button>
           </div>

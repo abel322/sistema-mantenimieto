@@ -179,8 +179,8 @@ export default function DrumScoreRenderer({
         const context = renderer.getContext();
 
         // High contrast adaptive engraving colors (Dark Mode vs Light Mode)
-        const staveColor = isDarkTheme ? '#334155' : '#0F172A';
-        const staveFill = isDarkTheme ? '#94A3B8' : '#0F172A';
+        const staveColor = isDarkTheme ? '#F8FAFC' : '#0F172A';
+        const staveFill = isDarkTheme ? '#F8FAFC' : '#0F172A';
 
         context.setFillStyle(staveFill);
         context.setStrokeStyle(staveColor);
@@ -403,7 +403,7 @@ export default function DrumScoreRenderer({
                       ? '#F59E0B'
                       : '#D97706'
                     : isDarkTheme
-                    ? '#38BDF8'
+                    ? '#F8FAFC'
                     : '#0F172A';
                 staveNote.setStyle({ fillStyle: noteColor, strokeStyle: noteColor });
                 if (staveNote.noteHeads) {
@@ -476,16 +476,28 @@ export default function DrumScoreRenderer({
 
             voice.draw(context, stave);
 
-            // Draw Beams
+            // Draw Beams with theme styling
             measureBeams.forEach((beam) => {
               try {
+                if (typeof (beam as any).setStyle === 'function') {
+                  (beam as any).setStyle({
+                    fillStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
+                    strokeStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
+                  });
+                }
                 beam.setContext(context).draw();
               } catch (_) {}
             });
 
-            // Draw Tuplets
+            // Draw Tuplets with theme styling
             measureTuplets.forEach((tuplet) => {
               try {
+                if (typeof (tuplet as any).setStyle === 'function') {
+                  (tuplet as any).setStyle({
+                    fillStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
+                    strokeStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
+                  });
+                }
                 tuplet.setContext(context).draw();
               } catch (_) {}
             });
@@ -539,7 +551,7 @@ export default function DrumScoreRenderer({
                     ? '#F59E0B'
                     : '#D97706'
                   : isDarkTheme
-                  ? '#38BDF8'
+                  ? '#F8FAFC'
                   : '#0F172A';
                 try {
                   tie.setStyle({ fillStyle: tieColor, strokeStyle: tieColor });
@@ -837,26 +849,26 @@ export default function DrumScoreRenderer({
   const selectedStep = selectedBeat?.steps[selectedStepIndex];
 
   return (
-    <div className="relative w-full box-border rounded-2xl bg-[#0B0F19] border border-white/10 p-5 shadow-2xl overflow-hidden select-none text-white">
+    <div className="relative w-full box-border rounded-2xl bg-white dark:bg-[#0A0E1A] border border-slate-200 dark:border-white/10 p-5 shadow-sm dark:shadow-2xl overflow-hidden select-none text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Score Header Info Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10 text-xs text-slate-300">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-white/10 font-mono text-[11px] text-synth-cyan">
-            <span className="w-2 h-2 rounded-full bg-synth-cyan animate-pulse" />
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-500/30 font-mono text-[11px] text-cyan-800 dark:text-cyan-400">
+            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
             PERCUSSION CLEF (5-LINE STANDARD)
           </span>
-          <span className="text-slate-300 font-mono font-medium">
+          <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">
             {measures[0]?.timeSignature[0]}/{measures[0]?.timeSignature[1]} Meter
           </span>
-          <span className="text-gray-500">•</span>
-          <span className="text-slate-300 font-mono">
+          <span className="text-slate-400 dark:text-gray-500">•</span>
+          <span className="text-slate-700 dark:text-slate-300 font-mono">
             {measures.length} {measures.length === 1 ? 'Measure' : 'Measures'}
           </span>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
           {/* Mini Floating Transport Bar (Always accessible alongside score) */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-white/10 shadow-md select-none text-slate-200">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 shadow-sm select-none text-slate-700 dark:text-slate-200">
             {onTogglePlay && (
               <button
                 type="button"
@@ -1296,7 +1308,7 @@ export default function DrumScoreRenderer({
                       className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold border transition-all duration-75 flex items-center gap-1 ${
                         isBeatActive
                           ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_14px_#f59e0b] scale-110'
-                          : 'bg-surface-dark/95 border-amber-500/50 text-amber-300/90 shadow-sm'
+                          : 'bg-white/95 dark:bg-surface-dark/95 border-amber-500/50 text-amber-900 dark:text-amber-300/90 shadow-sm'
                       }`}
                       title={`Tiempo a tierra ${pos.beatIndex + 1} silenciado por síncopa (referencia de anclaje)`}
                     >
@@ -1343,7 +1355,7 @@ export default function DrumScoreRenderer({
                     ? 'z-20'
                     : isPlayheadHere
                     ? 'z-10'
-                    : 'z-0 hover:bg-white/[0.04]'
+                    : 'z-0 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
                 }`}
                 style={{
                   left: `${pos.x}px`,
@@ -1359,7 +1371,7 @@ export default function DrumScoreRenderer({
                       ? 'bg-synth-cyan text-black font-bold shadow-[0_0_10px_#22d3ee]'
                       : isPlayheadHere
                       ? 'bg-synth-violet text-white font-bold'
-                      : 'text-gray-500 opacity-0 group-hover:opacity-100 bg-white/10'
+                      : 'text-gray-500 opacity-0 group-hover:opacity-100 bg-slate-200/80 dark:bg-white/10'
                   }`}
                 >
                   {pos.stepIndex === 0 ? `B${pos.beatIndex + 1}` : `.${pos.stepIndex + 1}`}
@@ -1372,7 +1384,7 @@ export default function DrumScoreRenderer({
 
                 {/* Hits Summary Tag on Hover */}
                 {hasHits && (
-                  <div className="opacity-0 group-hover:opacity-100 absolute -bottom-2 bg-obsidian-deep/95 border border-white/20 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-300 shadow-md whitespace-nowrap pointer-events-none transition-opacity z-30">
+                  <div className="opacity-0 group-hover:opacity-100 absolute -bottom-2 bg-white/95 dark:bg-obsidian-deep/95 border border-slate-300 dark:border-white/20 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-900 dark:text-cyan-300 shadow-md whitespace-nowrap pointer-events-none transition-opacity z-30">
                     {stepData.hits.map((h) => DRUM_PIECES[h.pieceId]?.shortName || h.pieceId).join('+')}
                   </div>
                 )}

@@ -561,29 +561,29 @@ export default function RudimentLibraryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-5xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-5xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl transition-colors duration-200">
         {/* Mobile Pull Handle */}
-        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
+        <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
 
         {/* Header Bar */}
-        <div className="p-3 sm:p-4 border-b border-white/10 bg-[#0B0F19]/95 backdrop-blur-md flex-shrink-0 space-y-2.5">
+        <div className="p-3 sm:p-4 border-b border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md flex-shrink-0 space-y-2.5">
           {/* Row 1: Title, count badge, and close button */}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(34,211,238,0.2)] flex-shrink-0">
-                <Disc3 className="w-4 h-4 sm:w-5 sm:h-5 text-synth-cyan animate-spin-slow" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-cyan-100 dark:bg-cyan-500/20 border border-cyan-300 dark:border-cyan-500/30 flex items-center justify-center shadow-sm dark:shadow-[0_0_15px_rgba(34,211,238,0.2)] flex-shrink-0">
+                <Disc3 className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-700 dark:text-synth-cyan animate-spin-slow" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight truncate">
                     Rudiment & Fill Vault
                   </h2>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold border border-cyan-500/30 flex-shrink-0">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-mono font-bold border border-cyan-300 dark:border-cyan-500/30 flex-shrink-0">
                     {allRudiments.length}
                   </span>
                 </div>
-                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 font-mono truncate hidden sm:block">
+                <p className="text-[10px] sm:text-xs text-slate-500 dark:text-gray-400 mt-0.5 font-mono truncate hidden sm:block">
                   Biblioteca inteligente de rudimentos percusivos con inyector multi-compás y digitaciones R/L
                 </p>
               </div>
@@ -591,7 +591,7 @@ export default function RudimentLibraryModal({
 
             <button
               onClick={onClose}
-              className="p-1.5 sm:p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer flex-shrink-0"
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-surface-slate border border-slate-200 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20 transition-all cursor-pointer flex-shrink-0"
               title="Cerrar ventana"
             >
               <X className="w-5 h-5" />
@@ -1036,22 +1036,22 @@ export default function RudimentLibraryModal({
       {/* MODAL / DRAWER: CREAR / GUARDAR RUDIMENTO EN VAULT             */}
       {/* ============================================================== */}
       {isSaveModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+        <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl transition-colors duration-200">
             {/* Mobile Pull Handle */}
-            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
 
             {/* Sticky Header */}
-            <div className="sticky top-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-b border-white/10 p-3 sm:p-4 flex justify-between items-center gap-2 flex-shrink-0">
+            <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-b border-slate-200 dark:border-white/10 p-3 sm:p-4 flex justify-between items-center gap-2 flex-shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 flex-shrink-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-cyan-100 dark:bg-cyan-500/20 border border-cyan-300 dark:border-cyan-500/40 flex items-center justify-center text-cyan-800 dark:text-cyan-300 flex-shrink-0">
                   <Bookmark className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-base sm:text-lg font-bold text-white leading-tight truncate">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight truncate">
                     Crear / Guardar Rudimento
                   </h3>
-                  <p className="text-[10px] sm:text-xs text-gray-400 font-mono truncate hidden sm:block">
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-gray-400 font-mono truncate hidden sm:block">
                     Guarda patrones, diddles o fills personalizados en la base de datos
                   </p>
                 </div>
@@ -1059,7 +1059,7 @@ export default function RudimentLibraryModal({
               <button
                 type="button"
                 onClick={() => setIsSaveModalOpen(false)}
-                className="p-1.5 sm:p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
+                className="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-transparent text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1346,11 +1346,11 @@ export default function RudimentLibraryModal({
               </div>
 
               {/* Sticky Footer */}
-              <div className="sticky bottom-0 z-10 bg-[#0B0F19]/95 backdrop-blur-md border-t border-white/10 p-3 sm:p-4 flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
+              <div className="sticky bottom-0 z-10 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 p-3 sm:p-4 flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-2 sm:gap-3 flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsSaveModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono text-center"
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono text-center"
                 >
                   Cancelar
                 </button>
