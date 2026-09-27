@@ -333,7 +333,8 @@ export type GrooveCategory =
   | 'Hip-Hop & Electronic'
   | 'Latin & World'
   | 'Jazz & Blues'
-  | 'Prog & Odd-Meter';
+  | 'Prog & Odd-Meter'
+  | 'Mis Grooves';
 
 export interface GrooveHit {
   instrument:
@@ -360,14 +361,17 @@ export interface GroovePattern {
   name: string;
   category: GrooveCategory;
   subCategory?: string; // Ej: 'Metal/Double-Bass', 'Afro-Cuban', 'Trap', 'Shuffle'
-  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Virtuoso';
+  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado' | 'Virtuoso' | string;
   suggestedBpm: number;
-  timeSignature: '4/4' | '3/4' | '5/4' | '7/4' | '7/8' | '9/8' | '11/8' | '6/8' | '12/8';
+  timeSignature: '4/4' | '3/4' | '5/4' | '7/4' | '7/8' | '9/8' | '11/8' | '6/8' | '12/8' | string;
   swingRatio?: number; // 0.0 (Straight) a 0.7 (Heavy Swing/Dilla)
-  measuresCount: 1 | 2;
+  measuresCount: number;
   description: string;
-  subdivision: '1/8' | '1/16' | '1/32' | '3:2' | '6:4' | '5:4' | '7:4';
+  subdivision: '1/8' | '1/16' | '1/32' | '3:2' | '6:4' | '5:4' | '7:4' | string;
   isSyncopated?: boolean;
+  isCustom?: boolean;
+  userId?: string;
+  createdAt?: string;
   tags?: string[];
   measures: Array<{
     beats: Array<{

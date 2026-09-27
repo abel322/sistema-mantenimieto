@@ -74,6 +74,13 @@ export const GROOVE_CATEGORIES: Array<{
     color: '#EC4899',
     badge: 'bg-pink-500/20 text-pink-300 border-pink-500/40',
   },
+  {
+    id: 'Mis Grooves',
+    label: 'Mis Grooves',
+    description: 'Grooves y ritmos personalizados creados y guardados por ti',
+    color: '#8B5CF6',
+    badge: 'bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-cyan-300 border-purple-500/40',
+  },
 ];
 
 export const GROOVES_DATA: GroovePattern[] = [
@@ -2059,4 +2066,61 @@ export function convertGrooveToDrumMeasures(
   }
 
   return result;
+}
+
+// --- Converter Helper: Transform DrumMeasure into GroovePattern format ---
+export function convertDrumMeasureToGrooveMeasures(
+  measure: DrumMeasure
+): {
+  measures: Array<{
+    beats: Array<{
+      subdivisions: Array<Array<GrooveHit>>;
+    }>;
+  }>;
+  subdivision: string;
+} {
+  let subStr = '1/16';
+  const firstBeatSub = measure.beats?.[0]?.subdivision || 4;
+  switch (firstBeatSub) {
+    case 2:
+      subStr = '1/8';
+      break;
+    case 4:
+      subStr = '1/16';
+      break;
+    case 8:
+      subStr = '1/32';
+      break;
+    case 3:
+      subStr = '3:2';
+      break;
+    case 5:
+      subStr = '5:4';
+      break;
+    case 6:
+      subStr = '6:4';
+      break;
+    case 7:
+      subStr = '7:4';
+      break;
+  }
+
+  const grooveMeasures = [
+    {
+      beats: (measure.beats || []).map((beat) => ({
+        subdivisions: (beat.steps || []).map((step) =>
+          step.isRest
+            ? []
+            : (step.hits || []).map((hit) => ({
+                instrument: (hit.pieceId === 'hihatClosed' ? 'hihat' : hit.pieceId) as GrooveHit['instrument'],
+                accent: hit.accent,
+                ghost: hit.ghost,
+                flam: hit.flam,
+              }))
+        ),
+      })),
+    },
+  ];
+
+  return { measures: grooveMeasures, subdivision: subStr };
 }

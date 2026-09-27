@@ -162,3 +162,24 @@ model LessonProgress {
   @@index([lessonId])
   @@map("lesson_progress")
 }
+
+model CustomGroove {
+  id            String   @id @default(cuid())
+  userId        String?  // Asociado al usuario autenticado (o ID por defecto 'student-demo')
+  name          String
+  genre         String   // 'Rock & Metal' | 'Funk & Gospel' | 'Hip-Hop & Electronic' | 'Latin & World' | 'Jazz & Blues' | 'Prog & Odd-Meter' | 'Mis Grooves'
+  subCategory   String?
+  difficulty    String   @default("Intermedio")
+  suggestedBpm  Int      @default(120)
+  timeSignature String   @default("4/4")
+  swingRatio    Float    @default(0.0)
+  measuresCount Int      @default(1)
+  subdivision   String   @default("1/16")
+  description   String?
+  scoreData     Json     // Estructura de beats y eventos por instrumento
+  isCustom      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@map("custom_grooves")
+}

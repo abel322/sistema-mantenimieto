@@ -734,6 +734,10 @@ export default function DrumLab() {
         onClose={() => setIsGroovesOpen(false)}
         measuresCount={score.measures.length}
         selectedMeasureIndex={score.selectedMeasureIndex}
+        currentMeasures={score.measures}
+        currentBpm={audio.bpm}
+        currentTimeSignature={score.timeSignature}
+        currentSwing={audio.swing}
         onApplyGroove={handleApplyGroove}
         onPlayHit={audio.playHit}
       />
