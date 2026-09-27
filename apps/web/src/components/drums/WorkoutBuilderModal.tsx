@@ -144,25 +144,55 @@ export type BlockOrchestration =
   | 'snare-only'
   | 'snare-kick-downbeat'
   | 'toms-cascade'
-  | 'full-kit-chops';
+  | 'full-kit-chops'
+  | 'snare_only'
+  | 'snare_kick'
+  | 'toms_cascade'
+  | 'full_kit';
 
 export const BLOCK_ORCHESTRATION_OPTIONS: {
   id: BlockOrchestration;
   label: string;
   desc: string;
   icon: string;
+  aliases: BlockOrchestration[];
 }[] = [
-  { id: 'snare-only', label: 'Caja Sola', desc: 'Práctica pura en caja o pad', icon: '🥁' },
-  { id: 'snare-kick-downbeat', label: 'Caja + Bombo', desc: 'Anclaje en cada tiempo fuerte', icon: '⚡' },
-  { id: 'toms-cascade', label: 'Cascada Toms', desc: 'Distribución melódica por el set', icon: '🌀' },
-  { id: 'full-kit-chops', label: 'Full Kit Chops', desc: 'Chops modernos en todo el kit', icon: '💥' },
+  { id: 'snare_only', label: 'Caja Sola', desc: 'Práctica pura en caja o pad', icon: '🥁', aliases: ['snare_only', 'snare-only'] },
+  { id: 'snare_kick', label: 'Caja + Bombo', desc: 'Anclaje en cada tiempo fuerte', icon: '⚡', aliases: ['snare_kick', 'snare-kick-downbeat'] },
+  { id: 'toms_cascade', label: 'Cascada Toms', desc: 'Distribución melódica por el set', icon: '🌀', aliases: ['toms_cascade', 'toms-cascade'] },
+  { id: 'full_kit', label: 'Full Kit Chops', desc: 'Chops modernos en todo el kit', icon: '💥', aliases: ['full_kit', 'full-kit-chops'] },
 ];
 
+export function getSubdivisionDef(val: number | string): BlockSubdivisionDef {
+  if (typeof val === 'string') {
+    return WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.label === val) || WORKOUT_SUBDIVISION_OPTIONS[3];
+  }
+  return WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === val) || WORKOUT_SUBDIVISION_OPTIONS[3];
+}
+
 export interface WorkoutPhase {
-  id: string;
-  contentType: 'groove' | 'rudiment';
+  id: string; // ej: 'phase-1', 'phase-2'
   measuresCount: number;
+  contentType: 'groove' | 'rudiment';
+  type?: 'groove' | 'rudiment';
+  pattern: {
+    id: string;
+    name: string;
+    category?: string;
+    subCategory?: string;
+    description?: string;
+    sticking?: string[];
+    steps?: any[];
+    measures?: any[];
+    defaultBpm?: number;
+    suggestedBpm?: number;
+    timeSignature?: string;
+    subdivision?: any;
+    tags?: string[];
+    [key: string]: any;
+  };
   subdivisionValue: number;
+  subdivision?: '1/8' | '3:2' | '1/16' | '6:4' | '1/32' | string;
   orchestration: BlockOrchestration;
 }
 
@@ -174,6 +204,7 @@ export interface WorkoutPreset {
   phases: Array<{
     measuresCount: number;
     contentType: 'groove' | 'rudiment';
+    type?: 'groove' | 'rudiment';
     subdivisionValue: number;
     orchestration: BlockOrchestration;
   }>;
@@ -501,14 +532,33 @@ export default function WorkoutBuilderModal({
   const [bpm, setBpm] = useState<number>(105);
   const [progressiveOrchestration, setProgressiveOrchestration] = useState<boolean>(true);
 
-  // Modular Phases System (Default: 🎯 Fraseo 3+1)
+  // Modular Phases System (Default: 🎯 Fraseo 3+1 con patrones independientes por fase)
   const [phases, setPhases] = useState<WorkoutPhase[]>([
-    { id: 'phase-1', contentType: 'groove', measuresCount: 3, subdivisionValue: 4, orchestration: 'snare-kick-downbeat' },
-    { id: 'phase-2', contentType: 'rudiment', measuresCount: 1, subdivisionValue: 4, orchestration: 'toms-cascade' },
+    {
+      id: 'phase-1',
+      contentType: 'groove',
+      type: 'groove',
+      measuresCount: 3,
+      pattern: GROOVES_DATA[0],
+      subdivisionValue: 4,
+      subdivision: '1/16',
+      orchestration: 'snare-kick-downbeat',
+    },
+    {
+      id: 'phase-2',
+      contentType: 'rudiment',
+      type: 'rudiment',
+      measuresCount: 1,
+      pattern: RUDIMENTS_DATA[0],
+      subdivisionValue: 4,
+      subdivision: '1/16',
+      orchestration: 'toms-cascade',
+    },
   ]);
 
   const [activePresetId, setActivePresetId] = useState<string | null>('phrase-3-1');
-  const [selectedPhaseId, setSelectedPhaseId] = useState<string>('phase-1');
+  const [activePhaseId, setActivePhaseId] = useState<string>('phase-1');
+  const selectedPhaseId = activePhaseId; // alias para compatibilidad
 
   // Preview Loop with Web Audio / Tone.js
   const [previewingId, setPreviewingId] = useState<string | null>(null);
@@ -570,14 +620,24 @@ export default function WorkoutBuilderModal({
     return [...GROOVES_DATA, ...customGrooves];
   }, [customGrooves]);
 
-  // Active Selected Patterns Objects
+  // Active Selected Phase Object (Aislamiento total por fase)
+  const activePhase = useMemo(() => {
+    return phases.find((p) => p.id === activePhaseId) || phases[0];
+  }, [phases, activePhaseId]);
+
   const activeRudiment = useMemo(() => {
+    if (activePhase?.contentType === 'rudiment' && activePhase?.pattern) {
+      return activePhase.pattern;
+    }
     return allRudiments.find((r) => r.id === selectedRudimentId) || allRudiments[0] || RUDIMENTS_DATA[0];
-  }, [allRudiments, selectedRudimentId]);
+  }, [activePhase, allRudiments, selectedRudimentId]);
 
   const activeGroove = useMemo(() => {
+    if (activePhase?.contentType === 'groove' && activePhase?.pattern) {
+      return activePhase.pattern;
+    }
     return allGrooves.find((g) => g.id === selectedGrooveId) || allGrooves[0] || GROOVES_DATA[0];
-  }, [allGrooves, selectedGrooveId]);
+  }, [activePhase, allGrooves, selectedGrooveId]);
 
   // Filtered lists
   const filteredRudiments = useMemo(() => {
@@ -651,38 +711,53 @@ export default function WorkoutBuilderModal({
     });
   };
 
-  // Phase manipulation handlers
-  const handleUpdatePhaseContentType = (phaseId: string, contentType: 'groove' | 'rudiment') => {
+  // Modificación y manipulación reactiva de fases aisladas
+  const updatePhase = useCallback((phaseId: string, updates: Partial<WorkoutPhase>) => {
     setActivePresetId(null);
     setPhases((prev) =>
-      prev.map((p) => (p.id === phaseId ? { ...p, contentType } : p))
+      prev.map((p) => {
+        if (p.id !== phaseId) return p;
+        const next = { ...p, ...updates };
+        if (updates.contentType) next.type = updates.contentType;
+        if (updates.type) next.contentType = updates.type;
+        if (updates.subdivisionValue !== undefined) {
+          next.subdivision = getSubdivisionDef(updates.subdivisionValue).label as any;
+        }
+        return next;
+      })
     );
+  }, []);
+
+  const handleMeasureChange = useCallback((phaseId: string, delta: number) => {
+    setActivePresetId(null);
+    setPhases((prev) =>
+      prev.map((p) => {
+        if (p.id !== phaseId) return p;
+        const newCount = Math.max(1, Math.min(32, p.measuresCount + delta));
+        return { ...p, measuresCount: newCount };
+      })
+    );
+  }, []);
+
+  const handleUpdatePhaseContentType = (phaseId: string, contentType: 'groove' | 'rudiment') => {
+    const defaultPat = contentType === 'groove' ? (allGrooves[0] || GROOVES_DATA[0]) : (allRudiments[0] || RUDIMENTS_DATA[0]);
+    updatePhase(phaseId, { contentType, type: contentType, pattern: defaultPat });
   };
 
   const handleUpdatePhaseMeasures = (phaseId: string, count: number) => {
-    const safeCount = Math.max(1, Math.min(32, count));
-    setActivePresetId(null);
-    setPhases((prev) =>
-      prev.map((p) => (p.id === phaseId ? { ...p, measuresCount: safeCount } : p))
-    );
+    updatePhase(phaseId, { measuresCount: Math.max(1, Math.min(32, count)) });
   };
 
   const handleUpdatePhaseSubdivision = (phaseId: string, subValue: number) => {
-    setActivePresetId(null);
-    setPhases((prev) =>
-      prev.map((p) => (p.id === phaseId ? { ...p, subdivisionValue: subValue } : p))
-    );
+    updatePhase(phaseId, { subdivisionValue: subValue });
   };
 
   const handleUpdatePhaseOrchestration = (phaseId: string, orchestration: BlockOrchestration) => {
-    setActivePresetId(null);
-    setPhases((prev) =>
-      prev.map((p) => (p.id === phaseId ? { ...p, orchestration } : p))
-    );
+    updatePhase(phaseId, { orchestration });
   };
 
   const handleSelectPhase = useCallback((phase: WorkoutPhase) => {
-    setSelectedPhaseId(phase.id);
+    setActivePhaseId(phase.id);
     if (phase.contentType === 'groove') {
       setBaseLibraryTab('grooves');
     } else {
@@ -690,47 +765,49 @@ export default function WorkoutBuilderModal({
     }
   }, []);
 
+  // Asignación exclusiva de rudimento a la fase activa (aislamiento total)
   const handleSelectRudiment = useCallback((rud: RudimentItem) => {
-    setSelectedRudimentId(rud.id);
     if (rud.defaultBpm) setBpm(rud.defaultBpm);
 
-    // Sincronización con las fases:
-    // Si la fase activa seleccionada en la columna derecha es de tipo 'rudiment', actualiza su subdivisión si corresponde
     setPhases((prevPhases) => {
-      const current = prevPhases.find((p) => p.id === selectedPhaseId);
-      if (current && current.contentType === 'rudiment') {
-        if (rud.subdivision && [1, 2, 3, 4, 5, 6, 8].includes(rud.subdivision)) {
-          return prevPhases.map((p) =>
-            p.id === current.id ? { ...p, subdivisionValue: rud.subdivision! } : p
-          );
+      return prevPhases.map((phase) => {
+        if (phase.id === activePhaseId) {
+          const subValue =
+            rud.subdivision && [1, 2, 3, 4, 5, 6, 8].includes(rud.subdivision)
+              ? rud.subdivision
+              : phase.subdivisionValue || 4;
+          return {
+            ...phase,
+            contentType: 'rudiment',
+            type: 'rudiment',
+            pattern: rud,
+            subdivisionValue: subValue,
+            subdivision: getSubdivisionDef(subValue).label as any,
+          };
         }
-      }
-      return prevPhases;
+        return phase;
+      });
     });
+  }, [activePhaseId]);
 
-    // Si la fase actualmente seleccionada es 'groove', busca si hay alguna fase de tipo rudimento y actívala
-    const currentPhase = phases.find((p) => p.id === selectedPhaseId);
-    if (currentPhase && currentPhase.contentType === 'groove') {
-      const rudPhase = phases.find((p) => p.contentType === 'rudiment');
-      if (rudPhase) {
-        setSelectedPhaseId(rudPhase.id);
-      }
-    }
-  }, [phases, selectedPhaseId]);
-
+  // Asignación exclusiva de groove a la fase activa (aislamiento total)
   const handleSelectGroove = useCallback((grv: GroovePattern) => {
-    setSelectedGrooveId(grv.id);
     if (grv.suggestedBpm) setBpm(grv.suggestedBpm);
 
-    // Si la fase actualmente seleccionada es 'rudiment', busca si hay alguna fase de tipo groove y actívala
-    const currentPhase = phases.find((p) => p.id === selectedPhaseId);
-    if (currentPhase && currentPhase.contentType === 'rudiment') {
-      const grvPhase = phases.find((p) => p.contentType === 'groove');
-      if (grvPhase) {
-        setSelectedPhaseId(grvPhase.id);
-      }
-    }
-  }, [phases, selectedPhaseId]);
+    setPhases((prevPhases) => {
+      return prevPhases.map((phase) => {
+        if (phase.id === activePhaseId) {
+          return {
+            ...phase,
+            contentType: 'groove',
+            type: 'groove',
+            pattern: grv,
+          };
+        }
+        return phase;
+      });
+    });
+  }, [activePhaseId]);
 
   // Audio previews for list items con blindaje defensivo Web Audio / Tone.js
   const handlePreviewRudiment = useCallback((rud: RudimentItem) => {
@@ -854,20 +931,29 @@ export default function WorkoutBuilderModal({
     setActivePresetId(null);
 
     const lastPhase = phases[phases.length - 1];
-    const nextType: 'groove' | 'rudiment' = lastPhase?.contentType === 'groove' ? 'rudiment' : 'groove';
-    const nextSub = lastPhase?.subdivisionValue || 4;
-    const nextOrch: BlockOrchestration = lastPhase?.orchestration || 'toms-cascade';
+    const nextType: 'groove' | 'rudiment' =
+      (lastPhase?.type || lastPhase?.contentType) === 'groove' ? 'rudiment' : 'groove';
+    const nextSubValue = lastPhase?.subdivisionValue || 4;
+    const nextSub = lastPhase?.subdivision || '1/16';
+    const nextOrch: BlockOrchestration = lastPhase?.orchestration || 'toms_cascade';
+    const nextPattern =
+      nextType === 'groove'
+        ? allGrooves[0] || GROOVES_DATA[0]
+        : allRudiments[0] || RUDIMENTS_DATA[0];
 
     const newPhase: WorkoutPhase = {
       id: `phase-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      contentType: nextType,
       measuresCount: Math.max(1, Math.round(totalMeasures / (phases.length + 1)) || 2),
-      subdivisionValue: nextSub,
+      type: nextType,
+      contentType: nextType,
+      pattern: nextPattern,
+      subdivision: nextSub as any,
+      subdivisionValue: nextSubValue,
       orchestration: nextOrch,
     };
 
     setPhases((prev) => [...prev, newPhase]);
-    setSelectedPhaseId(newPhase.id);
+    setActivePhaseId(newPhase.id);
     if (nextType === 'groove') {
       setBaseLibraryTab('grooves');
     } else {
@@ -880,8 +966,8 @@ export default function WorkoutBuilderModal({
     setActivePresetId(null);
     setPhases((prev) => {
       const remaining = prev.filter((p) => p.id !== phaseId);
-      if (selectedPhaseId === phaseId && remaining.length > 0) {
-        setSelectedPhaseId(remaining[0].id);
+      if (activePhaseId === phaseId && remaining.length > 0) {
+        setActivePhaseId(remaining[0].id);
       }
       return remaining;
     });
@@ -889,17 +975,28 @@ export default function WorkoutBuilderModal({
 
   const handleApplyPreset = (preset: WorkoutPreset) => {
     setActivePresetId(preset.id);
-    const newPhases = preset.phases.map((p, idx) => ({
-      id: `phase-${idx + 1}-${Date.now()}`,
-      contentType: p.contentType,
-      measuresCount: p.measuresCount,
-      subdivisionValue: p.subdivisionValue,
-      orchestration: p.orchestration,
-    }));
+    const newPhases: WorkoutPhase[] = preset.phases.map((p, idx) => {
+      const pType = p.type || p.contentType;
+      const pat =
+        pType === 'groove'
+          ? allGrooves[idx % allGrooves.length] || GROOVES_DATA[0]
+          : allRudiments[idx % allRudiments.length] || RUDIMENTS_DATA[0];
+      const subDef = getSubdivisionDef(p.subdivisionValue || 4);
+      return {
+        id: `phase-${idx + 1}-${Date.now()}`,
+        measuresCount: p.measuresCount,
+        type: pType,
+        contentType: pType,
+        pattern: pat,
+        subdivision: subDef.label as any,
+        subdivisionValue: p.subdivisionValue || 4,
+        orchestration: p.orchestration,
+      };
+    });
     setPhases(newPhases);
     if (newPhases.length > 0) {
-      setSelectedPhaseId(newPhases[0].id);
-      if (newPhases[0].contentType === 'groove') {
+      setActivePhaseId(newPhases[0].id);
+      if ((newPhases[0].type || newPhases[0].contentType) === 'groove') {
         setBaseLibraryTab('grooves');
       } else {
         setBaseLibraryTab('rudiments');
@@ -925,7 +1022,12 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    if (orchestration === 'snare-only') {
+    const isSnareOnly = orchestration === 'snare_only' || orchestration === 'snare-only';
+    const isSnareKick = orchestration === 'snare_kick' || orchestration === 'snare-kick-downbeat';
+    const isTomsCascade = orchestration === 'toms_cascade' || orchestration === 'toms-cascade';
+    const isFullKit = orchestration === 'full_kit' || orchestration === 'full-kit-chops';
+
+    if (isSnareOnly) {
       hits.push({
         pieceId: 'snare',
         accent: stepDef.accent,
@@ -936,7 +1038,7 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    if (orchestration === 'snare-kick-downbeat') {
+    if (isSnareKick) {
       hits.push({
         pieceId: 'snare',
         accent: stepDef.accent,
@@ -950,7 +1052,7 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    if (orchestration === 'toms-cascade') {
+    if (isTomsCascade) {
       let pieceId: DrumPieceId = 'snare';
       if (stepDef.ghost) {
         pieceId = 'snare';
@@ -976,7 +1078,7 @@ export default function WorkoutBuilderModal({
       return hits;
     }
 
-    if (orchestration === 'full-kit-chops') {
+    if (isFullKit) {
       let pieceId: DrumPieceId = 'snare';
       if (stepDef.ghost) {
         pieceId = 'snare';
@@ -1021,39 +1123,35 @@ export default function WorkoutBuilderModal({
     return hits;
   };
 
-  // Full score generator across all dynamic phases (supporting both Grooves & Rudiments)
+  // Full score generator across all dynamic phases (patrones aislados por fase)
   const handleGenerate = () => {
     const measures: DrumMeasure[] = [];
     let globalMeasureNum = 1;
-    let rudimentCycleIndex = 0;
-
-    // Build rudiment step sequence
-    const rudimentSteps = activeRudiment.steps && activeRudiment.steps.length > 0
-      ? activeRudiment.steps
-      : (activeRudiment.sticking || ['R', 'L']).map((s, i) => ({
-          sticking: s,
-          accent: i === 0,
-          ghost: false,
-          flam: false,
-        }));
 
     for (const phase of phases) {
-      if (phase.contentType === 'groove') {
-        // --- Inyectar Groove Polifónico Completo ---
-        const grooveMeasuresTemplate = activeGroove.measures || [];
+      const isGroove = (phase.type || phase.contentType) === 'groove';
+
+      if (isGroove) {
+        // --- Inyectar Groove Polifónico de esta Fase ---
+        const phaseGroove: GroovePattern =
+          phase.pattern && phase.pattern.measures
+            ? (phase.pattern as GroovePattern)
+            : allGrooves.find((g) => g.id === phase.pattern?.id) || allGrooves[0] || GROOVES_DATA[0];
+
+        const grooveMeasuresTemplate = phaseGroove.measures || [];
         const subValue =
-          activeGroove.subdivision === '1/8'
+          phaseGroove.subdivision === '1/8'
             ? 2
-            : activeGroove.subdivision === '1/32'
+            : phaseGroove.subdivision === '1/32'
             ? 8
-            : activeGroove.subdivision === '3:2'
+            : phaseGroove.subdivision === '3:2'
             ? 3
-            : activeGroove.subdivision === '6:4'
+            : phaseGroove.subdivision === '6:4'
             ? 6
             : 4;
-        const isTuplet = activeGroove.subdivision === '3:2' || activeGroove.subdivision === '6:4';
+        const isTuplet = phaseGroove.subdivision === '3:2' || phaseGroove.subdivision === '6:4';
         const tupletRatio: [number, number] | undefined =
-          activeGroove.subdivision === '3:2' ? [3, 2] : activeGroove.subdivision === '6:4' ? [6, 4] : undefined;
+          phaseGroove.subdivision === '3:2' ? [3, 2] : phaseGroove.subdivision === '6:4' ? [6, 4] : undefined;
 
         for (let m = 0; m < phase.measuresCount; m++) {
           const templateMeasure =
@@ -1103,10 +1201,27 @@ export default function WorkoutBuilderModal({
           globalMeasureNum++;
         }
       } else {
-        // --- Inyectar Rudimento / Fill Orquestado ---
+        // --- Inyectar Rudimento / Fill Orquestado de esta Fase ---
+        const phaseRudiment: RudimentItem =
+          phase.pattern && (phase.pattern.steps || phase.pattern.sticking)
+            ? (phase.pattern as RudimentItem)
+            : allRudiments.find((r) => r.id === phase.pattern?.id) || allRudiments[0] || RUDIMENTS_DATA[0];
+
+        const rudimentSteps =
+          phaseRudiment.steps && phaseRudiment.steps.length > 0
+            ? phaseRudiment.steps
+            : (phaseRudiment.sticking || ['R', 'L']).map((s: string, i: number) => ({
+                sticking: s,
+                accent: i === 0,
+                ghost: false,
+                flam: false,
+              }));
+
+        let rudimentCycleIndex = 0;
         const subOption =
-          WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === phase.subdivisionValue) ||
-          WORKOUT_SUBDIVISION_OPTIONS[1];
+          WORKOUT_SUBDIVISION_OPTIONS.find(
+            (s) => s.value === phase.subdivisionValue || s.label === phase.subdivision
+          ) || WORKOUT_SUBDIVISION_OPTIONS[2];
         const sub = subOption.value;
 
         for (let m = 0; m < phase.measuresCount; m++) {
@@ -1121,7 +1236,7 @@ export default function WorkoutBuilderModal({
 
               const hits = getHitsForRudimentStep(
                 stepDef,
-                progressiveOrchestration ? phase.orchestration : 'snare-only',
+                progressiveOrchestration ? phase.orchestration : 'snare_only',
                 bIdx,
                 sIdx
               );
@@ -1156,7 +1271,10 @@ export default function WorkoutBuilderModal({
       }
     }
 
-    const title = `Workout: ${activeGroove.name} + ${activeRudiment.name} (${totalMeasures} C)`;
+    const phaseNames = phases
+      .map((p) => p.pattern?.name || ((p.type || p.contentType) === 'groove' ? 'Groove' : 'Rudimento'))
+      .join(' + ');
+    const title = `Workout: ${phaseNames.length > 60 ? phaseNames.slice(0, 57) + '...' : phaseNames} (${totalMeasures} C)`;
 
     onGenerateWorkout({
       title,
@@ -1171,25 +1289,28 @@ export default function WorkoutBuilderModal({
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl h-[88vh] max-h-[820px] bg-white dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-colors duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md overflow-hidden animate-in fade-in duration-200">
+      <div className="relative w-full max-w-6xl xl:max-w-7xl h-[90vh] max-h-[920px] bg-[#0B0F19] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
         {/* Header Fijo */}
-        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-slate-200 dark:border-white/10 bg-white dark:bg-[#0B0F19]">
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-b border-white/10 bg-[#0B0F19]">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-gradient-to-tr dark:from-emerald-500/20 dark:to-teal-500/30 border border-emerald-300 dark:border-emerald-500/40 flex items-center justify-center text-emerald-700 dark:text-emerald-300 shadow-sm dark:shadow-[0_0_15px_rgba(16,185,129,0.3)] flex-shrink-0">
-              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/30 border border-emerald-500/40 flex items-center justify-center text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.3)] flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-wide truncate">
+                <h2 className="text-base sm:text-lg font-bold text-white tracking-wide truncate">
                   Workout Builder: Pirámide Modular
                 </h2>
-                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 font-semibold flex-shrink-0">
+                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold flex-shrink-0">
                   {totalMeasures} Compases
                 </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-semibold flex-shrink-0">
+                  {phases.length} Fases
+                </span>
               </div>
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-gray-400 truncate hidden sm:block">
-                Combina más de 85 Grooves y 46 Rudimentos con orquestación libre por fases.
+              <p className="text-[10px] sm:text-xs text-gray-400 truncate hidden sm:block">
+                Combina más de 85 Grooves y 46 Rudimentos con aislamiento total y orquestación libre por fases.
               </p>
             </div>
           </div>
@@ -1197,7 +1318,7 @@ export default function WorkoutBuilderModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer flex-shrink-0"
+            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all cursor-pointer flex-shrink-0"
             title="Cerrar ventana"
           >
             <X className="w-5 h-5" />
@@ -1205,10 +1326,10 @@ export default function WorkoutBuilderModal({
         </div>
 
         {/* Presets Strip (Fijo) */}
-        <div className="flex-shrink-0 bg-slate-100 dark:bg-slate-950/90 border-b border-slate-200 dark:border-white/10 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex-shrink-0 bg-slate-950/90 border-b border-white/10 px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <span className="text-[10px] font-mono font-bold text-gray-400 flex items-center gap-1 shrink-0">
             <Wand2 className="w-3.5 h-3.5 text-emerald-400" />
-            Plantillas de Práctica:
+            Plantillas Rápidas:
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             {WORKOUT_PRESETS.map((preset) => {
@@ -1233,15 +1354,15 @@ export default function WorkoutBuilderModal({
           </div>
         </div>
 
-        {/* Body: Grid Estricto 2 Columnas Balanceado */}
-        <div className="flex-1 overflow-hidden p-5 min-h-0">
-          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6 h-full min-h-0">
+        {/* Body: Grid Estricto 2 Columnas Balanceado con Espacio Workstation */}
+        <div className="flex-1 overflow-hidden p-4 sm:p-5 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5 h-full min-h-0">
             {/* ======================================================== */}
             {/* COLUMNA IZQUIERDA: Catálogo y Parámetros */}
             {/* ======================================================== */}
-            <div className="w-full lg:w-[340px] flex flex-col gap-3 h-full min-h-0 overflow-y-auto pr-2 custom-scrollbar flex-shrink-0 border-r border-slate-200 dark:border-white/10">
+            <div className="w-full lg:w-[360px] flex flex-col gap-3 h-full min-h-0 overflow-y-auto pr-2 custom-scrollbar flex-shrink-0 border-r border-white/10">
               {/* 1. Longitud Total Deseada (Libre) */}
-              <div className="p-3 rounded-xl bg-slate-900/80 dark:bg-[#0E1526]/80 border border-slate-200 dark:border-white/10 space-y-2 shadow-md flex-shrink-0">
+              <div className="p-3 rounded-xl bg-[#0E1526]/80 border border-white/10 space-y-2 shadow-md flex-shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <label className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Target className="w-3.5 h-3.5 text-cyan-400" />
@@ -1308,10 +1429,13 @@ export default function WorkoutBuilderModal({
               {/* 2. Célula / Patrón Base (Pestañas Selectoras Vault) */}
               <div className="flex-1 flex flex-col min-h-[280px] bg-[#0E1526]/80 border border-white/10 rounded-xl p-3 shadow-md">
                 <div className="flex items-center justify-between text-xs font-mono shrink-0 mb-2">
-                  <label className="font-bold text-gray-200 flex items-center gap-1.5">
-                    <Music className="w-3.5 h-3.5 text-purple-400" />
-                    CÉLULA / PATRÓN BASE:
+                  <label className="font-bold text-gray-200 flex items-center gap-1.5 truncate">
+                    <Music className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                    <span>CATÁLOGO DE PATRONES:</span>
                   </label>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 truncate max-w-[170px] shrink-0">
+                    Fase {phases.findIndex((p) => p.id === activePhaseId) + 1} activa
+                  </span>
                 </div>
 
                 {/* Tabs: Rudimentos Vault vs Grooves Vault */}
@@ -1372,7 +1496,7 @@ export default function WorkoutBuilderModal({
                       <RudimentCardItem
                         key={`rud-${rud.id}`}
                         rudiment={rud}
-                        isSelected={selectedRudimentId === rud.id}
+                        isSelected={activePhase?.pattern?.id === rud.id}
                         isPlaying={previewingId === rud.id}
                         onSelect={handleSelectRudiment}
                         onPlayPreview={handlePreviewRudiment}
@@ -1390,7 +1514,7 @@ export default function WorkoutBuilderModal({
                       <GrooveCardItem
                         key={`grv-${grv.id}`}
                         groove={grv}
-                        isSelected={selectedGrooveId === grv.id}
+                        isSelected={activePhase?.pattern?.id === grv.id}
                         isPlaying={previewingId === grv.id}
                         onSelect={handleSelectGroove}
                         onPlayPreview={handlePreviewGroove}
@@ -1406,7 +1530,7 @@ export default function WorkoutBuilderModal({
               </div>
 
               {/* 3. Tempo Objetivo (Slider Numérico Estilizado) */}
-              <div className="p-3 rounded-xl bg-slate-900/80 dark:bg-[#0E1526]/80 border border-slate-200 dark:border-white/10 space-y-2 shadow-md flex-shrink-0">
+              <div className="p-3 rounded-xl bg-[#0E1526]/80 border border-white/10 space-y-2 shadow-md flex-shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-amber-400" />
@@ -1466,9 +1590,9 @@ export default function WorkoutBuilderModal({
             </div>
 
             {/* ======================================================== */}
-            {/* PANEL DERECHO: Timeline Modular & Fases */}
+            {/* PANEL DERECHO: Timeline Modular & Fases con Scroll Suave */}
             {/* ======================================================== */}
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto pl-1 space-y-4 custom-scrollbar">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto pr-2 custom-scrollbar space-y-3">
               {/* 1. Línea de Tiempo Visual Horizontal Interactiva */}
               <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/10 space-y-2.5 shadow-xl shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
@@ -1477,9 +1601,12 @@ export default function WorkoutBuilderModal({
                     Línea de Tiempo Modular ({totalMeasures} Compases en Total):
                   </span>
                   <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono">
-                    <span className="text-amber-400">⚡ {activeGroove.name}</span>
-                    <span>+</span>
-                    <span className="text-purple-400">🥁 {activeRudiment.name}</span>
+                    <span className="text-cyan-400">
+                      Editando Fase {phases.findIndex((p) => p.id === activePhaseId) + 1}:
+                    </span>
+                    <span className="text-white font-bold truncate max-w-[160px]">
+                      {activePhase?.pattern?.name || 'Patrón'}
+                    </span>
                   </div>
                 </div>
 
@@ -1487,45 +1614,54 @@ export default function WorkoutBuilderModal({
                 <div className="w-full h-12 rounded-xl bg-slate-950/80 border border-white/10 p-1 flex items-center gap-1 shadow-inner overflow-hidden">
                   {phases.map((phase, idx) => {
                     const range = phaseRanges[idx];
-                    const isGroove = phase.contentType === 'groove';
+                    const isGroove = (phase.type || phase.contentType) === 'groove';
+                    const isPhaseActive = activePhaseId === phase.id;
                     const subInfo =
-                      WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === phase.subdivisionValue) ||
-                      WORKOUT_SUBDIVISION_OPTIONS[1];
+                      WORKOUT_SUBDIVISION_OPTIONS.find(
+                        (s) => s.value === phase.subdivisionValue || s.label === phase.subdivision
+                      ) || WORKOUT_SUBDIVISION_OPTIONS[2];
                     const orchInfo = BLOCK_ORCHESTRATION_OPTIONS.find(
-                      (o) => o.id === phase.orchestration
+                      (o) =>
+                        o.id === phase.orchestration ||
+                        o.aliases?.includes(phase.orchestration as any)
                     );
                     const widthPct = Math.max(8, (phase.measuresCount / totalMeasures) * 100);
+                    const patternName =
+                      phase.pattern?.name || (isGroove ? 'Groove Base' : 'Rudimento');
 
                     return (
                       <div
                         key={`timeline-segment-${phase.id}`}
-                        onClick={() => handleSelectPhase(phase)}
+                        onClick={() => {
+                          setActivePhaseId(phase.id);
+                          setBaseLibraryTab(isGroove ? 'grooves' : 'rudiments');
+                        }}
                         style={{ width: `${widthPct}%` }}
                         className={`h-full rounded-lg border px-2 flex items-center justify-between transition-all select-none relative group overflow-hidden cursor-pointer ${
-                          selectedPhaseId === phase.id ? 'ring-2 ring-white scale-[1.02] z-10 shadow-lg' : ''
+                          isPhaseActive
+                            ? 'ring-2 ring-white scale-[1.02] z-10 shadow-lg'
+                            : 'opacity-85 hover:opacity-100'
                         } ${
                           isGroove
                             ? 'bg-amber-500/20 text-amber-300 border-amber-400/60 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
                             : `${subInfo.borderColor} ${subInfo.badgeColor}`
                         }`}
-                        title={`Fase ${idx + 1}: C${range.startBar} - C${range.endBar} (${phase.measuresCount} C) • ${
-                          isGroove ? `Groove: ${activeGroove.name}` : `Rudimento: ${subInfo.label} (${orchInfo?.label})`
-                        }`}
+                        title={`Fase ${idx + 1}: C${range.startBar} - C${range.endBar} (${phase.measuresCount} C) • ${patternName}`}
                       >
                         <div className="min-w-0 flex items-center gap-1.5 truncate">
                           <span className="w-4 h-4 rounded-full bg-white/20 text-white font-mono text-[9px] font-black flex items-center justify-center shrink-0">
                             {idx + 1}
                           </span>
-                          <span className="font-black text-xs text-white shrink-0">
-                            {isGroove ? 'GROOVE' : subInfo.label}
+                          <span className="font-bold text-xs text-white truncate">
+                            {patternName}
                           </span>
-                          <span className="text-[10px] text-gray-200 font-mono hidden sm:inline truncate">
-                            C{range.startBar}–C{range.endBar}
+                          <span className="text-[10px] text-gray-300 font-mono hidden sm:inline truncate">
+                            ({phase.measuresCount} C)
                           </span>
                         </div>
 
                         <span className="text-xs shrink-0">
-                          {isGroove ? '⚡' : orchInfo?.icon}
+                          {isGroove ? '⚡' : orchInfo?.icon || '🥁'}
                         </span>
                       </div>
                     );
@@ -1541,31 +1677,34 @@ export default function WorkoutBuilderModal({
                     Fases de Aceleración y Asignación de Contenido:
                   </span>
                   <span className="text-[10px] text-gray-500 font-mono">
-                    Define si cada fase ejecuta el Groove base o el Rudimento
+                    Haz clic en una tarjeta o en el catálogo para cambiar su patrón de forma aislada
                   </span>
                 </div>
 
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {phases.map((phase, idx) => {
                     const range = phaseRanges[idx];
-                    const isGroove = phase.contentType === 'groove';
+                    const isGroove = (phase.type || phase.contentType) === 'groove';
+                    const isPhaseActive = activePhaseId === phase.id;
                     const subInfo =
-                      WORKOUT_SUBDIVISION_OPTIONS.find((s) => s.value === phase.subdivisionValue) ||
-                      WORKOUT_SUBDIVISION_OPTIONS[1];
-
-                    const isPhaseSelected = selectedPhaseId === phase.id;
+                      WORKOUT_SUBDIVISION_OPTIONS.find(
+                        (s) => s.value === phase.subdivisionValue || s.label === phase.subdivision
+                      ) || WORKOUT_SUBDIVISION_OPTIONS[2];
 
                     return (
                       <div
                         key={phase.id}
-                        onClick={() => handleSelectPhase(phase)}
-                        className={`p-3 sm:p-3.5 rounded-2xl border transition-all space-y-3 shadow-md cursor-pointer ${
-                          isPhaseSelected
+                        onClick={() => {
+                          setActivePhaseId(phase.id);
+                          setBaseLibraryTab(isGroove ? 'grooves' : 'rudiments');
+                        }}
+                        className={`p-3.5 sm:p-4 rounded-2xl border transition-all space-y-3 shadow-md cursor-pointer ${
+                          isPhaseActive
                             ? isGroove
-                              ? 'border-amber-400 bg-amber-950/25 ring-2 ring-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.25)]'
-                              : `${subInfo.borderColor} bg-slate-900 ring-2 ring-purple-400/80 shadow-[0_0_15px_rgba(168,85,247,0.25)]`
+                              ? 'border-amber-400 bg-amber-950/30 ring-2 ring-amber-400/80 shadow-[0_0_18px_rgba(245,158,11,0.25)]'
+                              : `${subInfo.borderColor} bg-slate-900 ring-2 ring-purple-400/80 shadow-[0_0_18px_rgba(168,85,247,0.25)]`
                             : isGroove
-                            ? 'border-amber-400/40 bg-amber-950/15 hover:border-amber-400/70'
+                            ? 'border-amber-400/30 bg-amber-950/15 hover:border-amber-400/60'
                             : `${subInfo.borderColor} bg-slate-900/80 hover:border-white/30`
                         }`}
                       >
@@ -1586,10 +1725,23 @@ export default function WorkoutBuilderModal({
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-cyan-300 border border-white/10">
                                 C{range.startBar} al C{range.endBar} ({phase.measuresCount} C)
                               </span>
-                              {isPhaseSelected && (
-                                <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 font-bold uppercase tracking-wider animate-pulse">
+                              {isPhaseActive ? (
+                                <span className="text-[9px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 font-bold uppercase tracking-wider animate-pulse flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
                                   Fase Activa
                                 </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActivePhaseId(phase.id);
+                                    setBaseLibraryTab(isGroove ? 'grooves' : 'rudiments');
+                                  }}
+                                  className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white border border-white/10 transition-colors"
+                                >
+                                  Seleccionar
+                                </button>
                               )}
                             </div>
                           </div>
@@ -1598,7 +1750,17 @@ export default function WorkoutBuilderModal({
                           <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-xl border border-white/10">
                             <button
                               type="button"
-                              onClick={() => handleUpdatePhaseContentType(phase.id, 'groove')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePhaseId(phase.id);
+                                const defaultPat = allGrooves[0] || GROOVES_DATA[0];
+                                updatePhase(phase.id, {
+                                  type: 'groove',
+                                  contentType: 'groove',
+                                  pattern: (phase.type || phase.contentType) === 'groove' ? phase.pattern : defaultPat,
+                                });
+                                setBaseLibraryTab('grooves');
+                              }}
                               className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
                                 isGroove
                                   ? 'bg-amber-500/25 text-amber-300 border border-amber-400/60 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
@@ -1611,7 +1773,17 @@ export default function WorkoutBuilderModal({
 
                             <button
                               type="button"
-                              onClick={() => handleUpdatePhaseContentType(phase.id, 'rudiment')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePhaseId(phase.id);
+                                const defaultPat = allRudiments[0] || RUDIMENTS_DATA[0];
+                                updatePhase(phase.id, {
+                                  type: 'rudiment',
+                                  contentType: 'rudiment',
+                                  pattern: (phase.type || phase.contentType) === 'rudiment' ? phase.pattern : defaultPat,
+                                });
+                                setBaseLibraryTab('rudiments');
+                              }}
                               className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
                                 !isGroove
                                   ? 'bg-purple-500/25 text-purple-300 border border-purple-400/60 shadow-[0_0_8px_rgba(168,85,247,0.25)]'
@@ -1628,9 +1800,10 @@ export default function WorkoutBuilderModal({
                             <div className="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-white/10">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleUpdatePhaseMeasures(phase.id, phase.measuresCount - 1)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMeasureChange(phase.id, -1);
+                                }}
                                 disabled={phase.measuresCount <= 1}
                                 className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center text-xs font-mono font-bold cursor-pointer transition-all"
                                 title="Reducir 1 compás"
@@ -1642,9 +1815,10 @@ export default function WorkoutBuilderModal({
                               </span>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  handleUpdatePhaseMeasures(phase.id, phase.measuresCount + 1)
-                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMeasureChange(phase.id, 1);
+                                }}
                                 disabled={phase.measuresCount >= 32}
                                 className="w-5 h-5 rounded bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-gray-300 hover:text-white flex items-center justify-center text-xs font-mono font-bold cursor-pointer transition-all"
                                 title="Añadir 1 compás"
@@ -1657,7 +1831,10 @@ export default function WorkoutBuilderModal({
                             {phases.length > 1 && (
                               <button
                                 type="button"
-                                onClick={() => handleRemovePhase(phase.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemovePhase(phase.id);
+                                }}
                                 className="p-1 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                                 title="Eliminar fase"
                               >
@@ -1667,97 +1844,132 @@ export default function WorkoutBuilderModal({
                           </div>
                         </div>
 
-                        {/* Configuración Dinámica según Contenido */}
+                        {/* Configuración Dinámica según Contenido Aislado de esta Fase */}
                         {isGroove ? (
-                          <div className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono">
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActivePhaseId(phase.id);
+                              setBaseLibraryTab('grooves');
+                            }}
+                            className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono hover:border-amber-400/50 transition-colors cursor-pointer group"
+                            title="Haz clic para seleccionar otro groove en el catálogo lateral"
+                          >
                             <div className="flex items-center gap-2 text-gray-300 truncate">
-                              <span className="text-amber-400 font-bold">Groove Activo:</span>
-                              <span className="text-white font-bold truncate">{activeGroove.name}</span>
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
-                                {activeGroove.category}
+                              <span className="text-amber-400 font-bold">Groove Asignado:</span>
+                              <span className="text-white font-bold truncate group-hover:text-amber-300 transition-colors">
+                                {phase.pattern?.name || 'Groove Base'}
                               </span>
+                              {phase.pattern?.category && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                  {phase.pattern.category}
+                                </span>
+                              )}
                             </div>
-                            <span className="text-[10px] text-gray-400 hidden sm:inline">
-                              Polifonía completa (Charles, Caja y Bombo)
+                            <span className="text-[10px] text-amber-400/80 group-hover:text-amber-300 font-mono hidden sm:inline">
+                              Cambiar en catálogo &rarr;
                             </span>
                           </div>
                         ) : (
                           <div className="space-y-2.5 pt-1 border-t border-white/5">
-                            <div className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono">
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActivePhaseId(phase.id);
+                                setBaseLibraryTab('rudiments');
+                              }}
+                              className="p-2.5 rounded-xl bg-slate-950/70 border border-white/10 flex items-center justify-between text-xs font-mono hover:border-purple-400/50 transition-colors cursor-pointer group"
+                              title="Haz clic para seleccionar otro rudimento en el catálogo lateral"
+                            >
                               <div className="flex items-center gap-2 text-gray-300 truncate">
-                                <span className="text-purple-400 font-bold">Célula Técnica:</span>
-                                <span className="text-white font-bold truncate">{activeRudiment.name}</span>
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300">
-                                  {activeRudiment.category}
+                                <span className="text-purple-400 font-bold">Célula Asignada:</span>
+                                <span className="text-white font-bold truncate group-hover:text-purple-300 transition-colors">
+                                  {phase.pattern?.name || 'Rudimento'}
                                 </span>
+                                {phase.pattern?.category && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                                    {phase.pattern.category}
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-[10px] text-gray-400 hidden sm:inline font-mono">
-                                {activeRudiment.sticking ? activeRudiment.sticking.slice(0, 16).join(' ') : ''}
+                              <span className="text-[10px] text-purple-400/80 group-hover:text-purple-300 font-mono hidden sm:inline">
+                                {phase.pattern?.sticking ? phase.pattern.sticking.slice(0, 12).join(' ') : 'Cambiar en catálogo &rarr;'}
                               </span>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {/* Subdivisión Chips */}
                               <div className="space-y-1">
-                              <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
-                                Subdivisión:
-                              </span>
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {CHIP_SUBDIVISIONS.map((opt) => {
-                                  const isSelected = phase.subdivisionValue === opt.value;
-                                  return (
-                                    <button
-                                      key={`sub-${phase.id}-${opt.value}`}
-                                      type="button"
-                                      onClick={() =>
-                                        handleUpdatePhaseSubdivision(phase.id, opt.value)
-                                      }
-                                      className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border ${
-                                        isSelected
-                                          ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)]'
-                                          : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
-                                      }`}
-                                      title={`${opt.label} (${opt.nameEs}) • ${opt.density}`}
-                                    >
-                                      {opt.label}
-                                    </button>
-                                  );
-                                })}
+                                <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
+                                  Subdivisión:
+                                </span>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {CHIP_SUBDIVISIONS.map((opt) => {
+                                    const isSelected =
+                                      phase.subdivision === opt.label ||
+                                      phase.subdivisionValue === opt.value;
+                                    return (
+                                      <button
+                                        key={`sub-${phase.id}-${opt.value}`}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActivePhaseId(phase.id);
+                                          updatePhase(phase.id, {
+                                            subdivision: opt.label as any,
+                                            subdivisionValue: opt.value,
+                                          });
+                                        }}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border ${
+                                          isSelected
+                                            ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
+                                            : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                                        }`}
+                                        title={`${opt.label} (${opt.nameEs}) • ${opt.density}`}
+                                      >
+                                        {opt.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
-                            </div>
 
-                            {/* Orquestación Chips */}
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
-                                Orquestación en Kit:
-                              </span>
-                              <div className="flex items-center gap-1 flex-wrap">
-                                {BLOCK_ORCHESTRATION_OPTIONS.map((orch) => {
-                                  const isSelected = phase.orchestration === orch.id;
-                                  return (
-                                    <button
-                                      key={`orch-${phase.id}-${orch.id}`}
-                                      type="button"
-                                      onClick={() =>
-                                        handleUpdatePhaseOrchestration(phase.id, orch.id)
-                                      }
-                                      className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
-                                        isSelected
-                                          ? 'bg-purple-500/25 text-purple-300 border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.3)]'
-                                          : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
-                                      }`}
-                                      title={orch.desc}
-                                    >
-                                      <span>{orch.icon}</span>
-                                      <span>{orch.label}</span>
-                                    </button>
-                                  );
-                                })}
+                              {/* Orquestación Chips */}
+                              <div className="space-y-1">
+                                <span className="text-[10px] font-mono font-bold text-gray-400 uppercase">
+                                  Orquestación en Kit:
+                                </span>
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {BLOCK_ORCHESTRATION_OPTIONS.map((orch) => {
+                                    const isSelected =
+                                      orch.aliases?.includes(phase.orchestration as any) ||
+                                      phase.orchestration === orch.id;
+                                    return (
+                                      <button
+                                        key={`orch-${phase.id}-${orch.id}`}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActivePhaseId(phase.id);
+                                          updatePhase(phase.id, { orchestration: orch.id });
+                                        }}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                          isSelected
+                                            ? 'bg-purple-500/25 text-purple-300 border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.3)] ring-1 ring-purple-400'
+                                            : 'bg-slate-950/80 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
+                                        }`}
+                                        title={orch.desc}
+                                      >
+                                        <span>{orch.icon}</span>
+                                        <span>{orch.label}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                       </div>
                     );
                   })}
@@ -1780,19 +1992,18 @@ export default function WorkoutBuilderModal({
         </div>
 
         {/* Modal Sticky Footer */}
-        <div className="flex-shrink-0 flex items-center justify-between p-4 border-t border-slate-200 dark:border-white/10 bg-white dark:bg-[#0B0F19] gap-3">
-          <div className="text-xs font-mono text-slate-600 dark:text-gray-300 truncate text-left">
-            Generando rutina de <span className="text-slate-900 dark:text-white font-bold">{totalMeasures} compases</span> ({phases.length} fases) • Groove:{' '}
-            <span className="text-amber-600 dark:text-amber-300 font-bold">{activeGroove.name}</span> + Rudimento:{' '}
-            <span className="text-purple-600 dark:text-purple-300 font-bold">{activeRudiment.name}</span> a{' '}
-            <span className="text-cyan-600 dark:text-cyan-400 font-bold">{bpm} BPM</span>.
+        <div className="flex-shrink-0 flex items-center justify-between p-4 border-t border-white/10 bg-[#0B0F19] gap-3">
+          <div className="text-xs font-mono text-gray-300 truncate text-left">
+            Generando rutina de <span className="text-white font-bold">{totalMeasures} compases</span> ({phases.length} fases) •{' '}
+            Fase activa: <span className="text-cyan-300 font-bold">{activePhase?.pattern?.name || 'Patrón'}</span> a{' '}
+            <span className="text-amber-400 font-bold">{bpm} BPM</span>.
           </div>
 
           <div className="flex items-center gap-2.5 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono text-center"
+              className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-white/5 transition-colors cursor-pointer text-xs font-mono text-center"
             >
               Cancelar
             </button>
