@@ -1,12 +1,14 @@
 'use client';
 
 import React from 'react';
-import { RudimentItem, RudimentStep, GroovePattern, GrooveHit, VoicingMode, DrumPieceId, DRUM_PIECES } from '@/types/drum';
+import { RudimentItem, RudimentStep, GroovePattern, GrooveHit, VoicingMode, DrumPieceId, DRUM_PIECES, DrumMeasure } from '@/types/drum';
 
 export interface MiniScorePreviewProps {
   rudiment?: RudimentItem;
   groove?: GroovePattern;
   steps?: RudimentStep[];
+  measures?: DrumMeasure[];
+  scoreData?: any;
   subdivision?: number | string;
   timeSignature?: string | [number, number];
   voicing?: VoicingMode;
@@ -51,7 +53,10 @@ function MiniScorePreviewComponent({
   rudiment,
   groove,
   steps,
+  measures,
+  scoreData,
   subdivision,
+  timeSignature,
   voicing = 'kit',
   className = '',
   width = 270,
@@ -339,15 +344,40 @@ function MiniScorePreviewComponent({
     );
   }
 
-  // --- Case 2: Groove Pattern Rendering (Polyphonic Multi-Voice) ---
-  if (groove) {
-    const isMultiMeasure = (groove.measuresCount === 2 || (groove.measures && groove.measures.length > 1));
-    const rawMeasures = groove.measures || [];
-    const measuresToRender = isMultiMeasure && rawMeasures.length >= 2
-      ? [rawMeasures[0], rawMeasures[1]]
-      : [rawMeasures[0] || { beats: [] }];
-    const timeSig = groove.timeSignature || '4/4';
-    const subStr = String(groove.subdivision || '1/16');
+  // --- Case 2: Polyphonic / Multi-Voice Score or Groove Pattern Rendering ---
+  const activeGroove: GroovePattern | undefined =
+    groove ||
+    (measures || scoreData
+      ? ({
+          id: 'score-preview',
+          name: 'Rutina',
+          measures: (measures || (Array.isArray(scoreData) ? scoreData : scoreData?.measures || [])) as any,
+          timeSignature:
+            typeof timeSignature === 'string'
+              ? timeSignature
+              : Array.isArray(timeSignature)
+              ? `${timeSignature[0]}/${timeSignature[1]}`
+              : '4/4',
+          subdivision: String(subdivision || '1/16'),
+          measuresCount: (measures || (Array.isArray(scoreData) ? scoreData : scoreData?.measures || []))?.length || 1,
+        } as GroovePattern)
+      : undefined);
+
+  if (activeGroove) {
+    const isMultiMeasure = activeGroove.measuresCount === 2 || (activeGroove.measures && activeGroove.measures.length > 1);
+    const rawMeasures = activeGroove.measures || [];
+    const measuresToRender =
+      isMultiMeasure && rawMeasures.length >= 2
+        ? [rawMeasures[0], rawMeasures[1]]
+        : [rawMeasures[0] || { beats: [] }];
+    const timeSig =
+      activeGroove.timeSignature ||
+      (typeof timeSignature === 'string'
+        ? timeSignature
+        : Array.isArray(timeSignature)
+        ? `${timeSignature[0]}/${timeSignature[1]}`
+        : '4/4');
+    const subStr = String(activeGroove.subdivision || subdivision || '1/16');
     const isTernary = subStr === '3:2' || subStr === 'triplet' || timeSig === '6/8' || timeSig === '12/8';
 
     const staffStartX = 10;
@@ -439,15 +469,33 @@ function MiniScorePreviewComponent({
             const beats = mObj.beats || [];
             const stepSlices: { timeIndex: number; hits: GrooveHit[]; beatIdx: number; stepInBeat: number }[] = [];
 
-            beats.forEach((b, bIdx) => {
-              (b.subdivisions || []).forEach((hits, sIdx) => {
-                stepSlices.push({
-                  timeIndex: stepSlices.length,
-                  hits: hits || [],
-                  beatIdx: bIdx,
-                  stepInBeat: sIdx,
+            beats.forEach((b: any, bIdx: number) => {
+              if (Array.isArray(b.steps)) {
+                b.steps.forEach((st: any, sIdx: number) => {
+                  const hits: GrooveHit[] = (st.hits || []).map((h: any) => ({
+                    instrument: h.pieceId,
+                    accent: h.accent,
+                    ghost: h.ghost,
+                    flam: h.flam,
+                    hand: st.sticking,
+                  }));
+                  stepSlices.push({
+                    timeIndex: stepSlices.length,
+                    hits,
+                    beatIdx: bIdx,
+                    stepInBeat: sIdx,
+                  });
                 });
-              });
+              } else {
+                (b.subdivisions || []).forEach((hits: any, sIdx: number) => {
+                  stepSlices.push({
+                    timeIndex: stepSlices.length,
+                    hits: hits || [],
+                    beatIdx: bIdx,
+                    stepInBeat: sIdx,
+                  });
+                });
+              }
             });
 
             const mTotalSteps = Math.max(1, stepSlices.length);

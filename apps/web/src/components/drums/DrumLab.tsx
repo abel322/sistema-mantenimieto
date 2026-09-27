@@ -776,7 +776,7 @@ export default function DrumLab() {
         timeSignature={score.timeSignature}
         measures={score.measures}
         onSave={(title, tags) => {
-          storage.saveExercise({
+          return storage.saveExercise({
             title,
             tags,
             bpm: audio.bpm,
@@ -793,7 +793,8 @@ export default function DrumLab() {
         exercises={storage.exercises}
         onLoadExercise={(exercise) => {
           audio.stop();
-          score.loadScoreData(exercise.measures, exercise.timeSignature, null, 0, 0, 0);
+          const ts: [number, number] = Array.isArray(exercise.timeSignature) ? exercise.timeSignature : [4, 4];
+          score.loadScoreData(exercise.measures, ts, null, 0, 0, 0);
           audio.setBpm(exercise.bpm);
         }}
         onDeleteExercise={storage.deleteExercise}

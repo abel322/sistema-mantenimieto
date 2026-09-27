@@ -11,7 +11,35 @@ export function useDrumStorage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load saved exercises from localStorage on mount
+  // Fetch routines from the cloud API and sync with local storage
+  const fetchCloudRoutines = useCallback(async () => {
+    try {
+      const res = await fetch('/api/routines');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.routines)) {
+          setExercises((prev) => {
+            // Merge cloud routines with any locally unsaved ones by ID
+            const cloudMap = new Map(data.routines.map((r: SavedDrumExercise) => [r.id, r]));
+            const localOnly = prev.filter((local) => !cloudMap.has(local.id));
+            const merged = [...data.routines, ...localOnly];
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem(STORAGE_KEY_USER_EXERCISES, JSON.stringify(merged));
+              } catch (e) {
+                console.warn('Error syncing routines to localStorage:', e);
+              }
+            }
+            return merged;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Could not sync routines with cloud database:', err);
+    }
+  }, []);
+
+  // Load saved exercises from localStorage on mount, then sync with cloud
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -27,8 +55,9 @@ export function useDrumStorage() {
       console.warn('Error loading Sonora Drum Lab exercises from localStorage:', e);
     } finally {
       setIsLoaded(true);
+      fetchCloudRoutines();
     }
-  }, []);
+  }, [fetchCloudRoutines]);
 
   // Save current studio draft session (with debounce)
   const saveDraftSession = useCallback((session: Omit<DrumDraftSession, 'savedAt'>) => {
@@ -78,20 +107,21 @@ export function useDrumStorage() {
     }
   }, []);
 
-  // Save a new exercise routine
+  // Save a new exercise routine (optimistic local update + cloud persist)
   const saveExercise = useCallback(
-    (params: {
+    async (params: {
       title: string;
       tags?: string[];
       bpm: number;
       timeSignature: [number, number];
       measures: DrumMeasure[];
       notes?: string;
-    }): SavedDrumExercise => {
+    }): Promise<SavedDrumExercise> => {
       const cleanMeasures = JSON.parse(JSON.stringify(params.measures)) as DrumMeasure[];
+      const tempId = `exercise-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
       const newExercise: SavedDrumExercise = {
-        id: `exercise-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        id: tempId,
         title: params.title.trim() || `Rutina ${params.bpm} BPM`,
         tags: params.tags && params.tags.length > 0 ? params.tags : ['Groove'],
         createdAt: new Date().toISOString(),
@@ -99,10 +129,12 @@ export function useDrumStorage() {
         bpm: params.bpm,
         timeSignature: params.timeSignature,
         totalMeasures: cleanMeasures.length,
+        measuresCount: cleanMeasures.length,
         measures: cleanMeasures,
         notes: params.notes,
       };
 
+      // 1. Optimistic local state update
       setExercises((prev) => {
         const next = [newExercise, ...prev];
         if (typeof window !== 'undefined') {
@@ -115,13 +147,48 @@ export function useDrumStorage() {
         return next;
       });
 
+      // 2. Cloud database persist
+      try {
+        const res = await fetch('/api/routines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: tempId,
+            title: newExercise.title,
+            bpm: newExercise.bpm,
+            timeSignature: `${params.timeSignature[0]}/${params.timeSignature[1]}`,
+            measuresCount: cleanMeasures.length,
+            tags: newExercise.tags,
+            measures: cleanMeasures,
+          }),
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.routine && json.routine.id) {
+            // Update local state with official server record
+            setExercises((prev) => {
+              const updated = prev.map((ex) => (ex.id === tempId ? json.routine : ex));
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_KEY_USER_EXERCISES, JSON.stringify(updated));
+              }
+              return updated;
+            });
+            return json.routine;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not persist routine to cloud database, kept in local vault:', err);
+      }
+
       return newExercise;
     },
     []
   );
 
-  // Delete an existing exercise
-  const deleteExercise = useCallback((id: string) => {
+  // Delete an existing exercise (local state + cloud persist)
+  const deleteExercise = useCallback(async (id: string) => {
+    // 1. Optimistic local state update
     setExercises((prev) => {
       const next = prev.filter((item) => item.id !== id);
       if (typeof window !== 'undefined') {
@@ -133,6 +200,15 @@ export function useDrumStorage() {
       }
       return next;
     });
+
+    // 2. Cloud database deletion
+    try {
+      await fetch(`/api/routines?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('Error deleting routine from cloud database:', err);
+    }
   }, []);
 
   // Export single exercise as JSON file

@@ -283,6 +283,7 @@ export interface DrumPreset {
 
 export interface SavedDrumExercise {
   id: string;
+  userId?: string;
   title: string;
   tags?: string[];
   createdAt: string; // ISO string
@@ -290,9 +291,14 @@ export interface SavedDrumExercise {
   bpm: number;
   timeSignature: [number, number];
   totalMeasures: number;
+  measuresCount?: number;
+  totalHits?: number;
+  scoreData?: any;
   measures: DrumMeasure[];
   notes?: string;
 }
+
+export type SavedRoutine = SavedDrumExercise;
 
 export interface DrumDraftSession {
   measures: DrumMeasure[];
