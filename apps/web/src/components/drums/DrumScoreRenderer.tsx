@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { X, Play, Pause, Square, Bell, Repeat } from 'lucide-react';
 import { DrumMeasure, DrumPieceId, DRUM_PIECES } from '@/types/drum';
 import { PlayheadPosition, BeatFlash } from '@/hooks/useDrumAudio';
 
@@ -23,6 +23,17 @@ interface DrumScoreRendererProps {
   onSelectStep: (mIdx: number, bIdx: number, sIdx: number) => void;
   onTogglePiece?: (pieceId: DrumPieceId) => void;
   onRemoveMeasure?: (index: number) => void;
+  getTransportSeconds?: () => number;
+  seekToSeconds?: (seconds: number) => void;
+  seekToStep?: (measureIndex: number, beatIndex?: number, stepIndex?: number) => void;
+  bpm?: number;
+  onSetBpm?: (bpm: number) => void;
+  onTogglePlay?: () => void;
+  onStop?: () => void;
+  isMetronomeActive?: boolean;
+  onToggleMetronome?: () => void;
+  isLooping?: boolean;
+  onToggleLoop?: () => void;
 }
 
 interface NoteXPosition {
@@ -51,9 +62,25 @@ export default function DrumScoreRenderer({
   onToggleHighlightSyncopations,
   onSelectStep,
   onRemoveMeasure,
+  getTransportSeconds,
+  seekToSeconds,
+  seekToStep,
+  bpm = 110,
+  onSetBpm,
+  onTogglePlay,
+  onStop,
+  isMetronomeActive = false,
+  onToggleMetronome,
+  isLooping = true,
+  onToggleLoop,
 }: DrumScoreRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const laserRef = useRef<HTMLDivElement>(null);
+  const timelineRulerRef = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null);
+  const isDraggingTimelineRef = useRef(false);
+  const prevIsPlayingRef = useRef(isPlaying);
   const [containerWidth, setContainerWidth] = useState(880);
   const [notePositions, setNotePositions] = useState<NoteXPosition[]>([]);
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -540,22 +567,106 @@ export default function DrumScoreRenderer({
     );
   }, [notePositions, selectedMeasureIndex, selectedBeatIndex, selectedStepIndex]);
 
-  // Auto-scroll synchronized with Tone.Transport Playhead in Runway Mode
+  // Calculate exact continuous subpixel X position from Web Audio seconds
+  const getTimeXPosition = useCallback(
+    (t: number): { x: number; measureIndex: number; beatIndex: number } => {
+      let accumulatedTime = 0;
+      for (let m = 0; m < measures.length; m++) {
+        const [beatsCount, beatValue] = measures[m].timeSignature;
+        const beatDuration = (60 / bpm) * (4 / beatValue);
+        const measureDuration = beatsCount * beatDuration;
+        const measureStartX = 20 + m * currentMeasureWidth;
+
+        if (t >= accumulatedTime && t < accumulatedTime + measureDuration) {
+          const timeInMeasure = t - accumulatedTime;
+          const fractionInMeasure = timeInMeasure / measureDuration;
+          const beatIdx = Math.min(beatsCount - 1, Math.floor(timeInMeasure / beatDuration));
+          return {
+            x: measureStartX + fractionInMeasure * currentMeasureWidth,
+            measureIndex: m,
+            beatIndex: beatIdx,
+          };
+        }
+        accumulatedTime += measureDuration;
+      }
+
+      if (measures.length > 0) {
+        const lastIdx = measures.length - 1;
+        return {
+          x: 20 + lastIdx * currentMeasureWidth + currentMeasureWidth,
+          measureIndex: lastIdx,
+          beatIndex: (measures[lastIdx].timeSignature[0] || 4) - 1,
+        };
+      }
+      return { x: 20, measureIndex: 0, beatIndex: 0 };
+    },
+    [measures, bpm, currentMeasureWidth]
+  );
+
+  // Continuous 60 FPS Runway Smooth Scroll & Laser Playhead animation loop
   useEffect(() => {
-    if (!isRunway || !isPlaying || !activePlayheadPos || !scrollContainerRef.current) {
+    if (!isRunway || !isPlaying || !scrollContainerRef.current) {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
       return;
     }
 
     const container = scrollContainerRef.current;
-    const containerVisibleWidth = container.clientWidth;
-    // Maintain active beat focused around 1/3 from the left side of the screen
-    const targetScrollLeft = Math.max(0, activePlayheadPos.x - containerVisibleWidth / 3);
+    // Critical: Disable CSS smooth scroll during RAF loop to eliminate frame-rate fighting/stutter
+    container.style.scrollBehavior = 'auto';
 
-    container.scrollTo({
-      left: targetScrollLeft,
-      behavior: 'smooth',
-    });
-  }, [isRunway, isPlaying, activePlayheadPos]);
+    let isRunning = true;
+
+    const animate = () => {
+      if (!isRunning) return;
+
+      if (getTransportSeconds) {
+        const t = getTransportSeconds();
+        const { x: exactX } = getTimeXPosition(t);
+
+        // Hardware GPU-accelerated translate3d on the laser playhead (smooth subpixel motion)
+        if (laserRef.current) {
+          laserRef.current.style.transform = `translate3d(${exactX}px, 0, 0)`;
+        }
+
+        // Keep reading line fixed around 25% from left of viewport (runway lookahead)
+        if (!isDraggingTimelineRef.current) {
+          const containerVisibleWidth = container.clientWidth;
+          const focusPoint = Math.max(120, containerVisibleWidth * 0.25);
+          const targetScrollLeft = Math.max(0, exactX - focusPoint);
+          container.scrollLeft = targetScrollLeft;
+        }
+      }
+
+      rafIdRef.current = requestAnimationFrame(animate);
+    };
+
+    rafIdRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      isRunning = false;
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+    };
+  }, [isRunway, isPlaying, getTimeXPosition, getTransportSeconds]);
+
+  // Graceful smooth reset to start (measure 1) when stopped
+  useEffect(() => {
+    if (prevIsPlayingRef.current && !isPlaying && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        left: 0,
+        behavior: 'smooth',
+      });
+      if (laserRef.current) {
+        laserRef.current.style.transform = `translate3d(20px, 0, 0)`;
+      }
+    }
+    prevIsPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   // Center selected step when clicking or navigating while paused
   useEffect(() => {
@@ -576,6 +687,72 @@ export default function DrumScoreRenderer({
       });
     }
   }, [isRunway, isPlaying, selectedStepPos]);
+
+  // Interactive timeline scrub handlers (click or drag to seek in Runway mode)
+  const handleTimelineSeek = useCallback(
+    (clientX: number) => {
+      if (!scrollContainerRef.current) return;
+      const rect = scrollContainerRef.current.getBoundingClientRect();
+      const scrollLeft = scrollContainerRef.current.scrollLeft;
+      const clickX = clientX - rect.left + scrollLeft;
+
+      const relativeX = Math.max(0, clickX - 20);
+      const mIdx = Math.min(measures.length - 1, Math.floor(relativeX / currentMeasureWidth));
+      const measureOffsetX = relativeX - mIdx * currentMeasureWidth;
+      const fraction = Math.max(0, Math.min(0.999, measureOffsetX / currentMeasureWidth));
+
+      const measure = measures[mIdx];
+      if (!measure) return;
+
+      const [beatsCount, beatValue] = measure.timeSignature;
+      const targetBeat = Math.min(beatsCount - 1, Math.floor(fraction * beatsCount));
+      const beat = measure.beats[targetBeat];
+      const numSteps = beat?.steps?.length || 4;
+      const fractionInBeat = fraction * beatsCount - targetBeat;
+      const targetStep = Math.min(numSteps - 1, Math.floor(fractionInBeat * numSteps));
+
+      onSelectStep(mIdx, targetBeat, targetStep);
+
+      if (seekToStep) {
+        seekToStep(mIdx, targetBeat, targetStep);
+      } else if (seekToSeconds) {
+        let time = 0;
+        for (let m = 0; m < mIdx; m++) {
+          const [bc, bv] = measures[m].timeSignature;
+          time += bc * (60 / bpm) * (4 / bv);
+        }
+        const beatDur = (60 / bpm) * (4 / beatValue);
+        const sub = beat?.subdivision || 1;
+        const stepDur = sub === 0.25 ? beatDur * 4 : sub === 0.5 ? beatDur * 2 : beatDur / sub;
+        time += targetBeat * beatDur + targetStep * stepDur;
+        seekToSeconds(time);
+      }
+    },
+    [measures, currentMeasureWidth, bpm, onSelectStep, seekToStep, seekToSeconds]
+  );
+
+  const handleTimelineMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      isDraggingTimelineRef.current = true;
+      handleTimelineSeek(e.clientX);
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (isDraggingTimelineRef.current) {
+          handleTimelineSeek(moveEvent.clientX);
+        }
+      };
+
+      const handleMouseUp = () => {
+        isDraggingTimelineRef.current = false;
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    },
+    [handleTimelineSeek]
+  );
 
   const selectedBeat = measures[selectedMeasureIndex]?.beats[selectedBeatIndex];
   const selectedStep = selectedBeat?.steps[selectedStepIndex];
@@ -599,6 +776,99 @@ export default function DrumScoreRenderer({
         </div>
 
         <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
+          {/* Mini Floating Transport Bar (Always accessible alongside score) */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-surface-dark/95 border border-white/10 shadow-lg select-none">
+            {onTogglePlay && (
+              <button
+                type="button"
+                onClick={onTogglePlay}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-mono font-bold text-xs transition-all cursor-pointer shadow-md ${
+                  isPlaying
+                    ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/30'
+                    : 'bg-synth-cyan hover:bg-cyan-300 text-black shadow-glow-cyan'
+                }`}
+                title={isPlaying ? 'Pausar (Espacio)' : 'Reproducir (Espacio)'}
+              >
+                {isPlaying ? (
+                  <>
+                    <Pause className="w-3.5 h-3.5 fill-current" />
+                    <span>PAUSA</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>PLAY</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {onStop && (
+              <button
+                type="button"
+                onClick={onStop}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-gray-400 hover:text-rose-400 border border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
+                title="Detener y volver al Compás 1"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+              </button>
+            )}
+
+            {onSetBpm && bpm && (
+              <div className="flex items-center px-1 py-0.5 rounded-lg bg-white/5 border border-white/10 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => onSetBpm(bpm - 5)}
+                  className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+                  title="Bajar 5 BPM"
+                >
+                  -
+                </button>
+                <span className="px-1.5 text-synth-cyan font-bold min-w-[50px] text-center">
+                  {bpm} <span className="text-[9px] text-gray-400 font-normal">BPM</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onSetBpm(bpm + 5)}
+                  className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
+                  title="Subir 5 BPM"
+                >
+                  +
+                </button>
+              </div>
+            )}
+
+            {onToggleMetronome && (
+              <button
+                type="button"
+                onClick={onToggleMetronome}
+                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                  isMetronomeActive
+                    ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                }`}
+                title={isMetronomeActive ? 'Desactivar Metrónomo (Click)' : 'Activar Metrónomo (Click)'}
+              >
+                <Bell className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {onToggleLoop && (
+              <button
+                type="button"
+                onClick={onToggleLoop}
+                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                  isLooping
+                    ? 'bg-synth-cyan/20 border-synth-cyan text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
+                    : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                }`}
+                title={isLooping ? 'Loop Activado' : 'Loop Desactivado'}
+              >
+                <Repeat className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous strip) */}
           {onToggleLayoutMode && (
             <div className="flex items-center p-0.5 rounded-xl bg-surface-dark/90 border border-white/10 select-none">
@@ -751,14 +1021,61 @@ export default function DrumScoreRenderer({
         ref={scrollContainerRef}
         className={`relative overflow-y-hidden py-4 ${
           isRunway
-            ? 'overflow-x-auto scroll-smooth scrollbar-thin scrollbar-thumb-synth-cyan/40 scrollbar-track-surface-dark'
+            ? 'overflow-x-auto scrollbar-thin scrollbar-thumb-synth-cyan/40 scrollbar-track-surface-dark [will-change:scroll-position]'
             : 'overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent'
         }`}
       >
         <div
           className="relative mx-auto transition-all"
-          style={{ width: `${totalWidth}px`, height: `${totalHeight}px`, minHeight: '190px' }}
+          style={{ width: `${totalWidth}px`, height: `${totalHeight + (isRunway ? 28 : 0)}px`, minHeight: '190px' }}
         >
+          {/* Runway Continuous Scrub & Timeline Ruler */}
+          {isRunway && (
+            <div
+              ref={timelineRulerRef}
+              onMouseDown={handleTimelineMouseDown}
+              className="absolute top-0 left-0 right-0 h-6 bg-surface-dark/95 border-b border-white/10 rounded-t-xl overflow-hidden cursor-crosshair select-none z-25 group/timeline shadow-inner"
+              title="Línea de Tiempo Runway: Haz clic o arrastra para situar el cursor / reproducir desde aquí"
+            >
+              {measures.map((m, mIdx) => {
+                const measureX = 20 + mIdx * currentMeasureWidth;
+                const [beatsCount] = m.timeSignature;
+                const isPlayingHere = isPlaying && playhead.measureIndex === mIdx;
+
+                return (
+                  <div
+                    key={`timeline-bar-${mIdx}`}
+                    className={`absolute inset-y-0 border-r flex items-center text-[10px] font-mono transition-colors ${
+                      isPlayingHere
+                        ? 'border-synth-cyan/60 bg-synth-cyan/15 text-cyan-200'
+                        : 'border-white/15 text-gray-400 hover:bg-white/5'
+                    }`}
+                    style={{ left: `${measureX}px`, width: `${currentMeasureWidth}px` }}
+                  >
+                    <span className="px-1.5 font-bold text-synth-cyan text-[10px]">C{mIdx + 1}</span>
+                    <div className="flex-1 flex h-full">
+                      {Array.from({ length: beatsCount }).map((_, bIdx) => {
+                        const isCurrentBeat = isPlayingHere && playhead.beatIndex === bIdx;
+                        return (
+                          <div
+                            key={`tick-${mIdx}-${bIdx}`}
+                            className={`flex-1 border-r border-white/5 flex items-center justify-center text-[9px] transition-colors ${
+                              isCurrentBeat
+                                ? 'bg-synth-cyan/35 text-white font-bold'
+                                : 'text-gray-500 hover:text-white hover:bg-synth-cyan/15'
+                            }`}
+                          >
+                            {bIdx + 1}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* VexFlow Render Canvas Container */}
           <div ref={containerRef} className="w-full h-full pointer-events-none" />
 
@@ -950,8 +1267,30 @@ export default function DrumScoreRenderer({
             );
           })}
 
-          {/* Real-time Laser Playhead */}
-          {isPlaying && activePlayheadPos && (
+          {/* Continuous GPU-Accelerated Laser Playhead (Runway Mode) */}
+          {isRunway && (
+            <div
+              ref={laserRef}
+              className={`absolute top-0 left-0 pointer-events-none z-30 transition-opacity duration-150 ${
+                isPlaying ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{
+                transform: 'translate3d(20px, 0, 0)',
+                height: `${totalHeight + 28}px`,
+                willChange: 'transform',
+              }}
+            >
+              {/* Laser Core Beam */}
+              <div className="w-[2px] h-full bg-synth-cyan shadow-[0_0_14px_#22d3ee,0_0_28px_#38bdf8]" />
+              {/* Top Reading Diamond */}
+              <div className="absolute -top-1 -left-[5px] w-3 h-3 bg-synth-cyan rotate-45 shadow-[0_0_12px_#22d3ee]" />
+              {/* Glowing reading core dot at stave center */}
+              <div className="absolute top-[88px] -left-[3px] w-2 h-2 rounded-full bg-white shadow-[0_0_10px_#fff]" />
+            </div>
+          )}
+
+          {/* Discrete Step Laser Playhead (Paginated Mode) */}
+          {!isRunway && isPlaying && activePlayheadPos && (
             <div
               className="absolute -translate-x-1/2 pointer-events-none z-30 transition-all duration-75 ease-linear"
               style={{

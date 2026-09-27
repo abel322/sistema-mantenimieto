@@ -496,41 +496,46 @@ export default function DrumLab() {
         </div>
       </div>
 
-      {/* 1. Master Transport Bar (Play/Stop/BPM/Presets/Meter) */}
-      <DrumTransport
-        isPlaying={audio.isPlaying}
-        bpm={audio.bpm}
-        isMetronomeActive={audio.isMetronomeActive}
-        metronomeMode={audio.metronomeMode}
-        metronomeVolume={audio.metronomeVolume}
-        isSyncopationDrill={audio.isSyncopationDrill}
-        currentBeatFlash={audio.currentBeatFlash}
-        isLooping={audio.isLooping}
-        timeSignature={score.timeSignature}
-        activePresetId={score.activePresetId}
-        measuresCount={score.measures.length}
-        selectedMeasureIndex={score.selectedMeasureIndex}
-        savedExercisesCount={storage.exercises.length}
-        onTogglePlay={handleTogglePlay}
-        onStop={audio.stop}
-        onSetBpm={audio.setBpm}
-        onToggleMetronome={audio.toggleMetronome}
-        onSetMetronomeMode={audio.setMetronomeMode}
-        onSetMetronomeVolume={audio.setMetronomeVolume}
-        onToggleSyncopationDrill={audio.toggleSyncopationDrill}
-        onToggleLoop={audio.toggleLoop}
-        onSelectPreset={handleSelectPreset}
-        onSetTimeSignature={score.setTimeSignature}
-        onAddMeasure={score.addMeasure}
-        onRemoveMeasure={score.removeMeasure}
-        onClearMeasure={score.clearMeasure}
-        onSelectMeasureIndex={(idx) => score.selectStep(idx, 0, 0)}
-        onOpenRudiments={() => setIsRudimentsOpen(true)}
-        onOpenGrooves={() => setIsGroovesOpen(true)}
-        onOpenWorkoutBuilder={() => setIsWorkoutBuilderOpen(true)}
-        onOpenSaveExercise={() => setIsSaveExerciseOpen(true)}
-        onOpenExerciseLibrary={() => setIsExerciseLibraryOpen(true)}
-      />
+      {/* 1. Master Transport Bar (Play/Stop/BPM/Presets/Meter) - Sticky Floating Bar */}
+      <div className="sticky top-2 z-40 bg-[#0B0F19]/95 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl transition-all">
+        <DrumTransport
+          isPlaying={audio.isPlaying}
+          bpm={audio.bpm}
+          isMetronomeActive={audio.isMetronomeActive}
+          metronomeMode={audio.metronomeMode}
+          metronomeVolume={audio.metronomeVolume}
+          isSyncopationDrill={audio.isSyncopationDrill}
+          currentBeatFlash={audio.currentBeatFlash}
+          isLooping={audio.isLooping}
+          timeSignature={score.timeSignature}
+          activePresetId={score.activePresetId}
+          measuresCount={score.measures.length}
+          selectedMeasureIndex={score.selectedMeasureIndex}
+          savedExercisesCount={storage.exercises.length}
+          onTogglePlay={handleTogglePlay}
+          onStop={audio.stop}
+          onSetBpm={audio.setBpm}
+          onToggleMetronome={audio.toggleMetronome}
+          onSetMetronomeMode={audio.setMetronomeMode}
+          onSetMetronomeVolume={audio.setMetronomeVolume}
+          onToggleSyncopationDrill={audio.toggleSyncopationDrill}
+          onToggleLoop={audio.toggleLoop}
+          onSelectPreset={handleSelectPreset}
+          onSetTimeSignature={score.setTimeSignature}
+          onAddMeasure={score.addMeasure}
+          onRemoveMeasure={score.removeMeasure}
+          onClearMeasure={score.clearMeasure}
+          onSelectMeasureIndex={(idx) => {
+            score.selectStep(idx, 0, 0);
+            audio.seekToStep(idx, 0, 0);
+          }}
+          onOpenRudiments={() => setIsRudimentsOpen(true)}
+          onOpenGrooves={() => setIsGroovesOpen(true)}
+          onOpenWorkoutBuilder={() => setIsWorkoutBuilderOpen(true)}
+          onOpenSaveExercise={() => setIsSaveExerciseOpen(true)}
+          onOpenExerciseLibrary={() => setIsExerciseLibraryOpen(true)}
+        />
+      </div>
 
       {/* 2. Rapid Subdivision & Dynamics Bar */}
       <DrumSubdivisionBar
@@ -640,9 +645,23 @@ export default function DrumLab() {
             zoomLevel={zoomLevel}
             onChangeZoomLevel={setZoomLevel}
             onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
-            onSelectStep={score.selectStep}
+            onSelectStep={(m, b, s) => {
+              score.selectStep(m, b, s);
+              audio.seekToStep(m, b, s);
+            }}
             onTogglePiece={handleTogglePiece}
             onRemoveMeasure={score.removeMeasure}
+            getTransportSeconds={audio.getTransportSeconds}
+            seekToSeconds={audio.seekToSeconds}
+            seekToStep={audio.seekToStep}
+            bpm={audio.bpm}
+            onSetBpm={audio.setBpm}
+            onTogglePlay={handleTogglePlay}
+            onStop={audio.stop}
+            isMetronomeActive={audio.isMetronomeActive}
+            onToggleMetronome={audio.toggleMetronome}
+            isLooping={audio.isLooping}
+            onToggleLoop={audio.toggleLoop}
           />
         </section>
       )}

@@ -48,6 +48,7 @@ export function useDrumAudio() {
   const metronomeVolumeRef = useRef<number>(0);
   const isSyncopationDrillRef = useRef(false);
   const isLoopingRef = useRef(true);
+  const totalDurationRef = useRef(2);
 
   // Sync refs with state
   useEffect(() => {
@@ -598,6 +599,7 @@ export function useDrumAudio() {
       });
 
       const totalDuration = totalMeasureTime > 0 ? totalMeasureTime : 2;
+      totalDurationRef.current = totalDuration;
       Tone.Transport.loopStart = 0;
       Tone.Transport.loopEnd = totalDuration;
       Tone.Transport.loop = isLoopingRef.current;
@@ -707,6 +709,67 @@ export function useDrumAudio() {
     setIsLooping((prev) => !prev);
   }, []);
 
+  // Continuous high-precision transport queries and seeking
+  const getTransportSeconds = useCallback(() => {
+    if (!ToneRef.current?.Transport) return 0;
+    return ToneRef.current.Transport.seconds || 0;
+  }, []);
+
+  const getTransportProgress = useCallback(() => {
+    if (!ToneRef.current?.Transport || totalDurationRef.current <= 0) return 0;
+    return (ToneRef.current.Transport.seconds % totalDurationRef.current) / totalDurationRef.current;
+  }, []);
+
+  const getTotalDuration = useCallback(() => {
+    return totalDurationRef.current;
+  }, []);
+
+  const seekToSeconds = useCallback((sec: number) => {
+    if (ToneRef.current?.Transport) {
+      const maxSec = totalDurationRef.current > 0 ? totalDurationRef.current : 100;
+      const clamped = Math.max(0, Math.min(maxSec - 0.001, sec));
+      ToneRef.current.Transport.seconds = clamped;
+    }
+  }, []);
+
+  const seekToStep = useCallback((measureIndex: number, beatIndex: number = 0, stepIndex: number = 0) => {
+    const measures = currentMeasuresRef.current;
+    if (!measures || measures.length === 0) return;
+
+    let time = 0;
+    for (let m = 0; m < measures.length; m++) {
+      const [beatsCount, beatValue] = measures[m].timeSignature;
+      const beatDuration = (60 / bpmRef.current) * (4 / beatValue);
+      const measureDuration = beatsCount * beatDuration;
+
+      if (m === measureIndex) {
+        const beat = measures[m].beats[beatIndex];
+        const sub = beat?.subdivision || 1;
+        const stepDuration =
+          sub === 0.25
+            ? beatDuration * 4
+            : sub === 0.5
+            ? beatDuration * 2
+            : beatDuration / sub;
+        time += beatIndex * beatDuration + stepIndex * stepDuration;
+        break;
+      }
+      time += measureDuration;
+    }
+
+    if (ToneRef.current?.Transport) {
+      ToneRef.current.Transport.seconds = time;
+    }
+
+    const progress = totalDurationRef.current > 0 ? time / totalDurationRef.current : 0;
+    setPlayhead({
+      measureIndex,
+      beatIndex,
+      stepIndex,
+      progress,
+    });
+  }, []);
+
   return {
     isPlaying,
     bpm,
@@ -733,5 +796,10 @@ export function useDrumAudio() {
     playHit,
     scheduleScore,
     initAudio,
+    getTransportSeconds,
+    getTransportProgress,
+    getTotalDuration,
+    seekToSeconds,
+    seekToStep,
   };
 }
