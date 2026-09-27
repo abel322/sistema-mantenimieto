@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { RudimentItem, RudimentCategory, VoicingMode, DrumPieceId, DRUM_PIECES } from '@/types/drum';
 import { RUDIMENTS_DATA, RUDIMENT_CATEGORIES } from '@/lib/rudimentsData';
+import MiniScorePreview from './MiniScorePreview';
 
 interface RudimentLibraryModalProps {
   isOpen: boolean;
@@ -587,61 +588,12 @@ export default function RudimentLibraryModal({
                         {rudiment.description}
                       </p>
 
-                      {/* Sticking / Dynamic Sequence Visualizer */}
-                      <div className="p-2.5 rounded-xl bg-surface-dark border border-white/5 flex items-center gap-1.5 overflow-x-auto scrollbar-none mb-3">
-                        <span className="text-[10px] font-mono text-gray-500 uppercase mr-1">
-                          Digitación:
-                        </span>
-                        {rudiment.steps.map((st, sIdx) => {
-                          const isR = st.sticking === 'R';
-                          const isL = st.sticking === 'L';
-                          const isK = st.sticking === 'K';
-
-                          let badgeColor = 'bg-white/10 text-gray-300 border-white/20';
-                          if (isR) badgeColor = 'bg-sky-500/20 text-sky-300 border-sky-500/40';
-                          else if (isL) badgeColor = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
-                          else if (isK) badgeColor = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-
-                          const activeKitPiece =
-                            voicing === 'kit'
-                              ? st.kitPiece || (st.sticking === 'K' ? 'kick' : 'snare')
-                              : st.sticking === 'K' ? 'kick' : 'snare';
-                          const pieceMeta = DRUM_PIECES[activeKitPiece];
-
-                          return (
-                            <div
-                              key={sIdx}
-                              className="flex flex-col items-center gap-0.5"
-                              title={`${st.sticking} • ${pieceMeta?.name || 'Snare'}${
-                                st.accent ? ' (Acento)' : ''
-                              }${st.ghost ? ' (Ghost)' : ''}${st.flam ? ' (Flam)' : ''}${st.drag ? ' (Drag)' : ''}`}
-                            >
-                              <div
-                                className={`w-6 h-6 rounded-lg text-[11px] font-mono font-bold flex items-center justify-center border relative select-none ${badgeColor} ${
-                                  st.accent
-                                    ? 'ring-1 ring-amber-400 font-black shadow-[0_0_8px_rgba(245,158,11,0.4)]'
-                                    : ''
-                                } ${st.ghost ? 'opacity-60 scale-90' : ''}`}
-                              >
-                                {st.flam && (
-                                  <span className="text-[8px] font-serif absolute -top-1.5 -left-1 text-amber-400 font-bold">
-                                    º
-                                  </span>
-                                )}
-                                {st.drag && (
-                                  <span className="text-[8px] font-serif absolute -top-1.5 -left-1 text-rose-400 font-bold">
-                                    ºº
-                                  </span>
-                                )}
-                                <span>{st.ghost ? `(${st.sticking})` : st.sticking}</span>
-                              </div>
-                              <span className="text-[8px] font-mono text-gray-500 truncate max-w-[28px]">
-                                {pieceMeta?.shortName.slice(0, 3) || 'Snr'}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      {/* Mini Score Preview Visualizer */}
+                      <MiniScorePreview
+                        rudiment={rudiment}
+                        voicing={voicing}
+                        className="mb-3"
+                      />
                     </div>
 
                     {/* Stamping Action Buttons (Dynamic Targets) */}

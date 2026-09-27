@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { GrooveCategory, GroovePattern, DrumPieceId } from '@/types/drum';
 import { GROOVES_DATA, GROOVE_CATEGORIES } from '@/lib/groovesData';
+import MiniScorePreview from './MiniScorePreview';
 
 interface GrooveLibraryModalProps {
   isOpen: boolean;
@@ -581,6 +582,9 @@ export default function GrooveLibraryModal({
                           </span>
                         )}
                       </div>
+
+                      {/* Mini Score Preview Visualizer */}
+                      <MiniScorePreview groove={groove} className="mb-2.5" />
 
                       {/* Description */}
                       <p className="text-xs text-gray-300 font-sans leading-relaxed line-clamp-2">
