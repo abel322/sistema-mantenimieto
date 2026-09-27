@@ -82,19 +82,22 @@ export default function SaveExerciseModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-deep/85 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-lg rounded-3xl bg-surface-card border border-white/10 shadow-2xl p-6 sm:p-7 space-y-6">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full sm:max-w-lg max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Mobile Pull Handle */}
+        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-1 sm:hidden flex-shrink-0" />
+
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-glow-cyan">
-              <Save className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-glow-cyan flex-shrink-0">
+              <Save className="w-4 h-4 sm:w-5 sm:h-5" />
             </span>
-            <div>
-              <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
                 Guardar Ejercicio / Rutina
               </h2>
-              <p className="text-xs text-gray-400">
+              <p className="text-[10px] sm:text-xs text-gray-400 truncate hidden sm:block">
                 Almacena tu composición para practicarla y recuperarla en cualquier momento
               </p>
             </div>
@@ -102,7 +105,7 @@ export default function SaveExerciseModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer"
+            className="p-1.5 sm:p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

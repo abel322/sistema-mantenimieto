@@ -109,8 +109,11 @@ export default function ExerciseLibraryModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-obsidian-deep/85 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-surface-card border border-white/10 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-4xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+        {/* Mobile Pull Handle */}
+        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
+
         {/* Hidden File Input for JSON import */}
         <input
           ref={fileInputRef}
@@ -121,32 +124,44 @@ export default function ExerciseLibraryModal({
         />
 
         {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-slate/40">
-          <div className="flex items-center gap-3">
-            <span className="p-2.5 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-glow-violet">
-              <FolderOpen className="w-5 h-5" />
-            </span>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Mis Rutinas de Práctica
-                </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-bold border border-purple-500/30">
-                  {exercises.length} Guardadas
-                </span>
+        <div className="p-3 sm:p-4 border-b border-white/10 bg-[#0B0F19]/95 backdrop-blur-md flex-shrink-0 space-y-2.5">
+          {/* Row 1: Title, count badge, and close button */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-glow-violet flex-shrink-0">
+                <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+                    Mis Rutinas
+                  </h2>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-bold border border-purple-500/30 flex-shrink-0">
+                    {exercises.length}
+                  </span>
+                </div>
+                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate hidden sm:block">
+                  Carga tus composiciones, ejercicios de independencia y rudimentos guardados en el estudio
+                </p>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Carga tus composiciones, ejercicios de independencia y rudimentos guardados en el estudio
-              </p>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 sm:p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer flex-shrink-0"
+              title="Cerrar ventana"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* Header Action Tools */}
-          <div className="flex items-center gap-2 self-end md:self-auto flex-wrap">
+          {/* Row 2: Header Action Tools */}
+          <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-white/5">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="px-3 py-1.5 rounded-xl bg-surface-slate hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl bg-surface-slate hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
               title="Importar rutinas desde archivo JSON"
             >
               <Upload className="w-3.5 h-3.5 text-cyan-400" />
@@ -157,21 +172,13 @@ export default function ExerciseLibraryModal({
               <button
                 type="button"
                 onClick={onExportAll}
-                className="px-3 py-1.5 rounded-xl bg-surface-slate hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl bg-surface-slate hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer"
                 title="Descargar copia de seguridad de todas las rutinas"
               >
                 <Download className="w-3.5 h-3.5 text-purple-400" />
                 <span>Exportar Todo</span>
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all cursor-pointer ml-1"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
 

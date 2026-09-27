@@ -79,170 +79,178 @@ export default function DrumSubdivisionBar({
   const isGhostActive = hasGhost || isGhostMode;
 
   return (
-    <div className="w-full rounded-2xl bg-white/95 dark:bg-surface-card border border-slate-200 dark:border-white/10 p-4 shadow-sm dark:shadow-glass flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+    <div className="w-full rounded-2xl bg-white/95 dark:bg-surface-card border border-slate-200 dark:border-white/10 p-3 sm:p-4 shadow-sm dark:shadow-glass flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
       {/* Beat & Subdivision Selector */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 w-full lg:w-auto">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span className="p-1 rounded-md bg-gradient-electric text-white">
             <Zap className="w-3.5 h-3.5" />
           </span>
-          <span className="text-xs font-mono font-bold text-slate-800 dark:text-gray-200">
+          <span className="text-xs font-mono font-bold text-slate-800 dark:text-gray-200 whitespace-nowrap">
             FIGURA / SUBDIVISIÓN T{selectedBeatIndex + 1}:
           </span>
         </div>
 
-        {/* Regular Subdivisions (Whole 1/1, Half 1/2, Quarter 1/4, 8th 1/8, 16th 1/16, 32nd 1/32) */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-slate p-1 rounded-xl border border-slate-200 dark:border-white/5">
-          <span className="text-[10px] font-mono text-slate-500 dark:text-gray-500 uppercase px-2 font-semibold">
-            Regulares
-          </span>
-          {regularOptions.map((opt) => {
-            const isSelected = currentSubdivision === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => onChangeSubdivision(opt.value)}
-                className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 select-none cursor-pointer ${
-                  isSelected
-                    ? 'bg-synth-cyan text-black shadow-glow-cyan'
-                    : 'text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
-                title={`${opt.nameEs} (${opt.label}) - Atajo [${opt.shortcut}]`}
-              >
-                <span>{opt.label}</span>
-                <span className="text-[9px] opacity-75 font-normal">[{opt.shortcut}]</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Scrollable Figures container for mobile */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full sm:w-auto">
+          {/* Regular Subdivisions (Whole 1/1, Half 1/2, Quarter 1/4, 8th 1/8, 16th 1/16, 32nd 1/32) */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-slate p-1 rounded-xl border border-slate-200 dark:border-white/5 flex-shrink-0">
+            <span className="text-[10px] font-mono text-slate-500 dark:text-gray-500 uppercase px-1.5 sm:px-2 font-semibold">
+              Regulares
+            </span>
+            {regularOptions.map((opt) => {
+              const isSelected = currentSubdivision === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onChangeSubdivision(opt.value)}
+                  className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 select-none cursor-pointer flex-shrink-0 whitespace-nowrap ${
+                    isSelected
+                      ? 'bg-synth-cyan text-black shadow-glow-cyan'
+                      : 'text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                  }`}
+                  title={`${opt.nameEs} (${opt.label}) - Atajo [${opt.shortcut}]`}
+                >
+                  <span>{opt.label}</span>
+                  <span className="text-[9px] opacity-75 font-normal hidden xs:inline">[{opt.shortcut}]</span>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Irregular Subdivisions / Tuplets (3:2, 5:4, 6:4, 7:4, 9:8) */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-slate p-1 rounded-xl border border-slate-200 dark:border-white/5">
-          <span className="text-[10px] font-mono text-purple-700 dark:text-purple-400 uppercase px-2 font-semibold flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-            Tuplets
-          </span>
-          {tupletOptions.map((opt) => {
-            const isSelected = currentSubdivision === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => onChangeSubdivision(opt.value)}
-                className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 select-none cursor-pointer ${
-                  isSelected
-                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-glow-violet'
-                    : 'text-purple-800 dark:text-purple-300 hover:text-purple-950 dark:hover:text-white hover:bg-purple-100 dark:hover:bg-white/5'
-                }`}
-                title={`${opt.nameEs} (${opt.label}) - Atajo [${opt.shortcut}]`}
-              >
-                <span>{opt.label}</span>
-                <span className="text-[9px] opacity-75 font-normal">[{opt.shortcut}]</span>
-              </button>
-            );
-          })}
+          {/* Irregular Subdivisions / Tuplets (3:2, 5:4, 6:4, 7:4, 9:8) */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-slate p-1 rounded-xl border border-slate-200 dark:border-white/5 flex-shrink-0">
+            <span className="text-[10px] font-mono text-purple-700 dark:text-purple-400 uppercase px-1.5 sm:px-2 font-semibold flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+              Tuplets
+            </span>
+            {tupletOptions.map((opt) => {
+              const isSelected = currentSubdivision === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => onChangeSubdivision(opt.value)}
+                  className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 select-none cursor-pointer flex-shrink-0 whitespace-nowrap ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-glow-violet'
+                      : 'text-purple-800 dark:text-purple-300 hover:text-purple-950 dark:hover:text-white hover:bg-purple-100 dark:hover:bg-white/5'
+                  }`}
+                  title={`${opt.nameEs} (${opt.label}) - Atajo [${opt.shortcut}]`}
+                >
+                  <span>{opt.label}</span>
+                  <span className="text-[9px] opacity-75 font-normal hidden xs:inline">[{opt.shortcut}]</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Dynamics, Rest & Articulations Quick Actions */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Accent Button */}
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onToggleAccent}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
-            isAccentActive
-              ? 'bg-amber-100 dark:bg-amber-500/25 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.45)] ring-1 ring-amber-400'
-              : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-amber-500/40 hover:text-amber-800 dark:hover:text-amber-300'
-          }`}
-          title="Alternar Acento (Atajo: A o >)"
-        >
-          <span className="text-sm font-black">&gt;</span>
-          <span>Acento [A]</span>
-          {isAccentActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse ml-0.5" />}
-        </button>
-
-        {/* Ghost Note Button */}
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onToggleGhost}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
-            isGhostActive
-              ? 'bg-purple-100 dark:bg-purple-500/25 border-purple-400 text-purple-900 dark:text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.45)] ring-1 ring-purple-400'
-              : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-purple-500/40 hover:text-purple-800 dark:hover:text-purple-300'
-          }`}
-          title="Alternar Ghost Note (Atajo: G o ()"
-        >
-          <span className="text-xs font-bold">(•)</span>
-          <span>Ghost [G]</span>
-          {isGhostActive && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 dark:bg-purple-400 animate-pulse ml-0.5" />}
-        </button>
-
-        {/* Rest Toggle Button */}
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onToggleRest}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
-            isRest
-              ? 'bg-cyan-100 dark:bg-cyan-500/20 border-cyan-400 text-cyan-900 dark:text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.35)] ring-1 ring-cyan-400'
-              : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-cyan-500/40 hover:text-cyan-800 dark:hover:text-cyan-300'
-          }`}
-          title="Alternar Silencio percusivo (Atajo: Z o 0)"
-        >
-          <span className="text-sm font-serif font-black mr-1.5">𝄽</span>
-          <span>Silencio [Z]</span>
-          {isRest && <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-pulse ml-0.5" />}
-        </button>
-
-        {/* Syncopate / Anticipate Push Button */}
-        {onToggleSyncopate && (
+      <div className="w-full lg:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {/* 2x2 Grid on Mobile (< sm), Flex on Desktop */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          {/* Accent Button */}
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={onToggleSyncopate}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
-              isSyncopated || isTied
-                ? 'bg-amber-100 dark:bg-amber-500/25 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] ring-1 ring-amber-400'
+            onClick={onToggleAccent}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center justify-center sm:justify-start gap-1.5 border cursor-pointer select-none ${
+              isAccentActive
+                ? 'bg-amber-100 dark:bg-amber-500/25 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.45)] ring-1 ring-amber-400'
                 : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-amber-500/40 hover:text-amber-800 dark:hover:text-amber-300'
             }`}
-            title="𝄐 Síncopa / Anticipar: Desplaza el golpe una subdivisión hacia atrás (al contratiempo) y lo liga hacia adelante, silenciando el pulso fuerte [Atajo: S o Shift+S / P]"
+            title="Alternar Acento (Atajo: A o >)"
           >
-            <span className="text-base leading-none">𝄐</span>
-            <span>Síncopa / Push [S]</span>
-            {(isSyncopated || isTied) && (
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse ml-0.5" />
-            )}
+            <span className="text-sm font-black">&gt;</span>
+            <span>Acento [A]</span>
+            {isAccentActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse ml-0.5" />}
           </button>
-        )}
 
-        {/* Pedagogical Switch: Destacar Sincopas */}
-        {onToggleHighlightSyncopations && (
+          {/* Ghost Note Button */}
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={onToggleHighlightSyncopations}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
-              highlightSyncopations
-                ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
-                : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-300 hover:border-amber-400'
+            onClick={onToggleGhost}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center justify-center sm:justify-start gap-1.5 border cursor-pointer select-none ${
+              isGhostActive
+                ? 'bg-purple-100 dark:bg-purple-500/25 border-purple-400 text-purple-900 dark:text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.45)] ring-1 ring-purple-400'
+                : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-purple-500/40 hover:text-purple-800 dark:hover:text-purple-300'
             }`}
-            title="Activar switch pedagógico para destacar visualmente notas sincopadas y ligaduras en partitura y secuenciador"
+            title="Alternar Ghost Note (Atajo: G o ()"
           >
-            <span className="text-sm">𝄐</span>
-            <span className="hidden sm:inline">Destacar Síncopas</span>
-            <span
-              className={`w-2 h-2 rounded-full ${
-                highlightSyncopations ? 'bg-amber-500 dark:bg-amber-400 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'
-              }`}
-            />
+            <span className="text-xs font-bold">(•)</span>
+            <span>Ghost [G]</span>
+            {isGhostActive && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 dark:bg-purple-400 animate-pulse ml-0.5" />}
           </button>
-        )}
+
+          {/* Rest Toggle Button */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onToggleRest}
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center justify-center sm:justify-start gap-1.5 border cursor-pointer select-none ${
+              isRest
+                ? 'bg-cyan-100 dark:bg-cyan-500/20 border-cyan-400 text-cyan-900 dark:text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.35)] ring-1 ring-cyan-400'
+                : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-cyan-500/40 hover:text-cyan-800 dark:hover:text-cyan-300'
+            }`}
+            title="Alternar Silencio percusivo (Atajo: Z o 0)"
+          >
+            <span className="text-sm font-serif font-black mr-1.5">𝄽</span>
+            <span>Silencio [Z]</span>
+            {isRest && <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-pulse ml-0.5" />}
+          </button>
+
+          {/* Syncopate / Anticipate Push Button */}
+          {onToggleSyncopate && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onToggleSyncopate}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center justify-center sm:justify-start gap-1.5 border cursor-pointer select-none ${
+                isSyncopated || isTied
+                  ? 'bg-amber-100 dark:bg-amber-500/25 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.5)] ring-1 ring-amber-400'
+                  : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:border-amber-500/40 hover:text-amber-800 dark:hover:text-amber-300'
+              }`}
+              title="𝄐 Síncopa / Anticipar: Desplaza el golpe una subdivisión hacia atrás [Atajo: S o P]"
+            >
+              <span className="text-base leading-none">𝄐</span>
+              <span>Síncopa [S]</span>
+              {(isSyncopated || isTied) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 animate-pulse ml-0.5" />
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Secondary controls on mobile for Highlight & Trash */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* Pedagogical Switch: Destacar Sincopas */}
+          {onToggleHighlightSyncopations && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onToggleHighlightSyncopations}
+              className={`flex-1 sm:flex-initial px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 border cursor-pointer select-none ${
+                highlightSyncopations
+                  ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
+                  : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-300 hover:border-amber-400'
+              }`}
+              title="Activar switch pedagógico para destacar notas sincopadas y ligaduras"
+            >
+              <span className="text-sm">𝄐</span>
+              <span>Destacar Síncopas</span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  highlightSyncopations ? 'bg-amber-500 dark:bg-amber-400 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'
+                }`}
+              />
+            </button>
+          )}
 
         {/* Clear & Delete Options Popover Menu */}
         <div className="relative" ref={trashMenuRef}>
@@ -338,5 +346,6 @@ export default function DrumSubdivisionBar({
         </button>
       </div>
     </div>
+  </div>
   );
 }

@@ -13,26 +13,29 @@ export default function DrumLegendModal({ isOpen, onClose }: DrumLegendModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-deep/80 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-3xl rounded-3xl bg-surface-card border border-white/10 shadow-2xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Mobile Pull Handle */}
+        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-1 sm:hidden flex-shrink-0" />
+
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <span className="p-2 rounded-xl bg-gradient-electric text-white shadow-glow-violet">
-              <Music className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-3 border-b border-white/10 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="p-2 rounded-xl bg-gradient-electric text-white shadow-glow-violet flex-shrink-0">
+              <Music className="w-4 h-4 sm:w-5 sm:h-5" />
             </span>
-            <div>
-              <h2 className="text-lg sm:text-xl font-extrabold text-white">
-                Guía de Notación de Batería & Atajos Ágiles
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-extrabold text-white truncate">
+                Guía de Notación & Atajos
               </h2>
-              <p className="text-xs text-gray-400">
+              <p className="text-[10px] sm:text-xs text-gray-400 truncate hidden sm:block">
                 Estándar internacional de clave de percusión de 5 líneas y flujo de trabajo Guitar Pro
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all"
+            className="p-1.5 sm:p-2 rounded-xl bg-surface-slate border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

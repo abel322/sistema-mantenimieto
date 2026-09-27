@@ -27,6 +27,7 @@ import {
   Maximize2,
   Save,
   FolderOpen,
+  X,
 } from 'lucide-react';
 
 export default function DrumLab() {
@@ -40,6 +41,28 @@ export default function DrumLab() {
   const [isSaveExerciseOpen, setIsSaveExerciseOpen] = useState(false);
   const [isExerciseLibraryOpen, setIsExerciseLibraryOpen] = useState(false);
   const [highlightSyncopations, setHighlightSyncopations] = useState(false);
+  const [isMobileQuickMenuOpen, setIsMobileQuickMenuOpen] = useState(false);
+
+  const isAnyModalOpen =
+    isLegendOpen ||
+    isRudimentsOpen ||
+    isGroovesOpen ||
+    isWorkoutBuilderOpen ||
+    isSaveExerciseOpen ||
+    isExerciseLibraryOpen;
+
+  // Lock body scroll when any modal or drawer is open
+  useEffect(() => {
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      setIsMobileQuickMenuOpen(false);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isAnyModalOpen]);
 
   const audio = useDrumAudio();
   const score = useDrumScore('classic-rock');
@@ -406,12 +429,12 @@ export default function DrumLab() {
         </div>
 
         {/* Header Actions: Routines, Rudiments Vault & View Mode Selector */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full md:w-auto">
           {/* Save Exercise Button */}
           <button
             type="button"
             onClick={() => setIsSaveExerciseOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-100/90 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200 hover:dark:bg-slate-700 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-100/90 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200 hover:dark:bg-slate-700 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
             title="Guardar el ejercicio actual como rutina de práctica"
           >
             <Save className="w-3.5 h-3.5 text-emerald-700 dark:text-slate-300" />
@@ -422,7 +445,7 @@ export default function DrumLab() {
           <button
             type="button"
             onClick={() => setIsExerciseLibraryOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-100/80 hover:bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-950/40 dark:border-purple-500/40 dark:text-purple-300 hover:dark:bg-purple-900/50 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-100/80 hover:bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-950/40 dark:border-purple-500/40 dark:text-purple-300 hover:dark:bg-purple-900/50 text-xs font-semibold font-mono transition-all cursor-pointer shadow-sm whitespace-nowrap flex-shrink-0"
             title="Ver mis rutinas de práctica guardadas"
           >
             <FolderOpen className="w-3.5 h-3.5 text-purple-700 dark:text-purple-300" />
@@ -436,7 +459,7 @@ export default function DrumLab() {
           <button
             type="button"
             onClick={() => setIsRudimentsOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 border border-cyan-300 dark:bg-cyan-950/40 dark:border-cyan-500/40 dark:text-cyan-300 hover:dark:bg-cyan-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(34,211,238,0.25)] cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 border border-cyan-300 dark:bg-cyan-950/40 dark:border-cyan-500/40 dark:text-cyan-300 hover:dark:bg-cyan-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(34,211,238,0.25)] cursor-pointer whitespace-nowrap flex-shrink-0"
             title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
           >
             <span className="text-base">🥁</span>
@@ -450,7 +473,7 @@ export default function DrumLab() {
           <button
             type="button"
             onClick={() => setIsGroovesOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-300 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300 hover:dark:bg-amber-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-300 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300 hover:dark:bg-amber-900/50 text-xs font-semibold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(245,158,11,0.25)] cursor-pointer whitespace-nowrap flex-shrink-0"
             title="Abrir Groove Vault (85+ patrones listos para tocar)"
           >
             <span className="text-base">⚡</span>
@@ -461,10 +484,10 @@ export default function DrumLab() {
           </button>
 
           {/* View Layout Mode Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/80">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
             <button
               onClick={() => setViewMode('both')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 viewMode === 'both'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
                   : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
@@ -474,30 +497,30 @@ export default function DrumLab() {
             </button>
             <button
               onClick={() => setViewMode('score')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 viewMode === 'score'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
                   : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Partitura VexFlow
+              Partitura
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                 viewMode === 'grid'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
                   : 'text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Matriz DAW
+              DAW
             </button>
           </div>
         </div>
       </div>
 
       {/* 1. Master Transport Bar (Play/Stop/BPM/Presets/Meter) - Sticky Floating Bar */}
-      <div className="sticky top-2 z-40 rounded-2xl">
+      <div className={`sticky top-2 z-30 rounded-2xl ${isAnyModalOpen ? 'hidden sm:block' : ''}`}>
         <DrumTransport
           isPlaying={audio.isPlaying}
           bpm={audio.bpm}
@@ -790,6 +813,95 @@ export default function DrumLab() {
         }}
         onPlayHit={audio.playHit}
       />
+
+      {/* Mobile Floating Action Button (Quick Vaults & Tools Drawer) */}
+      <div
+        className={`fixed bottom-6 right-4 z-30 sm:hidden transition-all duration-200 ${
+          isAnyModalOpen ? 'hidden' : 'flex'
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setIsMobileQuickMenuOpen((prev) => !prev)}
+          className="relative flex items-center justify-center w-12 h-12 rounded-full bg-[#111827] border border-cyan-400/60 text-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.4)] active:scale-95 transition-all focus:outline-none"
+          aria-label="Abrir panel rápido de herramientas y vaults"
+        >
+          {isMobileQuickMenuOpen ? (
+            <X className="w-5 h-5 text-white" />
+          ) : (
+            <Sliders className="w-5 h-5 text-cyan-400" />
+          )}
+        </button>
+
+        {/* Mobile Quick Menu Popover */}
+        {isMobileQuickMenuOpen && (
+          <div className="absolute bottom-14 right-0 w-64 rounded-2xl bg-[#0B0F19]/95 backdrop-blur-xl border border-white/15 p-3 shadow-2xl space-y-2 animate-in fade-in slide-in-from-bottom-2">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-synth-cyan font-bold px-2 py-1 border-b border-white/10">
+              ACCESO RÁPIDO VAULTS & TOOLS
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileQuickMenuOpen(false);
+                setIsRudimentsOpen(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold text-left"
+            >
+              <span>🥁</span>
+              <span>Rudiment Vault</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileQuickMenuOpen(false);
+                setIsGroovesOpen(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs font-mono font-semibold text-left"
+            >
+              <span>⚡</span>
+              <span>Groove Vault (85+)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileQuickMenuOpen(false);
+                setIsWorkoutBuilderOpen(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-semibold text-left"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>Workout Builder</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileQuickMenuOpen(false);
+                setIsExerciseLibraryOpen(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-purple-300 text-xs font-mono font-semibold text-left"
+            >
+              <FolderOpen className="w-4 h-4 text-purple-400" />
+              <span>Mis Rutinas ({storage.exercises.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileQuickMenuOpen(false);
+                setIsLegendOpen(true);
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 text-xs font-mono font-semibold text-left"
+            >
+              <Info className="w-4 h-4 text-synth-cyan" />
+              <span>Guía de Notación</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

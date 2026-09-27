@@ -377,46 +377,48 @@ export default function GrooveLibraryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl h-[92vh] max-h-[900px] flex flex-col rounded-3xl bg-surface-base border border-white/10 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full h-[92vh] sm:h-auto sm:max-h-[90vh] sm:max-w-5xl rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden bg-[#0B0F19] border-t sm:border border-white/10 shadow-2xl">
+        {/* Mobile Pull Handle */}
+        <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-2 sm:hidden flex-shrink-0" />
+
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-white/10 bg-surface-card/60 backdrop-blur flex-shrink-0 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500/20 via-pink-500/20 to-synth-cyan/20 border border-amber-500/30 flex items-center justify-center shadow-glow-amber">
-                <Disc3 className="w-5 h-5 text-amber-400 animate-spin-slow" />
+        <div className="p-3 sm:p-4 border-b border-white/10 bg-[#0B0F19]/95 backdrop-blur-md flex-shrink-0 space-y-2.5">
+          {/* Row 1: Title, Count badge, and Close Button */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-amber-500/20 via-pink-500/20 to-synth-cyan/20 border border-amber-500/30 flex items-center justify-center shadow-glow-amber flex-shrink-0">
+                <Disc3 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-spin-slow" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
-                    <span>Groove Vault</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono">
-                      {allGrooves.length} Patrones
-                    </span>
+                  <h2 className="text-base sm:text-lg font-bold tracking-tight text-white truncate">
+                    Groove Vault
                   </h2>
+                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono flex-shrink-0">
+                    {allGrooves.length}
+                  </span>
                 </div>
-                <p className="text-xs text-gray-400 font-mono">
+                <p className="text-[10px] sm:text-xs text-gray-400 font-mono truncate hidden sm:block">
                   Biblioteca profesional de ritmos divididos por estilo, métrica y sensación
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Save / Create Groove Button */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsSaveModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/25 via-purple-500/25 to-pink-500/25 hover:from-cyan-500/35 hover:via-purple-500/35 hover:to-pink-500/35 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.2)] hover:shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500/25 via-purple-500/25 to-pink-500/25 hover:from-cyan-500/35 hover:via-purple-500/35 hover:to-pink-500/35 text-cyan-300 hover:text-white border border-cyan-500/40 text-xs font-mono font-bold transition-all items-center gap-1.5 cursor-pointer shadow-[0_0_15px_rgba(6,182,212,0.2)]"
                 title="Capturar o diseñar un groove en la mini matriz para el Groove Vault"
               >
                 <Plus className="w-4 h-4 text-cyan-400" />
-                <span className="hidden sm:inline">+ Guardar / Crear Groove</span>
-                <span className="sm:hidden">+ Crear</span>
+                <span>+ Guardar / Crear Groove</span>
               </button>
 
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer flex-shrink-0"
                 title="Cerrar ventana"
               >
                 <X className="w-5 h-5" />
@@ -424,10 +426,22 @@ export default function GrooveLibraryModal({
             </div>
           </div>
 
+          {/* Row 2 on Mobile: Action button */}
+          <div className="sm:hidden flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+            <button
+              type="button"
+              onClick={() => setIsSaveModalOpen(true)}
+              className="w-full py-1.5 px-3 rounded-lg bg-gradient-to-r from-cyan-500/25 via-purple-500/25 to-pink-500/25 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-bold flex items-center justify-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5 text-cyan-400" />
+              <span>+ Guardar / Crear Groove</span>
+            </button>
+          </div>
+
           {/* Destination Selector & Sync Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-surface-slate/60 border border-white/5">
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-surface-slate/60 border border-white/5">
             {/* Target measures */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto py-0.5">
               <span className="text-[10px] font-mono font-bold text-synth-cyan uppercase tracking-wider flex items-center gap-1">
                 <Layers className="w-3.5 h-3.5" />
                 Aplicar en:
