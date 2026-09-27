@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -19,11 +19,16 @@ import {
 } from 'lucide-react';
 import { DRUM_PRESETS } from '@/lib/drumPresets';
 import { DrumPreset } from '@/types/drum';
+import { MetronomeMode, BeatFlash } from '@/hooks/useDrumAudio';
 
 interface DrumTransportProps {
   isPlaying: boolean;
   bpm: number;
   isMetronomeActive: boolean;
+  metronomeMode?: MetronomeMode;
+  metronomeVolume?: number;
+  isSyncopationDrill?: boolean;
+  currentBeatFlash?: BeatFlash | null;
   isLooping: boolean;
   timeSignature: [number, number];
   activePresetId: string | null;
@@ -34,6 +39,9 @@ interface DrumTransportProps {
   onStop: () => void;
   onSetBpm: (bpm: number) => void;
   onToggleMetronome: () => void;
+  onSetMetronomeMode?: (mode: MetronomeMode) => void;
+  onSetMetronomeVolume?: (vol: number) => void;
+  onToggleSyncopationDrill?: () => void;
   onToggleLoop: () => void;
   onSelectPreset: (preset: DrumPreset) => void;
   onSetTimeSignature: (ts: [number, number]) => void;
@@ -51,6 +59,10 @@ export default function DrumTransport({
   isPlaying,
   bpm,
   isMetronomeActive,
+  metronomeMode = 'beats',
+  metronomeVolume = 0,
+  isSyncopationDrill = false,
+  currentBeatFlash = null,
   isLooping,
   timeSignature,
   activePresetId,
@@ -61,6 +73,9 @@ export default function DrumTransport({
   onStop,
   onSetBpm,
   onToggleMetronome,
+  onSetMetronomeMode,
+  onSetMetronomeVolume,
+  onToggleSyncopationDrill,
   onToggleLoop,
   onSelectPreset,
   onSetTimeSignature,
@@ -73,6 +88,25 @@ export default function DrumTransport({
   onOpenSaveExercise,
   onOpenExerciseLibrary,
 }: DrumTransportProps) {
+  const [isMetronomeSettingsOpen, setIsMetronomeSettingsOpen] = useState(false);
+  const metronomeSettingsRef = useRef<HTMLDivElement>(null);
+
+  // Close metronome settings popover on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        metronomeSettingsRef.current &&
+        !metronomeSettingsRef.current.contains(event.target as Node)
+      ) {
+        setIsMetronomeSettingsOpen(false);
+      }
+    }
+    if (isMetronomeSettingsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isMetronomeSettingsOpen]);
+
   // Tap tempo logic
   const tapTimesRef = useRef<number[]>([]);
   const handleTapTempo = () => {
@@ -151,19 +185,174 @@ export default function DrumTransport({
             <Repeat className="w-4 h-4" />
           </button>
 
-          {/* Metronome Button */}
-          <button
-            onClick={onToggleMetronome}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-semibold border transition-all ${
-              isMetronomeActive
-                ? 'bg-emerald-500/20 border-emerald-500/70 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                : 'bg-surface-slate border-white/10 text-gray-400 hover:text-white'
-            }`}
-            title="Metrónomo acústico"
-          >
-            <Bell className="w-3.5 h-3.5" />
-            <span>CLICK</span>
-          </button>
+          {/* Metronome Group: CLICK + Beat Flash + 4-Beat LEDs + Settings Popover */}
+          <div className="relative flex items-center" ref={metronomeSettingsRef}>
+            {/* Main CLICK button with real-time flash and LED dots */}
+            <div className="flex items-center rounded-xl overflow-hidden border border-white/10 transition-all">
+              <button
+                type="button"
+                onClick={onToggleMetronome}
+                className={`flex items-center gap-2 px-3 py-2 text-xs font-mono font-semibold transition-all cursor-pointer ${
+                  isPlaying && currentBeatFlash
+                    ? currentBeatFlash.isDownbeat
+                      ? 'bg-synth-cyan/35 text-synth-cyan shadow-[0_0_18px_rgba(34,211,238,0.7)]'
+                      : 'bg-synth-violet/30 text-synth-violet shadow-[0_0_14px_rgba(168,85,247,0.6)]'
+                    : isMetronomeActive
+                    ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                    : 'bg-surface-slate text-gray-400 hover:text-white'
+                }`}
+                title="Activar / Desactivar Metrónomo [Click]"
+              >
+                <Bell className={`w-3.5 h-3.5 ${isPlaying && currentBeatFlash ? 'animate-bounce' : ''}`} />
+                <span>CLICK</span>
+
+                {/* Visual 4-beat LED indicators */}
+                <div className="flex items-center gap-1 pl-1.5 border-l border-white/10">
+                  {[0, 1, 2, 3].map((b) => {
+                    const isBeatActive = isPlaying && currentBeatFlash?.beatIndex === b;
+                    return (
+                      <span
+                        key={`beat-led-${b}`}
+                        className={`w-1.5 h-1.5 rounded-full transition-all duration-75 ${
+                          isBeatActive
+                            ? b === 0
+                              ? 'bg-synth-cyan shadow-[0_0_8px_#22d3ee] scale-150'
+                              : 'bg-synth-violet shadow-[0_0_8px_#a855f7] scale-150'
+                            : 'bg-white/20'
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              </button>
+
+              {/* Settings Dropdown Button for Metronome */}
+              <button
+                type="button"
+                onClick={() => setIsMetronomeSettingsOpen((prev) => !prev)}
+                className={`px-1.5 py-2 transition-all cursor-pointer border-l border-white/10 ${
+                  isMetronomeSettingsOpen
+                    ? 'bg-synth-cyan/20 text-synth-cyan'
+                    : isMetronomeActive
+                    ? 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                    : 'bg-surface-slate text-gray-400 hover:text-white'
+                }`}
+                title="Configuración de Metrónomo: Volumen y Subdivisiones"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Metronome Settings Popover Floating Menu */}
+            {isMetronomeSettingsOpen && (
+              <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl bg-surface-card/95 backdrop-blur-xl border border-white/15 p-4 shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-gray-200">
+                    <Sliders className="w-3.5 h-3.5 text-synth-cyan" />
+                    <span>METRÓNOMO TONE.JS</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-synth-cyan/15 text-synth-cyan font-semibold">
+                    1600/800/400 Hz
+                  </span>
+                </div>
+
+                {/* Volume Slider */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-400 flex items-center gap-1">
+                      <Volume2 className="w-3 h-3 text-gray-400" />
+                      <span>Volumen</span>
+                    </span>
+                    <span className="font-mono text-[11px] text-synth-cyan font-bold">
+                      {metronomeVolume > 0 ? `+${metronomeVolume}` : metronomeVolume} dB
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-24}
+                    max={6}
+                    step={1}
+                    value={metronomeVolume}
+                    onChange={(e) => onSetMetronomeVolume?.(Number(e.target.value))}
+                    className="w-full accent-synth-cyan cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[9px] font-mono text-gray-500">
+                    <span>-24 dB</span>
+                    <span>0 dB (Normal)</span>
+                    <span>+6 dB</span>
+                  </div>
+                </div>
+
+                {/* Metronome Mode Level Selector */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] text-gray-400 font-mono block">Nivel de marcación:</span>
+                  <div className="grid grid-cols-1 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onSetMetronomeMode?.('downbeat')}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-mono text-left flex items-center justify-between transition-all cursor-pointer ${
+                        metronomeMode === 'downbeat'
+                          ? 'bg-synth-cyan/20 border border-synth-cyan/60 text-synth-cyan font-bold shadow-sm'
+                          : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <span>Solo Tiempos Fuertes</span>
+                      <span className="text-[10px] text-gray-500">1600 Hz</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onSetMetronomeMode?.('beats')}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-mono text-left flex items-center justify-between transition-all cursor-pointer ${
+                        metronomeMode === 'beats'
+                          ? 'bg-synth-cyan/20 border border-synth-cyan/60 text-synth-cyan font-bold shadow-sm'
+                          : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <span>Pulsos 1-2-3-4</span>
+                      <span className="text-[10px] text-gray-500">1600 / 800 Hz</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onSetMetronomeMode?.('subdivision')}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-mono text-left flex items-center justify-between transition-all cursor-pointer ${
+                        metronomeMode === 'subdivision'
+                          ? 'bg-synth-cyan/20 border border-synth-cyan/60 text-synth-cyan font-bold shadow-sm'
+                          : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <span>Subdivisión Completa</span>
+                      <span className="text-[10px] text-gray-500">+400 Hz (-6dB)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 🎯 Modo Anclaje / Syncopation Drill Quick Toggle Button */}
+          {onToggleSyncopationDrill && (
+            <button
+              type="button"
+              onClick={onToggleSyncopationDrill}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer select-none ${
+                isSyncopationDrill
+                  ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
+                  : 'bg-surface-slate border-white/10 text-gray-400 hover:text-amber-300 hover:border-amber-500/40'
+              }`}
+              title="🎯 Modo Anclaje / Syncopation Drill: Fuerza pulsos 1-2-3-4 a tierra (woodblock digital) y resalta tiempos vacíos en la partitura"
+            >
+              <span>🎯</span>
+              <span className="hidden sm:inline">Modo Anclaje</span>
+              <span className="sm:hidden">Anclaje</span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isSyncopationDrill ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
+                }`}
+              />
+            </button>
+          )}
         </div>
 
         {/* BPM Tempo Slider & Tap Control */}

@@ -497,6 +497,10 @@ export default function DrumLab() {
         isPlaying={audio.isPlaying}
         bpm={audio.bpm}
         isMetronomeActive={audio.isMetronomeActive}
+        metronomeMode={audio.metronomeMode}
+        metronomeVolume={audio.metronomeVolume}
+        isSyncopationDrill={audio.isSyncopationDrill}
+        currentBeatFlash={audio.currentBeatFlash}
         isLooping={audio.isLooping}
         timeSignature={score.timeSignature}
         activePresetId={score.activePresetId}
@@ -507,6 +511,9 @@ export default function DrumLab() {
         onStop={audio.stop}
         onSetBpm={audio.setBpm}
         onToggleMetronome={audio.toggleMetronome}
+        onSetMetronomeMode={audio.setMetronomeMode}
+        onSetMetronomeVolume={audio.setMetronomeVolume}
+        onToggleSyncopationDrill={audio.toggleSyncopationDrill}
         onToggleLoop={audio.toggleLoop}
         onSelectPreset={handleSelectPreset}
         onSetTimeSignature={score.setTimeSignature}
@@ -535,7 +542,7 @@ export default function DrumLab() {
         isRest={isCurrentSelectionRest}
         isSyncopated={!!score.selectedStep?.isSyncopated}
         isTied={!!score.selectedStep?.tiedToNext || !!score.selectedStep?.tiedFromPrev}
-        highlightSyncopations={highlightSyncopations}
+        highlightSyncopations={highlightSyncopations || audio.isSyncopationDrill}
         onChangeSubdivision={(sub) => score.changeBeatSubdivision(sub)}
         onToggleAccent={handleToggleAccent}
         onToggleGhost={handleToggleGhost}
@@ -567,6 +574,8 @@ export default function DrumLab() {
             playhead={audio.playhead}
             isPlaying={audio.isPlaying}
             highlightSyncopations={highlightSyncopations}
+            isSyncopationDrill={audio.isSyncopationDrill}
+            currentBeatFlash={audio.currentBeatFlash}
             onToggleHighlightSyncopations={handleToggleHighlightSyncopations}
             onSelectStep={score.selectStep}
             onTogglePiece={handleTogglePiece}

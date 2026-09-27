@@ -10,11 +10,23 @@ export interface PlayheadPosition {
   progress: number; // 0.0 to 1.0 of the current measure or loop
 }
 
+export type MetronomeMode = 'downbeat' | 'beats' | 'subdivision';
+
+export interface BeatFlash {
+  beatIndex: number;
+  isDownbeat: boolean;
+  timestamp: number;
+}
+
 export function useDrumAudio() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [bpm, setBpmState] = useState(110);
   const [swing, setSwingState] = useState(0);
   const [isMetronomeActive, setIsMetronomeActive] = useState(false);
+  const [metronomeMode, setMetronomeModeState] = useState<MetronomeMode>('beats');
+  const [metronomeVolume, setMetronomeVolumeState] = useState<number>(0); // in dB
+  const [isSyncopationDrill, setIsSyncopationDrillState] = useState(false);
+  const [currentBeatFlash, setCurrentBeatFlash] = useState<BeatFlash | null>(null);
   const [isLooping, setIsLooping] = useState(true);
   const [playhead, setPlayhead] = useState<PlayheadPosition>({
     measureIndex: 0,
@@ -32,6 +44,9 @@ export function useDrumAudio() {
   const swingRef = useRef(0);
   const isPlayingRef = useRef(false);
   const isMetronomeRef = useRef(false);
+  const metronomeModeRef = useRef<MetronomeMode>('beats');
+  const metronomeVolumeRef = useRef<number>(0);
+  const isSyncopationDrillRef = useRef(false);
   const isLoopingRef = useRef(true);
 
   // Sync refs with state
@@ -55,11 +70,35 @@ export function useDrumAudio() {
   }, [isMetronomeActive]);
 
   useEffect(() => {
+    metronomeModeRef.current = metronomeMode;
+  }, [metronomeMode]);
+
+  useEffect(() => {
+    metronomeVolumeRef.current = metronomeVolume;
+    if (synthsRef.current?.metronomeBus) {
+      synthsRef.current.metronomeBus.volume.value = metronomeVolume;
+    }
+  }, [metronomeVolume]);
+
+  useEffect(() => {
+    isSyncopationDrillRef.current = isSyncopationDrill;
+  }, [isSyncopationDrill]);
+
+  useEffect(() => {
     isLoopingRef.current = isLooping;
     if (ToneRef.current?.Transport) {
       ToneRef.current.Transport.loop = isLooping;
     }
   }, [isLooping]);
+
+  // Auto-clear visual beat pulse after 120ms
+  useEffect(() => {
+    if (!currentBeatFlash) return;
+    const timer = setTimeout(() => {
+      setCurrentBeatFlash(null);
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [currentBeatFlash]);
 
   // Lazy initialization of Web Audio + Tone.js synths
   const initAudio = useCallback(async () => {
@@ -271,17 +310,43 @@ export function useDrumAudio() {
       chinaMetal.frequency.value = 210;
       chinaMetal.volume.value = -3;
 
-      // Metronome synth
+      // Independent Metronome Bus with dedicated master volume
+      const metronomeBus = new Tone.Volume(metronomeVolumeRef.current).toDestination();
+
+      // 13. Metronome synth: High-precision synth for acoustic/digital click (1600Hz / 800Hz / 400Hz)
       const clickSynth = new Tone.Synth({
         oscillator: { type: 'sine' },
         envelope: {
-          attack: 0.001,
-          decay: 0.025,
+          attack: 0.0005,
+          decay: 0.02,
           sustain: 0,
-          release: 0.02,
+          release: 0.015,
         },
-      }).toDestination();
-      clickSynth.volume.value = -8;
+      }).connect(metronomeBus);
+
+      // 14. Syncopation Drill Anchor Synths: Woodblock / digital rimshot
+      const anchorSynth = new Tone.MembraneSynth({
+        pitchDecay: 0.008,
+        octaves: 2.2,
+        oscillator: { type: 'sine' },
+        envelope: {
+          attack: 0.001,
+          decay: 0.045,
+          sustain: 0,
+          release: 0.03,
+        },
+      }).connect(metronomeBus);
+      anchorSynth.volume.value = 2;
+
+      const anchorNoise = new Tone.NoiseSynth({
+        noise: { type: 'white' },
+        envelope: {
+          attack: 0.001,
+          decay: 0.012,
+          sustain: 0,
+        },
+      }).connect(metronomeBus);
+      anchorNoise.volume.value = -10;
 
       synthsRef.current = {
         kick,
@@ -298,7 +363,10 @@ export function useDrumAudio() {
         tom1,
         tom2,
         floorTom,
+        metronomeBus,
         clickSynth,
+        anchorSynth,
+        anchorNoise,
       };
 
       Tone.Transport.bpm.value = bpmRef.current;
@@ -380,12 +448,43 @@ export function useDrumAudio() {
     [initAudio]
   );
 
-  // Play metronome click
-  const playClick = useCallback((isDownbeat: boolean, time: number) => {
-    const synths = synthsRef.current;
-    if (!synths || !isMetronomeRef.current) return;
-    synths.clickSynth.triggerAttackRelease(isDownbeat ? 'C6' : 'G5', '32n', time, isDownbeat ? 0.9 : 0.5);
-  }, []);
+  // Play metronome click / anchor pulse
+  const playClick = useCallback(
+    (beatIndex: number, isDownbeat: boolean, isSubdivision: boolean, time: number) => {
+      const synths = synthsRef.current;
+      if (!synths) return;
+      if (!isMetronomeRef.current && !isSyncopationDrillRef.current) return;
+
+      if (isSyncopationDrillRef.current) {
+        // Modo Anclaje / Syncopation Drill:
+        // Acoustic woodblock / digital rimshot timbre strictly marking the 4 ground beats
+        if (isSubdivision) return;
+        if (isDownbeat) {
+          // Downbeat (Tiempo 1 fuerte)
+          synths.anchorSynth.triggerAttackRelease('A4', '32n', time, 1.0);
+          synths.anchorNoise.triggerAttackRelease('32n', time, 0.45);
+        } else {
+          // Ground beats 2, 3, 4 (Pulsos a tierra)
+          synths.anchorSynth.triggerAttackRelease('F#4', '32n', time, 0.8);
+          synths.anchorNoise.triggerAttackRelease('32n', time, 0.25);
+        }
+        return;
+      }
+
+      // Standard Metronome
+      if (isSubdivision) {
+        // Clic de subdivisión: Frecuencia 400 Hz a volumen atenuado (-6 dB ~ 0.35 vel)
+        synths.clickSynth.triggerAttackRelease(400, '32n', time, 0.35);
+      } else if (isDownbeat) {
+        // Tiempo 1 (Downbeat fuerte): Frecuencia 1600 Hz (clic agudo y penetrante)
+        synths.clickSynth.triggerAttackRelease(1600, '32n', time, 1.0);
+      } else {
+        // Tiempos 2, 3 y 4 (Pulsos a tierra): Frecuencia 800 Hz
+        synths.clickSynth.triggerAttackRelease(800, '32n', time, 0.75);
+      }
+    },
+    []
+  );
 
   // Schedule all measures on Tone.Transport
   const scheduleScore = useCallback(
@@ -421,13 +520,40 @@ export function useDrumAudio() {
               ? beatDuration * 2
               : beatDuration / sub;
 
-          // Schedule metronome click at beat start
+          // Schedule metronome click and visual beat flash at beat start
           Tone.Transport.schedule((time: number) => {
-            playClick(bIdx === 0 && mIdx === 0, time);
+            const isDownbeat = bIdx === 0;
+            const mode = metronomeModeRef.current;
+            const drill = isSyncopationDrillRef.current;
+            const active = isMetronomeRef.current || drill;
+
+            if (active) {
+              if (drill || mode === 'beats' || mode === 'subdivision' || (mode === 'downbeat' && isDownbeat)) {
+                playClick(bIdx, isDownbeat, false, time);
+              }
+            }
+
+            // Visual beat pulse synchronized with Tone.Transport
+            Tone.Draw.schedule(() => {
+              setCurrentBeatFlash({
+                beatIndex: bIdx,
+                isDownbeat,
+                timestamp: Date.now(),
+              });
+            }, time);
           }, beatStartTime);
 
           beat.steps.forEach((step, sIdx) => {
             const stepTime = beatStartTime + sIdx * stepDuration;
+
+            // Schedule subdivision metronome clicks if enabled and not in drill
+            if (sIdx > 0) {
+              Tone.Transport.schedule((time: number) => {
+                if (isMetronomeRef.current && !isSyncopationDrillRef.current && metronomeModeRef.current === 'subdivision') {
+                  playClick(bIdx, false, true, time);
+                }
+              }, stepTime);
+            }
 
             // Determine which hits are tied into this step from previous
             const currentTiedFromPrev = new Set(tiedPiecesFromPrev);
@@ -551,6 +677,32 @@ export function useDrumAudio() {
     setIsMetronomeActive((prev) => !prev);
   }, []);
 
+  const setMetronomeMode = useCallback((mode: MetronomeMode) => {
+    setMetronomeModeState(mode);
+    metronomeModeRef.current = mode;
+  }, []);
+
+  const setMetronomeVolume = useCallback((db: number) => {
+    setMetronomeVolumeState(db);
+    metronomeVolumeRef.current = db;
+    if (synthsRef.current?.metronomeBus) {
+      synthsRef.current.metronomeBus.volume.value = db;
+    }
+  }, []);
+
+  const toggleSyncopationDrill = useCallback(() => {
+    setIsSyncopationDrillState((prev) => {
+      const next = !prev;
+      isSyncopationDrillRef.current = next;
+      return next;
+    });
+  }, []);
+
+  const setSyncopationDrill = useCallback((active: boolean) => {
+    setIsSyncopationDrillState(active);
+    isSyncopationDrillRef.current = active;
+  }, []);
+
   const toggleLoop = useCallback(() => {
     setIsLooping((prev) => !prev);
   }, []);
@@ -560,6 +712,10 @@ export function useDrumAudio() {
     bpm,
     swing,
     isMetronomeActive,
+    metronomeMode,
+    metronomeVolume,
+    isSyncopationDrill,
+    currentBeatFlash,
     isLooping,
     playhead,
     play,
@@ -569,6 +725,10 @@ export function useDrumAudio() {
     setBpm,
     setSwing,
     toggleMetronome,
+    setMetronomeMode,
+    setMetronomeVolume,
+    toggleSyncopationDrill,
+    setSyncopationDrill,
     toggleLoop,
     playHit,
     scheduleScore,

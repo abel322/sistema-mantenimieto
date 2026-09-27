@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { DrumMeasure, DrumPieceId, DRUM_PIECES } from '@/types/drum';
-import { PlayheadPosition } from '@/hooks/useDrumAudio';
+import { PlayheadPosition, BeatFlash } from '@/hooks/useDrumAudio';
 
 interface DrumScoreRendererProps {
   measures: DrumMeasure[];
@@ -13,6 +13,8 @@ interface DrumScoreRendererProps {
   playhead: PlayheadPosition;
   isPlaying: boolean;
   highlightSyncopations?: boolean;
+  isSyncopationDrill?: boolean;
+  currentBeatFlash?: BeatFlash | null;
   onToggleHighlightSyncopations?: () => void;
   onSelectStep: (mIdx: number, bIdx: number, sIdx: number) => void;
   onTogglePiece?: (pieceId: DrumPieceId) => void;
@@ -36,6 +38,8 @@ export default function DrumScoreRenderer({
   playhead,
   isPlaying,
   highlightSyncopations = false,
+  isSyncopationDrill = false,
+  currentBeatFlash = null,
   onToggleHighlightSyncopations,
   onSelectStep,
   onRemoveMeasure,
@@ -317,7 +321,8 @@ export default function DrumScoreRenderer({
                   step.tiedFromPrev ||
                   (step.hits && step.hits.some((h: any) => h.isSyncopated || h.tiedToNext));
 
-                const noteColor = highlightSyncopations && isStepSyncopated ? '#F59E0B' : '#38BDF8';
+                const shouldHighlightSync = highlightSyncopations || isSyncopationDrill;
+                const noteColor = shouldHighlightSync && isStepSyncopated ? '#F59E0B' : '#38BDF8';
                 staveNote.setStyle({ fillStyle: noteColor, strokeStyle: noteColor });
                 if (staveNote.noteHeads) {
                   staveNote.noteHeads.forEach((nh: any) => {
@@ -446,7 +451,8 @@ export default function DrumScoreRenderer({
                   lastIndexes: [0],
                 });
 
-                const tieColor = highlightSyncopations ? '#F59E0B' : '#38BDF8';
+                const shouldHighlightSync = highlightSyncopations || isSyncopationDrill;
+                const tieColor = shouldHighlightSync ? '#F59E0B' : '#38BDF8';
                 try {
                   tie.setStyle({ fillStyle: tieColor, strokeStyle: tieColor });
                 } catch (_) {}
@@ -475,7 +481,7 @@ export default function DrumScoreRenderer({
     return () => {
       isCancelled = true;
     };
-  }, [measures, totalWidth, totalHeight, measuresPerRow, currentMeasureWidth, rowHeight, highlightSyncopations]);
+  }, [measures, totalWidth, totalHeight, measuresPerRow, currentMeasureWidth, rowHeight, highlightSyncopations, isSyncopationDrill]);
 
   // Find position of active playhead step
   const activePlayheadPos = useMemo(() => {
@@ -535,13 +541,35 @@ export default function DrumScoreRenderer({
         </div>
 
         <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
+          {/* Synchronized Beat Flash Counter (Cyan on 1, Violet on 2, 3, 4) */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/5 border border-white/10 font-mono text-[11px]">
+            <span className="text-gray-400 text-[10px] mr-1">PULSO:</span>
+            {[0, 1, 2, 3].map((b) => {
+              const isCurrent = isPlaying && currentBeatFlash?.beatIndex === b;
+              return (
+                <span
+                  key={`score-beat-${b}`}
+                  className={`px-1.5 py-0.2 rounded font-bold transition-all duration-75 ${
+                    isCurrent
+                      ? b === 0
+                        ? 'bg-synth-cyan text-black shadow-[0_0_12px_#22d3ee] scale-110'
+                        : 'bg-synth-violet text-white shadow-[0_0_10px_#a855f7] scale-110'
+                      : 'text-gray-500 bg-white/5'
+                  }`}
+                >
+                  T{b + 1}
+                </span>
+              );
+            })}
+          </div>
+
           {/* Pedagogical Toggle Switch for Syncopations */}
           {onToggleHighlightSyncopations && (
             <button
               type="button"
               onClick={onToggleHighlightSyncopations}
               className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
-                highlightSyncopations
+                highlightSyncopations || isSyncopationDrill
                   ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
                   : 'bg-white/5 border-white/10 text-gray-400 hover:text-amber-300 hover:border-amber-500/40'
               }`}
@@ -551,7 +579,7 @@ export default function DrumScoreRenderer({
               <span>Destacar Síncopas</span>
               <span
                 className={`w-2 h-2 rounded-full ${
-                  highlightSyncopations ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
+                  highlightSyncopations || isSyncopationDrill ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
                 }`}
               />
             </button>
@@ -580,17 +608,25 @@ export default function DrumScoreRenderer({
         </div>
       </div>
 
-      {/* Syncopation Pedagogical Info Banner */}
-      {highlightSyncopations && (
-        <div className="mt-3 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-[11px] font-mono text-amber-200">
+      {/* Syncopation & Anchor Drill Pedagogical Info Banner */}
+      {(highlightSyncopations || isSyncopationDrill) && (
+        <div className="mt-3 px-3.5 py-2 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between text-[11px] font-mono text-amber-200">
           <div className="flex items-center gap-2">
-            <span className="text-base">𝄐</span>
+            <span className="text-lg">{isSyncopationDrill ? '🎯' : '𝄐'}</span>
             <span>
-              <strong>Modo Pedagógico Activo:</strong> Cabezas de nota y ligaduras en <strong>ámbar neón (#F59E0B)</strong> muestran cómo el ritmo desplaza los acentos a contratiempo y esquiva el impacto en los tiempos fuertes.
+              {isSyncopationDrill ? (
+                <>
+                  <strong>Modo Anclaje / Syncopation Drill Activo:</strong> El metrónomo marca estrictamente los 4 pulsos a tierra con timbre percusivo (woodblock digital). Las guías punteadas <strong>⚓ T1-T4 (Tierra)</strong> señalan los tiempos fuertes silenciados o esquivados, manteniendo las notas sincopadas en <strong>ámbar neón (#F59E0B)</strong>.
+                </>
+              ) : (
+                <>
+                  <strong>Modo Pedagógico Activo:</strong> Cabezas de nota y ligaduras en <strong>ámbar neón (#F59E0B)</strong> muestran cómo el ritmo desplaza los acentos a contratiempo y esquiva el impacto en los tiempos fuertes.
+                </>
+              )}
             </span>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold uppercase">
-            Sincopado
+          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/30 text-amber-300 font-bold uppercase border border-amber-400/30">
+            {isSyncopationDrill ? 'Sync Drill' : 'Sincopado'}
           </span>
         </div>
       )}
@@ -650,6 +686,59 @@ export default function DrumScoreRenderer({
               </div>
             );
           })}
+
+          {/* Ground Anchor Visual Guides for Syncopation Drill */}
+          {isSyncopationDrill &&
+            notePositions
+              .filter((pos) => pos.stepIndex === 0)
+              .map((pos) => {
+                const stepData =
+                  measures[pos.measureIndex]?.beats[pos.beatIndex]?.steps[pos.stepIndex];
+                const isGroundSilenced =
+                  stepData?.tiedFromPrev ||
+                  stepData?.isRest ||
+                  !stepData?.hits ||
+                  stepData.hits.length === 0;
+
+                if (!isGroundSilenced) return null;
+
+                const isBeatActive = isPlaying && currentBeatFlash?.beatIndex === pos.beatIndex;
+
+                return (
+                  <div
+                    key={`ground-anchor-${pos.measureIndex}-${pos.beatIndex}`}
+                    className="absolute -translate-x-1/2 pointer-events-none z-15 flex flex-col items-center select-none transition-all"
+                    style={{
+                      left: `${pos.x}px`,
+                      top: `${pos.y - 14}px`,
+                      height: '146px',
+                    }}
+                  >
+                    {/* Ground Anchor Pill Badge */}
+                    <div
+                      className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold border transition-all duration-75 flex items-center gap-1 ${
+                        isBeatActive
+                          ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_14px_#f59e0b] scale-110'
+                          : 'bg-surface-dark/95 border-amber-500/50 text-amber-300/90 shadow-sm'
+                      }`}
+                      title={`Tiempo a tierra ${pos.beatIndex + 1} silenciado por síncopa (referencia de anclaje)`}
+                    >
+                      <span>⚓</span>
+                      <span>T{pos.beatIndex + 1}</span>
+                      <span className="text-[8px] opacity-75 font-normal">Tierra</span>
+                    </div>
+
+                    {/* Vertical Dashed Reference Line */}
+                    <div
+                      className={`w-0 flex-1 border-l-2 border-dashed mt-1 transition-colors duration-75 ${
+                        isBeatActive
+                          ? 'border-amber-400 opacity-100 shadow-[0_0_8px_#f59e0b]'
+                          : 'border-amber-400/40 opacity-70'
+                      }`}
+                    />
+                  </div>
+                );
+              })}
 
           {/* Interactive Step Click Zones & Selection Highlights */}
           {notePositions.map((pos) => {
