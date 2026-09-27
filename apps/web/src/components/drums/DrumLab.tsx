@@ -405,11 +405,11 @@ export default function DrumLab() {
   const isCurrentSelectionRest = !score.selectedStep || !!score.selectedStep.isRest || currentStepHits.length === 0;
 
   return (
-    <div className="min-h-screen bg-[#060913] text-white flex flex-col items-center w-full">
-      <div className="w-full max-w-6xl xl:max-w-7xl mx-auto px-6 py-6 flex flex-col gap-6">
+    <div className="w-full min-h-screen bg-[#060913] py-6 px-8 flex justify-center text-white">
+      <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
         {/* 1. Encabezado con Título y Botones */}
-        <div className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-white/10">
-          <div className="max-w-2xl min-w-0">
+        <div className="w-full flex items-center justify-between gap-4 pb-6 border-b border-white/10 flex-wrap">
+          <div className="max-w-xl min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="p-1.5 rounded-lg bg-gradient-electric text-white shadow-glow-violet">
                 <Headphones className="w-4 h-4" />
@@ -421,7 +421,7 @@ export default function DrumLab() {
                 Web Audio 2.0 • Tone.js
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight break-words">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight break-words">
               Sonora Drum Lab - Interactive Percussion Studio & Polyrhythmic Sequencer
             </h1>
             <p className="text-xs text-gray-400 mt-1">
