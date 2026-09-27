@@ -13,9 +13,7 @@ import {
   X,
   RotateCcw,
   Sparkles,
-  Music,
   Sliders,
-  ChevronDown,
 } from 'lucide-react';
 import { DRUM_PRESETS } from '@/lib/drumPresets';
 import { DrumPreset } from '@/types/drum';
@@ -139,15 +137,18 @@ export default function DrumTransport({
   ];
 
   return (
-    <div className="w-full rounded-2xl bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white p-3 sm:p-5 shadow-2xl space-y-3 sm:space-y-4 transition-colors duration-200">
-      {/* 3-Row Layout: Responsive for Mobile (< sm) and Desktop */}
-      <div className="flex flex-col gap-3">
-        {/* FILA 1: Playback Controls (Play/Pause, Stop, Loop, Metronome, Modo Anclaje) */}
-        <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap justify-between sm:justify-start w-full">
+    <div className="w-full rounded-2xl bg-white/95 dark:bg-[#0B0F19]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white p-3 sm:p-4 shadow-2xl space-y-3 transition-colors duration-200">
+      {/* ======================================================== */}
+      {/* FILA 1: Controles de Reproducción y Métricas             */}
+      {/* ======================================================== */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 w-full">
+        {/* Grupo Izquierdo: [PLAY], [STOP], [LOOP], [CLICK] y [Modo Anclaje] */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap shrink-0">
           {/* Main Play / Pause Button */}
           <button
+            type="button"
             onClick={onTogglePlay}
-            className={`flex items-center gap-1.5 sm:gap-2.5 px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-lg select-none cursor-pointer flex-shrink-0 ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-lg select-none cursor-pointer flex-shrink-0 ${
               isPlaying
                 ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/25'
                 : 'bg-gradient-electric hover:opacity-95 text-white shadow-glow-violet'
@@ -156,7 +157,7 @@ export default function DrumTransport({
             {isPlaying ? (
               <>
                 <Pause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
-                <span>PAUSE</span>
+                <span>PAUSA</span>
               </>
             ) : (
               <>
@@ -168,34 +169,35 @@ export default function DrumTransport({
 
           {/* Stop Button */}
           <button
+            type="button"
             onClick={onStop}
             className="p-2 sm:p-2.5 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-rose-500 hover:border-rose-500/40 transition-all cursor-pointer flex-shrink-0"
-            title="Stop [Spacebar al parar]"
+            title="Detener [Spacebar]"
           >
             <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
           </button>
 
           {/* Loop Button */}
           <button
+            type="button"
             onClick={onToggleLoop}
             className={`p-2 sm:p-2.5 rounded-xl border transition-all cursor-pointer flex-shrink-0 ${
               isLooping
                 ? 'bg-cyan-100 dark:bg-synth-cyan/20 border-cyan-400 dark:border-synth-cyan/70 text-cyan-900 dark:text-synth-cyan shadow-[0_0_12px_rgba(34,211,238,0.25)]'
                 : 'bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
             }`}
-            title="Repetición de bucle (Loop)"
+            title="Repetición en bucle (Loop)"
           >
             <Repeat className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
 
-          {/* Metronome Group: CLICK + Beat Flash + 4-Beat LEDs + Settings Popover */}
+          {/* Metronome Group: CLICK + LED Flash + Settings */}
           <div className="relative flex items-center flex-shrink-0" ref={metronomeSettingsRef}>
-            {/* Main CLICK button with real-time flash and LED dots */}
             <div className="flex items-center rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 transition-all bg-slate-100 dark:bg-[#111827]">
               <button
                 type="button"
                 onClick={onToggleMetronome}
-                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs font-mono font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-2 text-xs font-mono font-semibold transition-all cursor-pointer ${
                   isPlaying && currentBeatFlash
                     ? currentBeatFlash.isDownbeat
                       ? 'bg-synth-cyan/35 text-synth-cyan shadow-[0_0_18px_rgba(34,211,238,0.7)]'
@@ -209,7 +211,7 @@ export default function DrumTransport({
                 <Bell className={`w-3.5 h-3.5 ${isPlaying && currentBeatFlash ? 'animate-bounce' : ''}`} />
                 <span>CLICK</span>
 
-                {/* Visual 4-beat LED indicators */}
+                {/* 4-beat LED indicators */}
                 <div className="flex items-center gap-1 pl-1.5 border-l border-slate-200 dark:border-white/10">
                   {[0, 1, 2, 3].map((b) => {
                     const isBeatActive = isPlaying && currentBeatFlash?.beatIndex === b;
@@ -229,18 +231,17 @@ export default function DrumTransport({
                 </div>
               </button>
 
-              {/* Settings Dropdown Button for Metronome */}
               <button
                 type="button"
                 onClick={() => setIsMetronomeSettingsOpen((prev) => !prev)}
-                className={`px-1.5 py-1.5 sm:py-2 transition-all cursor-pointer border-l border-slate-200 dark:border-white/10 ${
+                className={`px-1.5 py-2 transition-all cursor-pointer border-l border-slate-200 dark:border-white/10 ${
                   isMetronomeSettingsOpen
                     ? 'bg-cyan-200 dark:bg-synth-cyan/20 text-cyan-900 dark:text-synth-cyan'
                     : isMetronomeActive
                     ? 'bg-emerald-200/50 dark:bg-emerald-500/10 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-500/20'
                     : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title="Configuración de Metrónomo: Volumen y Subdivisiones"
+                title="Configuración de Metrónomo"
               >
                 <Sliders className="w-3.5 h-3.5" />
               </button>
@@ -248,7 +249,7 @@ export default function DrumTransport({
 
             {/* Metronome Settings Popover Floating Menu */}
             {isMetronomeSettingsOpen && (
-              <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl bg-white/95 dark:bg-[#111827]/95 backdrop-blur-xl border border-slate-200 dark:border-white/15 p-4 shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95">
+              <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl bg-white/95 dark:bg-[#111827]/95 backdrop-blur-xl border border-slate-200 dark:border-white/15 p-4 shadow-2xl space-y-3 animate-in fade-in zoom-in-95">
                 <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2">
                   <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800 dark:text-gray-200">
                     <Sliders className="w-3.5 h-3.5 text-cyan-600 dark:text-synth-cyan" />
@@ -281,7 +282,7 @@ export default function DrumTransport({
                   />
                   <div className="flex justify-between text-[9px] font-mono text-slate-400 dark:text-gray-500">
                     <span>-24 dB</span>
-                    <span>0 dB (Normal)</span>
+                    <span>0 dB</span>
                     <span>+6 dB</span>
                   </div>
                 </div>
@@ -326,7 +327,7 @@ export default function DrumTransport({
                       }`}
                     >
                       <span>Subdivisión Completa</span>
-                      <span className="text-[10px] text-slate-500 dark:text-gray-500">+400 Hz (-6dB)</span>
+                      <span className="text-[10px] text-slate-500 dark:text-gray-500">+400 Hz</span>
                     </button>
                   </div>
                 </div>
@@ -334,23 +335,22 @@ export default function DrumTransport({
             )}
           </div>
 
-          {/* 🎯 Modo Anclaje / Syncopation Drill Quick Toggle Button */}
+          {/* 🎯 Modo Anclaje / Syncopation Drill */}
           {onToggleSyncopationDrill && (
             <button
               type="button"
               onClick={onToggleSyncopationDrill}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-mono font-bold border transition-all cursor-pointer select-none flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer select-none flex-shrink-0 ${
                 isSyncopationDrill
                   ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
-                  : 'bg-slate-100 dark:bg-[#111827] border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-300 hover:border-amber-400'
+                  : 'bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-300 hover:border-amber-400'
               }`}
-              title="🎯 Modo Anclaje / Syncopation Drill: Fuerza pulsos 1-2-3-4 a tierra y resalta tiempos vacíos en la partitura"
+              title="🎯 Modo Anclaje: Fuerza pulsos 1-2-3-4 a tierra y resalta síncopas"
             >
               <span>🎯</span>
-              <span className="hidden sm:inline">Modo Anclaje</span>
-              <span className="sm:hidden">Anclaje</span>
+              <span>Modo Anclaje</span>
               <span
-                className={`w-2 h-2 rounded-full ${
+                className={`w-1.5 h-1.5 rounded-full ${
                   isSyncopationDrill ? 'bg-amber-500 dark:bg-amber-400 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'
                 }`}
               />
@@ -358,167 +358,165 @@ export default function DrumTransport({
           )}
         </div>
 
-        {/* FILA 2: BPM Control & Time Signature Selector */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 w-full">
-          {/* BPM Tempo Slider & Tap Control */}
-          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-slate-100 dark:bg-[#111827] px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-slate-200 dark:border-white/5 flex-shrink-0">
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-xs font-mono text-slate-600 dark:text-gray-400 font-semibold">BPM:</span>
-              <input
-                type="number"
-                min={40}
-                max={260}
-                value={bpm}
-                onChange={(e) => onSetBpm(Number(e.target.value))}
-                className="w-14 sm:w-16 bg-white dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 rounded-lg px-1.5 py-1 text-center font-mono text-xs sm:text-sm font-bold text-cyan-800 dark:text-synth-cyan focus:outline-none focus:border-synth-cyan"
-              />
-            </div>
-
+        {/* Grupo Derecho: BPM [input + slider + tap] + COMPÁS [4/4 3/4 5/4 6/8 7/8] + [+] [-] [↺] */}
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap justify-between lg:justify-end shrink-0">
+          {/* Cápsula de BPM */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#111827] px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <span className="text-xs font-mono text-slate-600 dark:text-gray-400 font-bold">BPM:</span>
+            <input
+              type="number"
+              min={40}
+              max={260}
+              value={bpm}
+              onChange={(e) => onSetBpm(Number(e.target.value))}
+              className="w-14 bg-white dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 rounded-lg px-1 py-0.5 text-center font-mono text-xs font-bold text-cyan-800 dark:text-synth-cyan focus:outline-none focus:border-synth-cyan"
+            />
             <input
               type="range"
               min={40}
               max={240}
               value={bpm}
               onChange={(e) => onSetBpm(Number(e.target.value))}
-              className="flex-1 sm:w-32 accent-cyan-600 dark:accent-synth-cyan cursor-pointer"
+              className="w-20 sm:w-24 accent-cyan-600 dark:accent-synth-cyan cursor-pointer"
             />
-
             <button
+              type="button"
               onClick={handleTapTempo}
-              className="px-2 py-1 rounded-lg bg-slate-200/70 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 text-[10px] sm:text-[11px] font-mono text-slate-700 dark:text-gray-300 hover:text-cyan-800 dark:hover:text-synth-cyan transition-all active:scale-95 cursor-pointer"
-              title="Haz click varias veces para calcular el tempo"
+              className="px-2 py-0.5 rounded-lg bg-slate-200/70 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 text-[10px] font-mono text-slate-700 dark:text-gray-300 hover:text-cyan-800 dark:hover:text-synth-cyan transition-all active:scale-95 cursor-pointer"
+              title="Tap Tempo"
             >
               TAP
             </button>
           </div>
 
-          {/* Time Signature & Measure Actions */}
-          <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
-            {/* Time Signature Selector */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111827] p-1 rounded-xl border border-slate-200 dark:border-white/5">
-              <span className="text-[10px] font-mono text-slate-500 dark:text-gray-400 px-1 sm:px-2 font-semibold">COMPÁS</span>
-              {timeSignatureOptions.map(([num, den]) => {
-                const isSelected = timeSignature[0] === num && timeSignature[1] === den;
-                return (
-                  <button
-                    key={`${num}/${den}`}
-                    onClick={() => onSetTimeSignature([num, den])}
-                    className={`px-1.5 sm:px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-                      isSelected
-                        ? 'bg-synth-violet text-white shadow-glow-violet'
-                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
-                  >
-                    {num}/{den}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Selector de Compás */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111827] p-1 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
+            <span className="text-[10px] font-mono text-slate-500 dark:text-gray-400 px-1 font-bold">COMPÁS</span>
+            {timeSignatureOptions.map(([num, den]) => {
+              const isSelected = timeSignature[0] === num && timeSignature[1] === den;
+              return (
+                <button
+                  key={`${num}/${den}`}
+                  type="button"
+                  onClick={() => onSetTimeSignature([num, den])}
+                  className={`px-1.5 py-0.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-synth-violet text-white shadow-glow-violet'
+                      : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                  }`}
+                >
+                  {num}/{den}
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Action buttons: Add, Remove, Clear */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {/* Add Measure */}
-              <button
-                type="button"
-                onClick={onAddMeasure}
-                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-synth-cyan hover:border-synth-cyan/40 transition-all cursor-pointer"
-                title="Añadir Compás"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
+          {/* Botones de Acción de Compás: Add, Remove, Clear */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={onAddMeasure}
+              className="p-1.5 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-synth-cyan hover:border-synth-cyan/40 transition-all cursor-pointer"
+              title="Añadir Compás"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
 
-              {/* Remove Measure */}
-              <button
-                type="button"
-                onClick={() => onRemoveMeasure?.(measuresCount - 1)}
-                disabled={measuresCount <= 1}
-                className={`p-1.5 sm:p-2 rounded-xl border transition-all select-none ${
-                  measuresCount <= 1
-                    ? 'bg-slate-100/50 dark:bg-[#111827]/40 border-slate-200/50 dark:border-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-40'
-                    : 'bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-rose-500 hover:border-rose-500/40 cursor-pointer'
-                }`}
-                title={measuresCount <= 1 ? 'Mínimo 1 compás requerido' : 'Eliminar Último Compás'}
-              >
-                <Minus className="w-4 h-4" />
-              </button>
+            <button
+              type="button"
+              onClick={() => onRemoveMeasure?.(measuresCount - 1)}
+              disabled={measuresCount <= 1}
+              className={`p-1.5 rounded-xl border transition-all select-none ${
+                measuresCount <= 1
+                  ? 'bg-slate-100/50 dark:bg-[#111827]/40 border-slate-200/50 dark:border-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-40'
+                  : 'bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-rose-500 hover:border-rose-500/40 cursor-pointer'
+              }`}
+              title={measuresCount <= 1 ? 'Mínimo 1 compás' : 'Eliminar Último Compás'}
+            >
+              <Minus className="w-4 h-4" />
+            </button>
 
-              {/* Clear Measure */}
-              <button
-                type="button"
-                onClick={onClearMeasure}
-                className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:text-rose-500 hover:border-rose-500/40 transition-all cursor-pointer"
-                title="Limpiar Compás Activo"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onClearMeasure}
+              className="p-1.5 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:text-rose-500 hover:border-rose-500/40 transition-all cursor-pointer"
+              title="Limpiar Compás Activo"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
         </div>
-
-        {/* FILA 3: IR A: C1 C2... con scroll horizontal táctil */}
-        {measuresCount > 1 && (
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1 w-full bg-slate-100 dark:bg-slate-900/90 rounded-lg border border-slate-200 dark:border-white/10 px-2">
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-300 px-1 font-semibold flex-shrink-0">
-              IR A:
-            </span>
-            <div className="flex items-center gap-1 flex-nowrap">
-              {Array.from({ length: measuresCount }).map((_, idx) => {
-                const isCurrent = selectedMeasureIndex === idx;
-                return (
-                  <div key={`m-btn-${idx}`} className="group/pill relative flex items-center flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => onSelectMeasureIndex?.(idx)}
-                      className={`font-mono text-xs cursor-pointer flex items-center gap-1 transition-colors ${
-                        isCurrent
-                          ? 'bg-cyan-500 text-slate-950 font-bold px-2 py-0.5 rounded shadow-glow-cyan'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:text-cyan-300 dark:hover:bg-white/10 px-2 py-0.5 rounded'
-                      }`}
-                      title={`Seleccionar Compás ${idx + 1}`}
-                    >
-                      <span>C{idx + 1}</span>
-                    </button>
-                    {measuresCount > 1 && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveMeasure?.(idx);
-                        }}
-                        className="opacity-0 group-hover/pill:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-rose-500/20 text-gray-500 hover:text-rose-500 transition-all cursor-pointer -ml-1 mr-0.5"
-                        title={`Eliminar Compás C${idx + 1}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Preset Grooves Bar */}
-      <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-2.5 text-xs bg-slate-50/80 dark:bg-[#111827] p-2.5 rounded-xl border border-slate-200/80 dark:border-white/5">
-        <div className="flex items-center gap-2 text-slate-500 dark:text-gray-400 flex-shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-600 dark:text-synth-cyan" />
-          <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-gray-300 whitespace-nowrap">
-            Presets & Vault:
+      {/* ======================================================== */}
+      {/* FILA 2: Navegación de Compases y Franja de Presets / Vault */}
+      {/* ======================================================== */}
+      <div className="pt-2.5 border-t border-slate-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 w-full">
+        {/* Lado Izquierdo: [ IR A: C1 C2 ... ] */}
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#111827] px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0 overflow-x-auto no-scrollbar">
+          <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-bold flex-shrink-0">
+            IR A:
           </span>
+          <div className="flex items-center gap-1 flex-nowrap">
+            {Array.from({ length: measuresCount }).map((_, idx) => {
+              const isCurrent = selectedMeasureIndex === idx;
+              return (
+                <div key={`m-pill-${idx}`} className="group/pill relative flex items-center flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onSelectMeasureIndex?.(idx)}
+                    className={`font-mono text-xs cursor-pointer flex items-center gap-1 transition-all ${
+                      isCurrent
+                        ? 'bg-cyan-500 text-slate-950 font-bold px-2 py-0.5 rounded-lg shadow-glow-cyan'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:text-cyan-300 dark:hover:bg-white/10 px-2 py-0.5 rounded-lg'
+                    }`}
+                    title={`Ir al Compás ${idx + 1}`}
+                  >
+                    <span>C{idx + 1}</span>
+                  </button>
+                  {measuresCount > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveMeasure?.(idx);
+                      }}
+                      className="opacity-0 group-hover/pill:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-rose-500/20 text-gray-500 hover:text-rose-500 transition-all cursor-pointer -ml-1 mr-0.5"
+                      title={`Eliminar Compás C${idx + 1}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-1 sm:px-2 w-full">
+        {/* Separador vertical tenue en escritorio */}
+        <div className="hidden md:block w-px h-6 bg-slate-300 dark:bg-white/10 shrink-0" />
+
+        {/* Lado Derecho: Franja Scrolleable de PRESETS & VAULT */}
+        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar flex items-center gap-2 py-0.5">
+          <div className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-600 dark:text-synth-cyan" />
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-gray-300 whitespace-nowrap">
+              Presets:
+            </span>
+          </div>
+
           {onOpenRudiments && (
             <button
               type="button"
               onClick={onOpenRudiments}
-              className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-cyan-300 bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 dark:bg-cyan-950/40 dark:border-cyan-500/40 dark:text-cyan-300 hover:dark:bg-cyan-900/50 transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(34,211,238,0.15)] cursor-pointer"
-              title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
+              className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-cyan-300 bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 dark:bg-cyan-950/40 dark:border-cyan-500/40 dark:text-cyan-300 hover:dark:bg-cyan-900/50 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Abrir Catálogo de Rudimentos y Fills"
             >
-              <span className="text-sm">🥁</span>
+              <span>🥁</span>
               <span>Rudimentos & Fills</span>
-              <span className="text-[9px] px-1 rounded bg-cyan-200 text-cyan-950 dark:bg-cyan-500/30 dark:text-cyan-200 font-bold">Vault</span>
+              <span className="text-[9px] px-1 rounded bg-cyan-200 text-cyan-950 dark:bg-cyan-500/30 dark:text-cyan-200 font-bold">
+                Vault
+              </span>
             </button>
           )}
 
@@ -526,10 +524,10 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenGrooves}
-              className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-amber-300 bg-amber-100/80 hover:bg-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300 hover:dark:bg-amber-900/50 transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(245,158,11,0.15)] cursor-pointer"
-              title="Abrir Groove Vault (85+ ritmos clasificados)"
+              className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-amber-300 bg-amber-100/80 hover:bg-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-500/40 dark:text-amber-300 hover:dark:bg-amber-900/50 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Abrir Groove Vault"
             >
-              <span className="text-sm">⚡</span>
+              <span>⚡</span>
               <span>Groove Vault</span>
               <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-200 text-amber-950 dark:bg-amber-500/30 dark:text-amber-200 font-bold">
                 85+
@@ -541,13 +539,13 @@ export default function DrumTransport({
             <button
               type="button"
               onClick={onOpenWorkoutBuilder}
-              className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-emerald-300 bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-500/40 dark:text-emerald-300 hover:dark:bg-emerald-900/50 transition-all flex items-center gap-1.5 shadow-sm dark:shadow-[0_0_12px_rgba(16,185,129,0.15)] cursor-pointer"
-              title="Abrir Workout Builder (Generador de Rutinas y Pirámides de 8, 16 y 24 compases)"
+              className="flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-mono font-semibold border border-emerald-300 bg-emerald-100/80 hover:bg-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-500/40 dark:text-emerald-300 hover:dark:bg-emerald-900/50 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Abrir Workout Builder: Pirámides y Rutinas"
             >
-              <span className="text-sm">⚙️</span>
+              <span>⚙️</span>
               <span>Workout Builder</span>
               <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-200 text-emerald-950 dark:bg-emerald-500/30 dark:text-emerald-200 font-bold">
-                8-24 C
+                Modular
               </span>
             </button>
           )}
@@ -579,11 +577,13 @@ export default function DrumTransport({
             </button>
           )}
 
+          {/* Quick presets buttons */}
           {DRUM_PRESETS.map((preset) => {
             const isSelected = activePresetId === preset.id;
             return (
               <button
                 key={preset.id}
+                type="button"
                 onClick={() => onSelectPreset(preset)}
                 className={`flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all text-left flex items-center gap-2 cursor-pointer ${
                   isSelected
@@ -593,7 +593,7 @@ export default function DrumTransport({
               >
                 <span>{preset.name}</span>
                 <span className="text-[10px] font-mono opacity-80">
-                  {preset.bpm} BPM • {preset.timeSignature[0]}/{preset.timeSignature[1]}
+                  {preset.bpm} BPM
                 </span>
               </button>
             );
