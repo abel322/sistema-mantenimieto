@@ -245,9 +245,9 @@ export default function DrumTransport({
       {/* ======================================================== */}
       {/* 2. BARRA DE TRANSPORTE PRINCIPAL (Reproductor y Controles) */}
       {/* ======================================================== */}
-      <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-3 w-full">
-        {/* Lado Izquierdo: Botón Play grande, Stop, Loop, Click y Modo Anclaje */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-center lg:justify-between gap-4 p-3 bg-slate-100/90 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl">
+        {/* Grupo Izquierdo (Play, Stop, Loop, Click, Anclaje) */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Main Play / Pause Button */}
           <button
             type="button"
@@ -462,37 +462,39 @@ export default function DrumTransport({
           )}
         </div>
 
-        {/* Centro: Cápsula de BPM con su slider */}
-        <div className="flex items-center gap-3 bg-slate-100 dark:bg-black/40 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 flex-shrink-0">
-          <span className="text-xs font-mono text-slate-600 dark:text-slate-400 font-bold whitespace-nowrap">BPM:</span>
-          <input
-            type="number"
-            min={40}
-            max={260}
-            value={bpm}
-            onChange={(e) => onSetBpm(Number(e.target.value))}
-            className="w-14 bg-white dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 rounded-lg px-1 py-0.5 text-center font-mono text-xs font-bold text-cyan-800 dark:text-synth-cyan focus:outline-none focus:border-synth-cyan"
-          />
-          <input
-            type="range"
-            min={40}
-            max={240}
-            value={bpm}
-            onChange={(e) => onSetBpm(Number(e.target.value))}
-            className="w-16 sm:w-20 lg:w-24 accent-cyan-600 dark:accent-synth-cyan cursor-pointer"
-          />
-          <button
-            type="button"
-            onClick={handleTapTempo}
-            className="px-2 py-0.5 rounded-lg bg-slate-200/70 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 text-[10px] font-mono text-slate-700 dark:text-gray-300 hover:text-cyan-800 dark:hover:text-synth-cyan transition-all active:scale-95 cursor-pointer flex-shrink-0"
-            title="Tap Tempo"
-          >
-            TAP
-          </button>
-        </div>
+        {/* Grupo Central/Derecho (BPM + Compás + Ir a C1/C2) */}
+        <div className="flex items-center gap-3 flex-wrap flex-shrink-0">
+          {/* Centro: Cápsula de BPM con su slider */}
+          <div className="flex items-center gap-3 bg-slate-100 dark:bg-black/40 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/5 flex-shrink-0">
+            <span className="text-xs font-mono text-slate-600 dark:text-slate-400 font-bold whitespace-nowrap">BPM:</span>
+            <input
+              type="number"
+              min={40}
+              max={260}
+              value={bpm}
+              onChange={(e) => onSetBpm(Number(e.target.value))}
+              className="w-14 bg-white dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 rounded-lg px-1 py-0.5 text-center font-mono text-xs font-bold text-cyan-800 dark:text-synth-cyan focus:outline-none focus:border-synth-cyan"
+            />
+            <input
+              type="range"
+              min={40}
+              max={240}
+              value={bpm}
+              onChange={(e) => onSetBpm(Number(e.target.value))}
+              className="w-16 sm:w-20 lg:w-24 accent-cyan-600 dark:accent-synth-cyan cursor-pointer"
+            />
+            <button
+              type="button"
+              onClick={handleTapTempo}
+              className="px-2 py-0.5 rounded-lg bg-slate-200/70 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 text-[10px] font-mono text-slate-700 dark:text-gray-300 hover:text-cyan-800 dark:hover:text-synth-cyan transition-all active:scale-95 cursor-pointer flex-shrink-0"
+              title="Tap Tempo"
+            >
+              TAP
+            </button>
+          </div>
 
-        {/* Lado Derecho: Selector de Compás (4/4, 3/4...), botones [+] [-] [↺] y los accesos rápidos a compases IR A: [C1] [C2] */}
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 justify-end flex-wrap sm:flex-nowrap">
+          {/* Lado Derecho: Selector de Compás (4/4, 3/4...), botones [+] [-] [↺] y los accesos rápidos a compases IR A: [C1] [C2] */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
           {/* Selector de Compás */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111827] p-1 rounded-xl border border-slate-200 dark:border-white/10 shrink-0">
             <span className="text-[10px] font-mono text-slate-500 dark:text-gray-400 px-1 font-bold">COMPÁS</span>
@@ -596,5 +598,6 @@ export default function DrumTransport({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

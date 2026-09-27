@@ -406,7 +406,7 @@ export default function DrumLab() {
 
   return (
     <div className="w-full min-h-screen bg-[#060913] py-6 px-8 flex justify-center text-white">
-      <div className="w-full max-w-6xl mx-auto flex flex-col gap-6">
+      <div className="w-full max-w-6xl mx-auto flex flex-col gap-5 px-2">
         {/* 1. Encabezado con Título y Botones */}
         <div className="w-full flex items-center justify-between gap-4 pb-6 border-b border-white/10 flex-wrap">
           <div className="max-w-xl min-w-0">

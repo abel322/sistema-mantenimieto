@@ -79,14 +79,11 @@ export default function DrumSubdivisionBar({
   const isGhostActive = hasGhost || isGhostMode;
 
   return (
-    <div className="w-full box-border rounded-2xl bg-white/95 dark:bg-[#0B0F19]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 p-3 sm:p-4 shadow-sm dark:shadow-2xl space-y-2.5 sm:space-y-3 transition-colors duration-200">
+    <div className="w-full box-border rounded-2xl bg-white/95 dark:bg-[#0B0F19]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 p-3 sm:p-4 shadow-sm dark:shadow-2xl transition-colors duration-200">
       {/* ======================================================== */}
-      {/* LÍNEA 1: Selector de Figuras y Subdivisiones             */}
+      {/* Botones de figuras y dinámicas juntos y alineados sin huecos */}
       {/* ======================================================== */}
-      {/* ======================================================== */}
-      {/* LÍNEA 1: Selector de Figuras y Subdivisiones             */}
-      {/* ======================================================== */}
-      <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar py-0.5 w-full flex-nowrap">
+      <div className="flex items-center justify-start gap-3 flex-wrap w-full">
         {/* Label Identificador */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="p-1 rounded-md bg-gradient-electric text-white">
@@ -151,14 +148,12 @@ export default function DrumSubdivisionBar({
             );
           })}
         </div>
-      </div>
 
-      {/* ======================================================== */}
-      {/* LÍNEA 2: Acciones Rítmicas en Fila Horizontal Fluyente   */}
-      {/* ======================================================== */}
-      <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-white/10 w-full">
-        {/* Botones de dinámica rítmica (Acento, Ghost, Silencio, Síncopa) colocados uno al lado del otro */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap flex-shrink-0">
+        {/* Separador vertical sutil */}
+        <div className="hidden sm:block w-px h-6 bg-slate-300 dark:bg-white/10 mx-0.5" />
+
+        {/* Botones de dinámica rítmica (Acento, Ghost, Silencio, Síncopa) */}
+        <div className="flex items-center gap-2 flex-wrap flex-shrink-0">
           {/* Accent Button */}
           <button
             type="button"
@@ -230,9 +225,6 @@ export default function DrumSubdivisionBar({
               )}
             </button>
           )}
-
-          {/* Separador vertical sutil */}
-          <div className="hidden sm:block w-px h-5 bg-slate-300 dark:bg-white/10 mx-0.5" />
 
           {/* Switch: Destacar Síncopas */}
           {onToggleHighlightSyncopations && (
@@ -337,19 +329,19 @@ export default function DrumSubdivisionBar({
               </div>
             )}
           </div>
-        </div>
 
-        {/* Legend / Shortcut Help Modal Button */}
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onOpenLegend}
-          className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 hover:border-synth-cyan/50 text-xs font-mono text-slate-700 dark:text-gray-300 hover:text-cyan-800 dark:hover:text-synth-cyan transition-all flex items-center gap-1.5 cursor-pointer ml-auto lg:ml-0 flex-shrink-0 whitespace-nowrap"
-          title="Ver Guía de Notación y Atajos"
-        >
-          <HelpCircle className="w-3.5 h-3.5 text-synth-cyan" />
-          <span>Atajos</span>
-        </button>
+          {/* Legend / Shortcut Help Modal Button */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onOpenLegend}
+            className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 hover:border-synth-cyan/50 text-xs font-mono text-slate-700 dark:text-gray-300 hover:text-cyan-800 dark:hover:text-synth-cyan transition-all flex items-center gap-1.5 cursor-pointer flex-shrink-0 whitespace-nowrap"
+            title="Ver Guía de Notación y Atajos"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-synth-cyan" />
+            <span>Atajos</span>
+          </button>
+        </div>
       </div>
     </div>
   );
