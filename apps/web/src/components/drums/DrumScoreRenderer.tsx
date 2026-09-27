@@ -837,26 +837,26 @@ export default function DrumScoreRenderer({
   const selectedStep = selectedBeat?.steps[selectedStepIndex];
 
   return (
-    <div className="relative w-full box-border rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 p-5 shadow-inner dark:shadow-glass overflow-hidden select-none">
+    <div className="relative w-full box-border rounded-2xl bg-[#0B0F19] border border-white/10 p-5 shadow-2xl overflow-hidden select-none text-white">
       {/* Score Header Info Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/5 text-xs text-slate-600 dark:text-slate-300">
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10 text-xs text-slate-300">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-200/70 dark:bg-slate-800/80 border border-slate-300 dark:border-white/10 font-mono text-[11px] text-cyan-800 dark:text-synth-cyan">
-            <span className="w-2 h-2 rounded-full bg-cyan-600 dark:bg-synth-cyan animate-pulse" />
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800/80 border border-white/10 font-mono text-[11px] text-synth-cyan">
+            <span className="w-2 h-2 rounded-full bg-synth-cyan animate-pulse" />
             PERCUSSION CLEF (5-LINE STANDARD)
           </span>
-          <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">
+          <span className="text-slate-300 font-mono font-medium">
             {measures[0]?.timeSignature[0]}/{measures[0]?.timeSignature[1]} Meter
           </span>
-          <span className="text-slate-400 dark:text-gray-500">•</span>
-          <span className="text-slate-600 dark:text-slate-300 font-mono">
+          <span className="text-gray-500">•</span>
+          <span className="text-slate-300 font-mono">
             {measures.length} {measures.length === 1 ? 'Measure' : 'Measures'}
           </span>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
           {/* Mini Floating Transport Bar (Always accessible alongside score) */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 shadow-md select-none dark:text-slate-200">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/90 border border-white/10 shadow-md select-none text-slate-200">
             {onTogglePlay && (
               <button
                 type="button"

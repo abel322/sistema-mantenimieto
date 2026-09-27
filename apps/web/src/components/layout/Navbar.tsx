@@ -80,34 +80,63 @@ export default function Navbar() {
     };
   }, [isMobileMenuOpen]);
 
+  const isDrumLabRoute =
+    pathname?.startsWith('/studio/drums') ||
+    pathname?.startsWith('/drum') ||
+    pathname?.startsWith('/laboratorio');
+
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#0B0F19] backdrop-blur-md text-slate-900 dark:text-white transition-colors duration-200">
+      <header
+        className={`sticky top-0 z-40 w-full backdrop-blur-md transition-colors duration-200 ${
+          isDrumLabRoute
+            ? 'bg-[#070B14]/90 border-b border-white/10 text-white'
+            : 'border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#0B0F19] text-slate-900 dark:text-white'
+        }`}
+      >
         <div className="max-w-7xl mx-auto flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
             <div className="relative flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-gradient-electric p-[1px] shadow-glow-violet transition-transform duration-300 group-hover:scale-105">
-              <div className="flex h-full w-full items-center justify-center rounded-[10px] sm:rounded-[11px] bg-slate-50 dark:bg-obsidian transition-colors">
+              <div
+                className={`flex h-full w-full items-center justify-center rounded-[10px] sm:rounded-[11px] transition-colors ${
+                  isDrumLabRoute ? 'bg-obsidian' : 'bg-slate-50 dark:bg-obsidian'
+                }`}
+              >
                 <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-synth-cyan animate-pulse-subtle" />
               </div>
             </div>
             <div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-synth-cyan transition-colors">
+                <span
+                  className={`text-lg sm:text-xl font-bold tracking-tight group-hover:text-synth-cyan transition-colors ${
+                    isDrumLabRoute ? 'text-white' : 'text-slate-900 dark:text-white'
+                  }`}
+                >
                   SONORA
                 </span>
                 <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-synth-violet/15 dark:bg-synth-violet/20 border border-synth-violet/30 dark:border-synth-violet/40 text-synth-violet dark:text-synth-cyan font-semibold uppercase tracking-wider">
                   Academy
                 </span>
               </div>
-              <p className="hidden xs:block text-[9px] sm:text-[10px] text-slate-500 dark:text-gray-400 font-mono tracking-wider">
+              <p
+                className={`hidden xs:block text-[9px] sm:text-[10px] font-mono tracking-wider ${
+                  isDrumLabRoute ? 'text-gray-400' : 'text-slate-500 dark:text-gray-400'
+                }`}
+              >
                 LMS & SOUND LAB
               </p>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-100/80 dark:bg-slate-900/80 p-1.5 rounded-full border border-slate-200/80 dark:border-white/10 backdrop-blur-md transition-colors">
+          <nav
+            className={`hidden md:flex items-center gap-1 p-1.5 rounded-full border backdrop-blur-md transition-colors ${
+              isDrumLabRoute
+                ? 'bg-slate-900/80 border-white/10'
+                : 'bg-slate-100/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-white/10'
+            }`}
+          >
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href;
@@ -118,14 +147,20 @@ export default function Navbar() {
                   className={`group flex items-center gap-1.5 lg:gap-2 px-3 lg:px-4 py-2 rounded-full text-xs lg:text-sm transition-all duration-200 ${
                     isActive
                       ? 'bg-purple-600 text-white font-semibold shadow-md'
+                      : isDrumLabRoute
+                      ? 'text-slate-300 hover:text-white font-medium hover:bg-white/5'
                       : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium hover:bg-slate-200/60 dark:hover:bg-white/5'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 transition-colors ${
-                    isActive
-                      ? 'text-white'
-                      : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'
-                  }`} />
+                  <Icon
+                    className={`h-4 w-4 transition-colors ${
+                      isActive
+                        ? 'text-white'
+                        : isDrumLabRoute
+                        ? 'text-slate-400 group-hover:text-slate-200'
+                        : 'text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200'
+                    }`}
+                  />
                   <span>{link.label}</span>
                   {link.badge && (
                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-synth-cyan/20 text-synth-cyan font-bold border border-synth-cyan/30">
@@ -155,13 +190,21 @@ export default function Navbar() {
             {/* User Profile Capsule */}
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 pl-2 sm:pl-3 pr-2.5 sm:pr-4 py-1.5 rounded-xl bg-white dark:bg-surface-card border border-slate-200/80 dark:border-white/10 hover:border-synth-violet/40 shadow-sm dark:shadow-none transition-all"
+              className={`flex items-center gap-2 pl-2 sm:pl-3 pr-2.5 sm:pr-4 py-1.5 rounded-xl border hover:border-synth-violet/40 transition-all ${
+                isDrumLabRoute
+                  ? 'bg-surface-card border-white/10'
+                  : 'bg-white dark:bg-surface-card border-slate-200/80 dark:border-white/10 shadow-sm dark:shadow-none'
+              }`}
             >
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-analog flex items-center justify-center text-white font-bold text-xs shadow-glow-amber">
                 AR
               </div>
               <div className="hidden sm:block text-left">
-                <div className="text-xs font-semibold text-slate-800 dark:text-gray-200 leading-none">
+                <div
+                  className={`text-xs font-semibold leading-none ${
+                    isDrumLabRoute ? 'text-gray-200' : 'text-slate-800 dark:text-gray-200'
+                  }`}
+                >
                   Alex Rivera
                 </div>
                 <div className="text-[10px] text-synth-violet dark:text-synth-cyan font-mono mt-0.5">
@@ -173,7 +216,11 @@ export default function Navbar() {
             {/* Mobile Hamburger Menu Toggle Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden relative flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100/90 dark:bg-surface-card border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-200 hover:text-synth-cyan hover:border-synth-cyan/40 active:scale-95 transition-all focus:outline-none"
+              className={`md:hidden relative flex h-10 w-10 items-center justify-center rounded-xl border hover:text-synth-cyan hover:border-synth-cyan/40 active:scale-95 transition-all focus:outline-none ${
+                isDrumLabRoute
+                  ? 'bg-surface-card border-white/10 text-gray-200'
+                  : 'bg-slate-100/90 dark:bg-surface-card border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-200'
+              }`}
               aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú de navegación'}
             >
               {isMobileMenuOpen ? (

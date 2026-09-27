@@ -100,26 +100,56 @@ body {
   box-shadow: none;
 }
 
-/* Light mode utility fallbacks for high readability */
-html:not(.dark) .text-white:not([class*="bg-gradient"]):not([class*="bg-synth"]):not([class*="bg-analog"]):not([class*="bg-emerald"]):not([class*="bg-amber"]):not([class*="bg-rose"]):not([class*="bg-violet"]):not([class*="bg-cyan"]):not([class*="bg-purple"]):not([class*="bg-indigo"]):not([class*="bg-blue"]):not([class*="bg-red"]) {
+/* Fixed Dark Enclave Support (e.g. DrumLab DAW suite) */
+.dark,
+.dark * {
+  color-scheme: dark;
+}
+
+.dark .text-white {
+  color: #FFFFFF !important;
+}
+
+.dark .text-slate-100 {
+  color: #F1F5F9 !important;
+}
+
+.dark .text-slate-200 {
+  color: #E2E8F0 !important;
+}
+
+.dark .text-slate-300 {
+  color: #CBD5E1 !important;
+}
+
+.dark .text-slate-400 {
+  color: #94A3B8 !important;
+}
+
+.dark .text-cyan-400 {
+  color: #22D3EE !important;
+}
+
+/* Light mode utility fallbacks for high readability (strictly outside .dark enclaves) */
+html:not(.dark) :not(.dark):not(.dark *) > .text-white:not([class*="bg-gradient"]):not([class*="bg-synth"]):not([class*="bg-analog"]):not([class*="bg-emerald"]):not([class*="bg-amber"]):not([class*="bg-rose"]):not([class*="bg-violet"]):not([class*="bg-cyan"]):not([class*="bg-purple"]):not([class*="bg-indigo"]):not([class*="bg-blue"]):not([class*="bg-red"]) {
   color: #0F172A;
 }
 
-html:not(.dark) .text-gray-300 {
+html:not(.dark) :not(.dark):not(.dark *) > .text-gray-300 {
   color: #334155;
 }
 
-html:not(.dark) .text-gray-400 {
+html:not(.dark) :not(.dark):not(.dark *) > .text-gray-400 {
   color: #64748B;
 }
 
-html:not(.dark) .border-white\/5,
-html:not(.dark) .border-white\/10 {
+html:not(.dark) :not(.dark):not(.dark *) > .border-white\/5,
+html:not(.dark) :not(.dark):not(.dark *) > .border-white\/10 {
   border-color: rgba(0, 0, 0, 0.08);
 }
 
-html:not(.dark) .bg-white\/5,
-html:not(.dark) .bg-white\/10 {
+html:not(.dark) :not(.dark):not(.dark *) > .bg-white\/5,
+html:not(.dark) :not(.dark):not(.dark *) > .bg-white\/10 {
   background-color: rgba(0, 0, 0, 0.04);
 }
 
