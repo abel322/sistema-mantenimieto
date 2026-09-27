@@ -1239,9 +1239,9 @@ export default function WorkoutBuilderModal({
             {/* ======================================================== */}
             {/* COLUMNA IZQUIERDA: Catálogo y Parámetros */}
             {/* ======================================================== */}
-            <div className="w-full lg:w-[340px] flex flex-col h-full min-h-0 overflow-hidden pr-2 border-r border-white/10 space-y-3">
+            <div className="w-full lg:w-[340px] flex flex-col gap-3 h-full min-h-0 overflow-y-auto pr-2 custom-scrollbar flex-shrink-0 border-r border-slate-200 dark:border-white/10">
               {/* 1. Longitud Total Deseada (Libre) */}
-              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 space-y-2 shadow-md shrink-0">
+              <div className="p-3 rounded-xl bg-slate-900/80 dark:bg-[#0E1526]/80 border border-slate-200 dark:border-white/10 space-y-2 shadow-md flex-shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <label className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Target className="w-3.5 h-3.5 text-cyan-400" />
@@ -1261,7 +1261,7 @@ export default function WorkoutBuilderModal({
                         key={`quick-bar-${val}`}
                         type="button"
                         onClick={() => handleSetTotalMeasuresTarget(val)}
-                        className={`py-1 rounded-md border text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                        className={`py-1 rounded-md border text-xs font-mono font-bold transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_8px_rgba(6,182,212,0.3)] ring-1 ring-cyan-400'
                             : 'bg-slate-950/60 border-white/10 text-gray-400 hover:text-white hover:bg-slate-800'
@@ -1306,8 +1306,8 @@ export default function WorkoutBuilderModal({
               </div>
 
               {/* 2. Célula / Patrón Base (Pestañas Selectoras Vault) */}
-              <div className="flex-1 flex flex-col min-h-0 p-3 rounded-2xl bg-slate-900/80 border border-white/10 space-y-2 shadow-md overflow-hidden">
-                <div className="flex items-center justify-between text-xs font-mono shrink-0">
+              <div className="flex-1 flex flex-col min-h-[280px] bg-[#0E1526]/80 border border-white/10 rounded-xl p-3 shadow-md">
+                <div className="flex items-center justify-between text-xs font-mono shrink-0 mb-2">
                   <label className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Music className="w-3.5 h-3.5 text-purple-400" />
                     CÉLULA / PATRÓN BASE:
@@ -1315,17 +1315,17 @@ export default function WorkoutBuilderModal({
                 </div>
 
                 {/* Tabs: Rudimentos Vault vs Grooves Vault */}
-                <div className="p-1 rounded-xl bg-slate-950 border border-white/10 flex items-center gap-1 shrink-0">
+                <div className="flex gap-2 mb-2 flex-shrink-0">
                   <button
                     type="button"
                     onClick={() => {
                       setBaseLibraryTab('rudiments');
                       setPatternSearch('');
                     }}
-                    className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
                       baseLibraryTab === 'rudiments'
-                        ? 'bg-purple-500/25 text-purple-300 border border-purple-400/60 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                        ? 'bg-purple-500/25 text-purple-300 border-purple-400/60 shadow-[0_0_10px_rgba(168,85,247,0.3)]'
+                        : 'bg-black/40 text-gray-400 hover:text-white hover:bg-white/5 border-white/10'
                     }`}
                   >
                     <span>🥁</span>
@@ -1338,10 +1338,10 @@ export default function WorkoutBuilderModal({
                       setBaseLibraryTab('grooves');
                       setPatternSearch('');
                     }}
-                    className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer border ${
                       baseLibraryTab === 'grooves'
-                        ? 'bg-amber-500/25 text-amber-300 border border-amber-400/60 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                        ? 'bg-amber-500/25 text-amber-300 border-amber-400/60 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                        : 'bg-black/40 text-gray-400 hover:text-white hover:bg-white/5 border-white/10'
                     }`}
                   >
                     <span>⚡</span>
@@ -1350,8 +1350,8 @@ export default function WorkoutBuilderModal({
                 </div>
 
                 {/* Buscador Compacto */}
-                <div className="relative shrink-0">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <div className="relative mb-2 flex-shrink-0">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <input
                     type="text"
                     value={patternSearch}
@@ -1361,13 +1361,13 @@ export default function WorkoutBuilderModal({
                         ? 'Buscar paradiddle, roll, flam...'
                         : 'Buscar rock, funk, shuffle...'
                     }
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-white/10 text-white placeholder-gray-500 text-xs font-mono focus:outline-none focus:border-cyan-400 transition-all"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-black/40 border border-white/10 rounded-lg text-white placeholder-gray-500 font-mono focus:outline-none focus:border-cyan-400 transition-all"
                   />
                 </div>
 
                 {/* Lista Scrolleable según pestaña activa con MiniScorePreview */}
                 {baseLibraryTab === 'rudiments' ? (
-                  <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar space-y-2 pr-1">
+                  <div className="flex-1 min-h-[180px] max-h-[280px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar touch-auto">
                     {filteredRudiments.map((rud) => (
                       <RudimentCardItem
                         key={`rud-${rud.id}`}
@@ -1385,7 +1385,7 @@ export default function WorkoutBuilderModal({
                     )}
                   </div>
                 ) : (
-                  <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar space-y-2 pr-1">
+                  <div className="flex-1 min-h-[180px] max-h-[280px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar touch-auto">
                     {filteredGrooves.map((grv) => (
                       <GrooveCardItem
                         key={`grv-${grv.id}`}
@@ -1406,7 +1406,7 @@ export default function WorkoutBuilderModal({
               </div>
 
               {/* 3. Tempo Objetivo (Slider Numérico Estilizado) */}
-              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/10 space-y-1.5 shadow-md shrink-0">
+              <div className="p-3 rounded-xl bg-slate-900/80 dark:bg-[#0E1526]/80 border border-slate-200 dark:border-white/10 space-y-2 shadow-md flex-shrink-0">
                 <div className="flex items-center justify-between text-xs font-mono">
                   <span className="font-bold text-gray-200 flex items-center gap-1.5">
                     <Sliders className="w-3.5 h-3.5 text-amber-400" />
