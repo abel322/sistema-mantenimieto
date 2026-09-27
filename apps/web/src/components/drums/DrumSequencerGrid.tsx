@@ -33,40 +33,40 @@ export default function DrumSequencerGrid({
   onPreviewHit,
 }: DrumSequencerGridProps) {
   return (
-    <div className="w-full rounded-2xl bg-surface-card border border-white/10 p-5 shadow-glass space-y-4">
+    <div className="w-full rounded-2xl bg-white/95 dark:bg-surface-card border border-slate-200 dark:border-white/10 p-5 shadow-sm dark:shadow-glass space-y-4">
       {/* Sequencer Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs uppercase tracking-wider text-synth-cyan font-bold">
+          <span className="font-mono text-xs uppercase tracking-wider text-cyan-800 dark:text-synth-cyan font-bold">
             DAW DRUM MATRIX & SUBDIVISION LANES
           </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-400 font-mono">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 font-mono font-medium">
             Compás {measureIndex + 1}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-gray-400 font-mono flex-wrap">
+        <div className="flex items-center gap-3 text-[11px] text-slate-600 dark:text-gray-400 font-mono flex-wrap">
           {onToggleHighlightSyncopations && (
             <button
               type="button"
               onClick={onToggleHighlightSyncopations}
               className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all flex items-center gap-1 border cursor-pointer select-none ${
                 highlightSyncopations
-                  ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
-                  : 'bg-white/5 border-white/10 text-gray-400 hover:text-amber-300'
+                  ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.35)]'
+                  : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-300'
               }`}
               title="Resaltar en ámbar neón las celdas y notas sincopadas"
             >
               <span>𝄐 Destacar Síncopas</span>
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  highlightSyncopations ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
+                  highlightSyncopations ? 'bg-amber-500 dark:bg-amber-400 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'
                 }`}
               />
             </button>
           )}
           <span className="hidden sm:inline">Click celda: Activar/Desactivar</span>
-          <span className="text-gray-600 hidden sm:inline">•</span>
-          <span className="text-synth-cyan">Atajos: K, S, H, C, R, T, F</span>
+          <span className="text-slate-400 dark:text-gray-600 hidden sm:inline">•</span>
+          <span className="text-cyan-800 dark:text-synth-cyan font-medium">Atajos: K, S, H, C, R, T, F</span>
         </div>
       </div>
 

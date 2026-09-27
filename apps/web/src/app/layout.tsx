@@ -15,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-slate-50 dark:bg-obsidian-canvas text-slate-900 dark:text-gray-100 antialiased selection:bg-synth-violet selection:text-white relative transition-colors duration-200">
+      <body className="min-h-screen bg-slate-50 dark:bg-[#070A11] text-slate-900 dark:text-gray-100 antialiased selection:bg-synth-violet selection:text-white relative transition-colors duration-200">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           {/* Ambient Corner Radial Glows */}
           <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-synth-violet/20 dark:from-synth-violet/25 to-synth-indigo/10 blur-[130px] pointer-events-none -z-10 rounded-full opacity-40 dark:opacity-100 transition-opacity" />
@@ -29,7 +29,7 @@ export default function RootLayout({
           <main className="min-h-[calc(100vh-80px)]">{children}</main>
 
           {/* Footer */}
-          <footer className="border-t border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-surface-slate/80 backdrop-blur-md py-8 px-6 text-sm text-slate-600 dark:text-gray-400 transition-colors">
+          <footer className="border-t border-slate-200 dark:border-white/10 bg-slate-100/90 dark:bg-[#070A11] backdrop-blur-md py-8 px-6 text-sm text-slate-600 dark:text-slate-400 transition-colors">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-gradient-electric flex items-center justify-center font-bold text-white text-xs shadow-sm">

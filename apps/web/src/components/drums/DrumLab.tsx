@@ -411,10 +411,10 @@ export default function DrumLab() {
           <button
             type="button"
             onClick={() => setIsSaveExerciseOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-500/40 text-gray-300 hover:text-emerald-300 text-xs font-bold font-mono transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-100/90 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 dark:bg-white/5 dark:hover:bg-emerald-500/15 dark:border-white/10 dark:hover:border-emerald-500/40 dark:text-gray-300 dark:hover:text-emerald-300 text-xs font-bold font-mono transition-all cursor-pointer shadow-sm"
             title="Guardar el ejercicio actual como rutina de práctica"
           >
-            <Save className="w-3.5 h-3.5 text-emerald-400" />
+            <Save className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
             <span>Guardar Ejercicio</span>
           </button>
 
@@ -422,12 +422,12 @@ export default function DrumLab() {
           <button
             type="button"
             onClick={() => setIsExerciseLibraryOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/40 text-purple-200 text-xs font-bold font-mono transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-purple-100/80 hover:bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-500/15 dark:hover:bg-purple-500/25 dark:border-purple-500/40 dark:text-purple-200 text-xs font-bold font-mono transition-all cursor-pointer shadow-sm"
             title="Ver mis rutinas de práctica guardadas"
           >
-            <FolderOpen className="w-3.5 h-3.5 text-purple-400" />
+            <FolderOpen className="w-3.5 h-3.5 text-purple-700 dark:text-purple-400" />
             <span>Mis Rutinas</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-purple-500/40 text-purple-200 font-bold">
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-purple-200 text-purple-900 border border-purple-300 dark:bg-purple-500/40 dark:text-purple-200 dark:border-transparent font-bold">
               {storage.exercises.length}
             </span>
           </button>
@@ -436,12 +436,12 @@ export default function DrumLab() {
           <button
             type="button"
             onClick={() => setIsRudimentsOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-purple-500/25 via-indigo-500/25 to-cyan-500/25 hover:from-purple-500/40 hover:to-cyan-500/40 border border-synth-cyan/50 hover:border-synth-cyan text-white text-xs font-bold font-mono transition-all shadow-[0_0_15px_rgba(34,211,238,0.25)] hover:shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-cyan-100/80 hover:bg-cyan-200 text-cyan-900 border border-cyan-300 dark:bg-gradient-to-r dark:from-purple-500/25 dark:via-indigo-500/25 dark:to-cyan-500/25 dark:hover:from-purple-500/40 dark:hover:to-cyan-500/40 dark:border-synth-cyan/50 dark:hover:border-synth-cyan dark:text-white text-xs font-bold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(34,211,238,0.25)] dark:hover:shadow-[0_0_20px_rgba(34,211,238,0.45)] cursor-pointer"
             title="Abrir Catálogo y Generador Inteligente de Rudimentos y Fills"
           >
             <span className="text-base">🥁</span>
             <span>Rudimentos & Fills</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-synth-cyan/30 text-cyan-200 uppercase font-mono font-bold">
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-cyan-200 text-cyan-950 dark:bg-synth-cyan/30 dark:text-cyan-200 uppercase font-mono font-bold">
               Vault
             </span>
           </button>
@@ -450,24 +450,24 @@ export default function DrumLab() {
           <button
             type="button"
             onClick={() => setIsGroovesOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-amber-500/25 via-orange-500/25 to-pink-500/25 hover:from-amber-500/40 hover:to-orange-500/40 border border-amber-500/50 hover:border-amber-400 text-white text-xs font-bold font-mono transition-all shadow-[0_0_15px_rgba(245,158,11,0.25)] hover:shadow-[0_0_20px_rgba(245,158,11,0.45)] cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-300 dark:bg-gradient-to-r dark:from-amber-500/25 dark:via-orange-500/25 dark:to-pink-500/25 dark:hover:from-amber-500/40 dark:hover:to-orange-500/40 dark:border-amber-500/50 dark:hover:border-amber-400 dark:text-white text-xs font-bold font-mono transition-all shadow-sm dark:shadow-[0_0_15px_rgba(245,158,11,0.25)] dark:hover:shadow-[0_0_20px_rgba(245,158,11,0.45)] cursor-pointer"
             title="Abrir Groove Vault (85+ patrones listos para tocar)"
           >
             <span className="text-base">⚡</span>
             <span>Groove Vault</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-500/30 text-amber-200 uppercase font-mono font-bold">
+            <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-200 text-amber-950 dark:bg-amber-500/30 dark:text-amber-200 uppercase font-mono font-bold">
               85+
             </span>
           </button>
 
           {/* View Layout Mode Selector */}
-          <div className="flex items-center gap-1.5 bg-surface-card p-1.5 rounded-2xl border border-white/10">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-surface-card p-1.5 rounded-2xl border border-slate-200 dark:border-white/10">
             <button
               onClick={() => setViewMode('both')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'both'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-gray-400 hover:text-white'
+                  : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Vista Completa
@@ -477,7 +477,7 @@ export default function DrumLab() {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'score'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-gray-400 hover:text-white'
+                  : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Partitura VexFlow
@@ -487,7 +487,7 @@ export default function DrumLab() {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'grid'
                   ? 'bg-gradient-electric text-white shadow-glow-violet'
-                  : 'text-gray-400 hover:text-white'
+                  : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Matriz DAW
@@ -497,7 +497,7 @@ export default function DrumLab() {
       </div>
 
       {/* 1. Master Transport Bar (Play/Stop/BPM/Presets/Meter) - Sticky Floating Bar */}
-      <div className="sticky top-2 z-40 bg-[#0B0F19]/95 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl transition-all">
+      <div className="sticky top-2 z-40 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-2xl transition-all">
         <DrumTransport
           isPlaying={audio.isPlaying}
           bpm={audio.bpm}
@@ -576,14 +576,14 @@ export default function DrumLab() {
 
             <div className="flex items-center gap-2 flex-wrap">
               {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous Strip) */}
-              <div className="flex items-center p-0.5 rounded-xl bg-surface-card border border-white/10 select-none">
+              <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-surface-card border border-slate-200 dark:border-white/10 select-none">
                 <button
                   type="button"
                   onClick={() => setScoreLayoutMode('paginated')}
                   className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     scoreLayoutMode === 'paginated'
                       ? 'bg-gradient-electric text-white shadow-glow-violet'
-                      : 'text-gray-400 hover:text-white'
+                      : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                   title="Vista Partitura: Páginas / Multilínea (2 compases por fila)"
                 >
@@ -597,7 +597,7 @@ export default function DrumLab() {
                   className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                     scoreLayoutMode === 'runway'
                       ? 'bg-synth-cyan text-black shadow-glow-cyan font-extrabold'
-                      : 'text-gray-400 hover:text-white'
+                      : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                   title="Modo Ensayo Horizontal: Cinta Continua / Runway con Auto-Scroll sincronizado"
                 >
@@ -610,8 +610,8 @@ export default function DrumLab() {
               </div>
 
               {/* Zoom Controls (80%, 100%, 120%) */}
-              <div className="flex items-center gap-1 bg-surface-card p-0.5 rounded-xl border border-white/10 select-none">
-                <span className="text-[10px] text-gray-500 px-1 font-semibold">ZOOM:</span>
+              <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-card p-0.5 rounded-xl border border-slate-200 dark:border-white/10 select-none">
+                <span className="text-[10px] text-slate-500 dark:text-gray-500 px-1 font-semibold">ZOOM:</span>
                 {[0.8, 1.0, 1.2].map((z) => (
                   <button
                     key={`zoom-lab-${z}`}
@@ -620,7 +620,7 @@ export default function DrumLab() {
                     className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
                       zoomLevel === z
                         ? 'bg-synth-cyan text-black shadow-glow-cyan'
-                        : 'text-gray-400 hover:text-white hover:bg-white/10'
+                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10'
                     }`}
                   >
                     {Math.round(z * 100)}%
