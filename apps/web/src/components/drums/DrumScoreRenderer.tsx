@@ -837,7 +837,7 @@ export default function DrumScoreRenderer({
   const selectedStep = selectedBeat?.steps[selectedStepIndex];
 
   return (
-    <div className="relative w-full rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 p-5 shadow-inner dark:shadow-glass overflow-hidden select-none">
+    <div className="relative w-full box-border rounded-2xl bg-slate-50 dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 p-5 shadow-inner dark:shadow-glass overflow-hidden select-none">
       {/* Score Header Info Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/5 text-xs text-slate-600 dark:text-slate-300">
         <div className="flex items-center gap-3">

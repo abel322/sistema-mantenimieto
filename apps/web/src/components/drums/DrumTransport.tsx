@@ -137,7 +137,7 @@ export default function DrumTransport({
   ];
 
   return (
-    <div className="w-full rounded-2xl bg-white/95 dark:bg-[#0B0F19]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white p-3 sm:p-4 shadow-2xl space-y-3 transition-colors duration-200">
+    <div className="w-full box-border rounded-2xl bg-white/95 dark:bg-[#0B0F19]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white p-3 sm:p-4 shadow-2xl space-y-3 transition-colors duration-200">
       {/* ======================================================== */}
       {/* FILA 1: Controles de Reproducción y Métricas             */}
       {/* ======================================================== */}
@@ -451,7 +451,7 @@ export default function DrumTransport({
       {/* ======================================================== */}
       {/* FILA 2: Navegación de Compases y Franja de Presets / Vault */}
       {/* ======================================================== */}
-      <div className="pt-2.5 border-t border-slate-200 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 w-full">
+      <div className="w-full min-w-0 overflow-hidden pt-2.5 border-t border-slate-200 dark:border-white/10 flex flex-col md:flex-row md:items-center gap-2">
         {/* Lado Izquierdo: [ IR A: C1 C2 ... ] */}
         <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#111827] px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-white/10 shrink-0 overflow-x-auto no-scrollbar">
           <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-bold flex-shrink-0">
@@ -497,8 +497,8 @@ export default function DrumTransport({
         <div className="hidden md:block w-px h-6 bg-slate-300 dark:bg-white/10 shrink-0" />
 
         {/* Lado Derecho: Franja Scrolleable de PRESETS & VAULT */}
-        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar flex items-center gap-2 py-0.5">
-          <div className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 shrink-0">
+        <div className="flex-1 overflow-x-auto no-scrollbar flex items-center gap-2 py-1 min-w-0">
+          <div className="flex items-center gap-1.5 text-slate-500 dark:text-gray-400 shrink-0 flex-shrink-0">
             <Sparkles className="w-3.5 h-3.5 text-cyan-600 dark:text-synth-cyan" />
             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-gray-300 whitespace-nowrap">
               Presets:

@@ -405,11 +405,11 @@ export default function DrumLab() {
   const isCurrentSelectionRest = !score.selectedStep || !!score.selectedStep.isRest || currentStepHits.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-6 box-border">
       {/* Studio Header Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-white/10">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
+      <div className="w-full flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-6 border-b border-white/10">
+        <div className="max-w-2xl min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="p-1.5 rounded-lg bg-gradient-electric text-white shadow-glow-violet">
               <Headphones className="w-4 h-4" />
             </span>
@@ -420,7 +420,7 @@ export default function DrumLab() {
               Web Audio 2.0 • Tone.js
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight break-words">
             Sonora Drum Lab - Interactive Percussion Studio & Polyrhythmic Sequencer
           </h1>
           <p className="text-xs text-gray-400 mt-1">
@@ -429,7 +429,7 @@ export default function DrumLab() {
         </div>
 
         {/* Header Actions: Routines, Rudiments Vault & View Mode Selector */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
           {/* Save Exercise Button */}
           <button
             type="button"
@@ -520,7 +520,7 @@ export default function DrumLab() {
       </div>
 
       {/* 1. Master Transport Bar (Play/Stop/BPM/Presets/Meter) - Sticky Floating Bar */}
-      <div className={`sticky top-2 z-30 rounded-2xl ${isAnyModalOpen ? 'hidden sm:block' : ''}`}>
+      <div className={`sticky top-2 z-30 w-full box-border rounded-2xl ${isAnyModalOpen ? 'hidden sm:block' : ''}`}>
         <DrumTransport
           isPlaying={audio.isPlaying}
           bpm={audio.bpm}
@@ -590,7 +590,7 @@ export default function DrumLab() {
 
       {/* 3. Percussion Score View (VexFlow Standard 5-line Clef) */}
       {(viewMode === 'both' || viewMode === 'score') && (
-        <section className="space-y-2">
+        <section className="w-full box-border space-y-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-300 px-1 font-mono">
             <span className="flex items-center gap-1.5 text-cyan-800 dark:text-synth-cyan">
               <Music className="w-4 h-4" />
@@ -691,7 +691,7 @@ export default function DrumLab() {
 
       {/* 4. DAW Matrix & Subdivision Lane View */}
       {(viewMode === 'both' || viewMode === 'grid') && (
-        <section className="space-y-2">
+        <section className="w-full box-border space-y-2">
           <div className="flex items-center justify-between text-xs text-gray-400 px-1 font-mono">
             <span className="flex items-center gap-1.5 text-synth-violet">
               <Sliders className="w-4 h-4" />

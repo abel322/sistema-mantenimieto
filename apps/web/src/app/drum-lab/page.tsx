@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 
 export default function DrumLabDirectPage() {
   return (
-    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 overflow-x-hidden">
       <DrumLab />
-    </div>
+    </main>
   );
 }

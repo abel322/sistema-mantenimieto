@@ -79,7 +79,7 @@ export default function DrumSubdivisionBar({
   const isGhostActive = hasGhost || isGhostMode;
 
   return (
-    <div className="w-full rounded-2xl bg-white/95 dark:bg-[#0B0F19]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 p-3 sm:p-4 shadow-sm dark:shadow-2xl space-y-2.5 sm:space-y-3 transition-colors duration-200">
+    <div className="w-full box-border rounded-2xl bg-white/95 dark:bg-[#0B0F19]/90 backdrop-blur-md border border-slate-200 dark:border-white/10 p-3 sm:p-4 shadow-sm dark:shadow-2xl space-y-2.5 sm:space-y-3 transition-colors duration-200">
       {/* ======================================================== */}
       {/* LÍNEA 1: Selector de Figuras y Subdivisiones             */}
       {/* ======================================================== */}

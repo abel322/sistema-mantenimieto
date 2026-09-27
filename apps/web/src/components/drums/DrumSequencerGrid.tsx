@@ -33,7 +33,7 @@ export default function DrumSequencerGrid({
   onPreviewHit,
 }: DrumSequencerGridProps) {
   return (
-    <div className="w-full rounded-2xl bg-white/95 dark:bg-surface-card border border-slate-200 dark:border-white/10 p-5 shadow-sm dark:shadow-glass space-y-4">
+    <div className="w-full box-border rounded-2xl bg-white/95 dark:bg-surface-card border border-slate-200 dark:border-white/10 p-5 shadow-sm dark:shadow-glass space-y-4">
       {/* Sequencer Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
