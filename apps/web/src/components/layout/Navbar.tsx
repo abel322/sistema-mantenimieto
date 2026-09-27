@@ -82,7 +82,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md text-slate-900 dark:text-white transition-colors duration-200">
+      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#0B0F19] backdrop-blur-md text-slate-900 dark:text-white transition-colors duration-200">
         <div className="max-w-7xl mx-auto flex h-20 items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Brand Logo */}
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">

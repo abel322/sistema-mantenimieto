@@ -139,7 +139,7 @@ export default function DrumTransport({
   ];
 
   return (
-    <div className="w-full rounded-2xl bg-white/95 dark:bg-surface-card border border-slate-200 dark:border-white/10 p-5 shadow-glass space-y-4">
+    <div className="w-full rounded-2xl bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white p-5 shadow-2xl space-y-4 transition-colors duration-200">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         {/* Playback Controls (Play/Pause, Stop, Loop, Metronome) */}
         <div className="flex items-center gap-3">
@@ -168,7 +168,7 @@ export default function DrumTransport({
           {/* Stop Button */}
           <button
             onClick={onStop}
-            className="p-2.5 rounded-xl bg-surface-slate border border-white/10 text-gray-300 hover:text-rose-400 hover:border-rose-500/40 transition-all"
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-rose-500 hover:border-rose-500/40 transition-all cursor-pointer"
             title="Stop [Spacebar al parar]"
           >
             <Square className="w-4 h-4 fill-current" />
@@ -177,10 +177,10 @@ export default function DrumTransport({
           {/* Loop Button */}
           <button
             onClick={onToggleLoop}
-            className={`p-2.5 rounded-xl border transition-all ${
+            className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
               isLooping
-                ? 'bg-synth-cyan/20 border-synth-cyan/70 text-synth-cyan shadow-[0_0_12px_rgba(34,211,238,0.25)]'
-                : 'bg-surface-slate border-white/10 text-gray-400 hover:text-white'
+                ? 'bg-cyan-100 dark:bg-synth-cyan/20 border-cyan-400 dark:border-synth-cyan/70 text-cyan-900 dark:text-synth-cyan shadow-[0_0_12px_rgba(34,211,238,0.25)]'
+                : 'bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
             }`}
             title="Repetición de bucle (Loop)"
           >
@@ -190,7 +190,7 @@ export default function DrumTransport({
           {/* Metronome Group: CLICK + Beat Flash + 4-Beat LEDs + Settings Popover */}
           <div className="relative flex items-center" ref={metronomeSettingsRef}>
             {/* Main CLICK button with real-time flash and LED dots */}
-            <div className="flex items-center rounded-xl overflow-hidden border border-white/10 transition-all">
+            <div className="flex items-center rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 transition-all bg-slate-100 dark:bg-[#111827]">
               <button
                 type="button"
                 onClick={onToggleMetronome}
@@ -200,8 +200,8 @@ export default function DrumTransport({
                       ? 'bg-synth-cyan/35 text-synth-cyan shadow-[0_0_18px_rgba(34,211,238,0.7)]'
                       : 'bg-synth-violet/30 text-synth-violet shadow-[0_0_14px_rgba(168,85,247,0.6)]'
                     : isMetronomeActive
-                    ? 'bg-emerald-500/20 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                    : 'bg-surface-slate text-gray-400 hover:text-white'
+                    ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title="Activar / Desactivar Metrónomo [Click]"
               >
@@ -209,7 +209,7 @@ export default function DrumTransport({
                 <span>CLICK</span>
 
                 {/* Visual 4-beat LED indicators */}
-                <div className="flex items-center gap-1 pl-1.5 border-l border-white/10">
+                <div className="flex items-center gap-1 pl-1.5 border-l border-slate-200 dark:border-white/10">
                   {[0, 1, 2, 3].map((b) => {
                     const isBeatActive = isPlaying && currentBeatFlash?.beatIndex === b;
                     return (
@@ -220,7 +220,7 @@ export default function DrumTransport({
                             ? b === 0
                               ? 'bg-synth-cyan shadow-[0_0_8px_#22d3ee] scale-150'
                               : 'bg-synth-violet shadow-[0_0_8px_#a855f7] scale-150'
-                            : 'bg-white/20'
+                            : 'bg-slate-300 dark:bg-white/20'
                         }`}
                       />
                     );
@@ -232,12 +232,12 @@ export default function DrumTransport({
               <button
                 type="button"
                 onClick={() => setIsMetronomeSettingsOpen((prev) => !prev)}
-                className={`px-1.5 py-2 transition-all cursor-pointer border-l border-white/10 ${
+                className={`px-1.5 py-2 transition-all cursor-pointer border-l border-slate-200 dark:border-white/10 ${
                   isMetronomeSettingsOpen
-                    ? 'bg-synth-cyan/20 text-synth-cyan'
+                    ? 'bg-cyan-200 dark:bg-synth-cyan/20 text-cyan-900 dark:text-synth-cyan'
                     : isMetronomeActive
-                    ? 'bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                    : 'bg-surface-slate text-gray-400 hover:text-white'
+                    ? 'bg-emerald-200/50 dark:bg-emerald-500/10 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-500/20'
+                    : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title="Configuración de Metrónomo: Volumen y Subdivisiones"
               >
@@ -247,13 +247,13 @@ export default function DrumTransport({
 
             {/* Metronome Settings Popover Floating Menu */}
             {isMetronomeSettingsOpen && (
-              <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl bg-surface-card/95 backdrop-blur-xl border border-white/15 p-4 shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2">
-                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-gray-200">
-                    <Sliders className="w-3.5 h-3.5 text-synth-cyan" />
+              <div className="absolute left-0 top-full mt-2 z-50 w-72 rounded-2xl bg-white/95 dark:bg-[#111827]/95 backdrop-blur-xl border border-slate-200 dark:border-white/15 p-4 shadow-2xl space-y-3.5 animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2">
+                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-slate-800 dark:text-gray-200">
+                    <Sliders className="w-3.5 h-3.5 text-cyan-600 dark:text-synth-cyan" />
                     <span>METRÓNOMO TONE.JS</span>
                   </div>
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-synth-cyan/15 text-synth-cyan font-semibold">
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-100 dark:bg-synth-cyan/15 text-cyan-900 dark:text-synth-cyan font-semibold">
                     1600/800/400 Hz
                   </span>
                 </div>
@@ -261,11 +261,11 @@ export default function DrumTransport({
                 {/* Volume Slider */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400 flex items-center gap-1">
-                      <Volume2 className="w-3 h-3 text-gray-400" />
+                    <span className="text-slate-600 dark:text-gray-400 flex items-center gap-1">
+                      <Volume2 className="w-3 h-3 text-slate-500 dark:text-gray-400" />
                       <span>Volumen</span>
                     </span>
-                    <span className="font-mono text-[11px] text-synth-cyan font-bold">
+                    <span className="font-mono text-[11px] text-cyan-800 dark:text-synth-cyan font-bold">
                       {metronomeVolume > 0 ? `+${metronomeVolume}` : metronomeVolume} dB
                     </span>
                   </div>
@@ -276,9 +276,9 @@ export default function DrumTransport({
                     step={1}
                     value={metronomeVolume}
                     onChange={(e) => onSetMetronomeVolume?.(Number(e.target.value))}
-                    className="w-full accent-synth-cyan cursor-pointer"
+                    className="w-full accent-cyan-600 dark:accent-synth-cyan cursor-pointer"
                   />
-                  <div className="flex justify-between text-[9px] font-mono text-gray-500">
+                  <div className="flex justify-between text-[9px] font-mono text-slate-400 dark:text-gray-500">
                     <span>-24 dB</span>
                     <span>0 dB (Normal)</span>
                     <span>+6 dB</span>
@@ -287,19 +287,19 @@ export default function DrumTransport({
 
                 {/* Metronome Mode Level Selector */}
                 <div className="space-y-1.5">
-                  <span className="text-[11px] text-gray-400 font-mono block">Nivel de marcación:</span>
+                  <span className="text-[11px] text-slate-600 dark:text-gray-400 font-mono block">Nivel de marcación:</span>
                   <div className="grid grid-cols-1 gap-1">
                     <button
                       type="button"
                       onClick={() => onSetMetronomeMode?.('downbeat')}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-mono text-left flex items-center justify-between transition-all cursor-pointer ${
                         metronomeMode === 'downbeat'
-                          ? 'bg-synth-cyan/20 border border-synth-cyan/60 text-synth-cyan font-bold shadow-sm'
-                          : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                          ? 'bg-cyan-100 dark:bg-synth-cyan/20 border border-cyan-400 dark:border-synth-cyan/60 text-cyan-900 dark:text-synth-cyan font-bold shadow-sm'
+                          : 'bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'
                       }`}
                     >
                       <span>Solo Tiempos Fuertes</span>
-                      <span className="text-[10px] text-gray-500">1600 Hz</span>
+                      <span className="text-[10px] text-slate-500 dark:text-gray-500">1600 Hz</span>
                     </button>
 
                     <button
@@ -307,12 +307,12 @@ export default function DrumTransport({
                       onClick={() => onSetMetronomeMode?.('beats')}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-mono text-left flex items-center justify-between transition-all cursor-pointer ${
                         metronomeMode === 'beats'
-                          ? 'bg-synth-cyan/20 border border-synth-cyan/60 text-synth-cyan font-bold shadow-sm'
-                          : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                          ? 'bg-cyan-100 dark:bg-synth-cyan/20 border border-cyan-400 dark:border-synth-cyan/60 text-cyan-900 dark:text-synth-cyan font-bold shadow-sm'
+                          : 'bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'
                       }`}
                     >
                       <span>Pulsos 1-2-3-4</span>
-                      <span className="text-[10px] text-gray-500">1600 / 800 Hz</span>
+                      <span className="text-[10px] text-slate-500 dark:text-gray-500">1600 / 800 Hz</span>
                     </button>
 
                     <button
@@ -320,12 +320,12 @@ export default function DrumTransport({
                       onClick={() => onSetMetronomeMode?.('subdivision')}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-mono text-left flex items-center justify-between transition-all cursor-pointer ${
                         metronomeMode === 'subdivision'
-                          ? 'bg-synth-cyan/20 border border-synth-cyan/60 text-synth-cyan font-bold shadow-sm'
-                          : 'bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10'
+                          ? 'bg-cyan-100 dark:bg-synth-cyan/20 border border-cyan-400 dark:border-synth-cyan/60 text-cyan-900 dark:text-synth-cyan font-bold shadow-sm'
+                          : 'bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'
                       }`}
                     >
                       <span>Subdivisión Completa</span>
-                      <span className="text-[10px] text-gray-500">+400 Hz (-6dB)</span>
+                      <span className="text-[10px] text-slate-500 dark:text-gray-500">+400 Hz (-6dB)</span>
                     </button>
                   </div>
                 </div>
@@ -340,8 +340,8 @@ export default function DrumTransport({
               onClick={onToggleSyncopationDrill}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer select-none ${
                 isSyncopationDrill
-                  ? 'bg-amber-500/20 border-amber-400 text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
-                  : 'bg-surface-slate border-white/10 text-gray-400 hover:text-amber-300 hover:border-amber-500/40'
+                  ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_14px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
+                  : 'bg-slate-100 dark:bg-[#111827] border-slate-200 dark:border-white/10 text-slate-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-300 hover:border-amber-400'
               }`}
               title="🎯 Modo Anclaje / Syncopation Drill: Fuerza pulsos 1-2-3-4 a tierra (woodblock digital) y resalta tiempos vacíos en la partitura"
             >
@@ -350,7 +350,7 @@ export default function DrumTransport({
               <span className="sm:hidden">Anclaje</span>
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isSyncopationDrill ? 'bg-amber-400 animate-pulse' : 'bg-gray-600'
+                  isSyncopationDrill ? 'bg-amber-500 dark:bg-amber-400 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'
                 }`}
               />
             </button>
@@ -358,16 +358,16 @@ export default function DrumTransport({
         </div>
 
         {/* BPM Tempo Slider & Tap Control */}
-        <div className="flex items-center gap-3 bg-surface-slate px-4 py-2 rounded-xl border border-white/5">
+        <div className="flex items-center gap-3 bg-slate-100 dark:bg-[#111827] px-4 py-2 rounded-xl border border-slate-200 dark:border-white/5">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono text-gray-400 font-semibold">BPM:</span>
+            <span className="text-xs font-mono text-slate-600 dark:text-gray-400 font-semibold">BPM:</span>
             <input
               type="number"
               min={40}
               max={260}
               value={bpm}
               onChange={(e) => onSetBpm(Number(e.target.value))}
-              className="w-16 bg-surface-card border border-white/10 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold text-synth-cyan focus:outline-none focus:border-synth-cyan"
+              className="w-16 bg-white dark:bg-[#0B0F19] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-center font-mono text-sm font-bold text-cyan-800 dark:text-synth-cyan focus:outline-none focus:border-synth-cyan"
             />
           </div>
 
@@ -377,12 +377,12 @@ export default function DrumTransport({
             max={240}
             value={bpm}
             onChange={(e) => onSetBpm(Number(e.target.value))}
-            className="w-24 sm:w-32 accent-synth-cyan cursor-pointer"
+            className="w-24 sm:w-32 accent-cyan-600 dark:accent-synth-cyan cursor-pointer"
           />
 
           <button
             onClick={handleTapTempo}
-            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-mono text-gray-300 hover:text-synth-cyan transition-all active:scale-95"
+            className="px-2.5 py-1 rounded-lg bg-slate-200/70 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-300 dark:border-white/10 text-[11px] font-mono text-slate-700 dark:text-gray-300 hover:text-cyan-800 dark:hover:text-synth-cyan transition-all active:scale-95 cursor-pointer"
             title="Haz click varias veces para calcular el tempo"
           >
             TAP
@@ -390,32 +390,73 @@ export default function DrumTransport({
         </div>
 
         {/* Time Signature & Measure Actions */}
-        <div className="flex items-center gap-2 flex-wrap justify-start lg:justify-end max-w-full">
-          {/* Time Signature Selector */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-slate p-1 rounded-xl border border-slate-200 dark:border-white/5">
-            <span className="text-[10px] font-mono text-slate-500 dark:text-gray-500 px-2 font-semibold">COMPÁS</span>
-            {timeSignatureOptions.map(([num, den]) => {
-              const isSelected = timeSignature[0] === num && timeSignature[1] === den;
-              return (
-                <button
-                  key={`${num}/${den}`}
-                  onClick={() => onSetTimeSignature([num, den])}
-                  className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-                    isSelected
-                      ? 'bg-synth-violet text-white shadow-glow-violet'
-                      : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
-                  }`}
-                >
-                  {num}/{den}
-                </button>
-              );
-            })}
+        <div className="max-w-full overflow-hidden flex flex-col items-end gap-1.5">
+          {/* Top Row: COMPÁS selector + +/-/Reset actions */}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {/* Time Signature Selector */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#111827] p-1 rounded-xl border border-slate-200 dark:border-white/5">
+              <span className="text-[10px] font-mono text-slate-500 dark:text-gray-400 px-2 font-semibold">COMPÁS</span>
+              {timeSignatureOptions.map(([num, den]) => {
+                const isSelected = timeSignature[0] === num && timeSignature[1] === den;
+                return (
+                  <button
+                    key={`${num}/${den}`}
+                    onClick={() => onSetTimeSignature([num, den])}
+                    className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
+                      isSelected
+                        ? 'bg-synth-violet text-white shadow-glow-violet'
+                        : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    {num}/{den}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Action buttons: Add, Remove, Clear */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Add Measure */}
+              <button
+                type="button"
+                onClick={onAddMeasure}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-synth-cyan hover:border-synth-cyan/40 transition-all cursor-pointer"
+                title="Añadir Compás"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+
+              {/* Remove Measure */}
+              <button
+                type="button"
+                onClick={() => onRemoveMeasure?.(measuresCount - 1)}
+                disabled={measuresCount <= 1}
+                className={`p-2 rounded-xl border transition-all select-none ${
+                  measuresCount <= 1
+                    ? 'bg-slate-100/50 dark:bg-[#111827]/40 border-slate-200/50 dark:border-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-40'
+                    : 'bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-rose-500 hover:border-rose-500/40 cursor-pointer'
+                }`}
+                title={measuresCount <= 1 ? 'Mínimo 1 compás requerido' : 'Eliminar Último Compás'}
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+
+              {/* Clear Measure */}
+              <button
+                type="button"
+                onClick={onClearMeasure}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-[#111827] border border-slate-200 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:text-rose-500 hover:border-rose-500/40 transition-all cursor-pointer"
+                title="Limpiar Compás Activo"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Measure Switcher if multiple measures exist - Scrollable or wrap */}
+          {/* Bottom Row: Measure Switcher if multiple measures exist - Scrollable */}
           {measuresCount > 1 && (
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-surface-slate p-1 rounded-xl border border-slate-200 dark:border-white/5 max-w-full sm:max-w-xs md:max-w-md overflow-x-auto scrollbar-none py-1">
-              <span className="text-[10px] font-mono text-slate-500 dark:text-gray-500 px-1 font-semibold flex-shrink-0">IR A:</span>
+            <div className="max-w-[260px] md:max-w-xs overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex items-center gap-1 py-0.5 px-1 bg-slate-100 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+              <span className="text-[10px] font-mono text-slate-500 dark:text-gray-400 px-1 font-semibold flex-shrink-0">IR A:</span>
               <div className="flex items-center gap-1 flex-nowrap">
                 {Array.from({ length: measuresCount }).map((_, idx) => {
                   const isCurrent = selectedMeasureIndex === idx;
@@ -424,7 +465,7 @@ export default function DrumTransport({
                       <button
                         type="button"
                         onClick={() => onSelectMeasureIndex?.(idx)}
-                        className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        className={`px-2 py-0.5 rounded-md text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
                           isCurrent
                             ? 'bg-synth-cyan text-black shadow-glow-cyan'
                             : 'text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
@@ -452,51 +493,13 @@ export default function DrumTransport({
               </div>
             </div>
           )}
-
-          {/* Action buttons: Add, Remove, Clear */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Add Measure */}
-            <button
-              type="button"
-              onClick={onAddMeasure}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-surface-slate border border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-synth-cyan hover:border-synth-cyan/40 transition-all cursor-pointer"
-              title="Añadir Compás"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-
-            {/* Remove Measure */}
-            <button
-              type="button"
-              onClick={() => onRemoveMeasure?.(measuresCount - 1)}
-              disabled={measuresCount <= 1}
-              className={`p-2 rounded-xl border transition-all select-none ${
-                measuresCount <= 1
-                  ? 'bg-slate-100/50 dark:bg-surface-slate/30 border-slate-200/50 dark:border-white/5 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-40'
-                  : 'bg-slate-100 dark:bg-surface-slate border-slate-200 dark:border-white/10 text-slate-700 dark:text-gray-300 hover:text-rose-500 hover:border-rose-500/40 cursor-pointer'
-              }`}
-              title={measuresCount <= 1 ? 'Mínimo 1 compás requerido' : 'Eliminar Último Compás'}
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-
-            {/* Clear Measure */}
-            <button
-              type="button"
-              onClick={onClearMeasure}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-surface-slate border border-slate-200 dark:border-white/10 text-slate-500 dark:text-gray-400 hover:text-rose-500 hover:border-rose-500/40 transition-all cursor-pointer"
-              title="Limpiar Compás Activo"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-          </div>
         </div>
       </div>
 
       {/* Preset Grooves Bar */}
-      <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
+      <div className="pt-3 border-t border-slate-200 dark:border-white/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs bg-slate-50/80 dark:bg-[#111827] p-2.5 rounded-xl border border-slate-200/80 dark:border-white/5">
         <div className="flex items-center gap-2 text-slate-500 dark:text-gray-400 flex-shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-synth-cyan" />
+          <Sparkles className="w-3.5 h-3.5 text-cyan-600 dark:text-synth-cyan" />
           <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-gray-300">
             Presets & Vault:
           </span>
@@ -579,10 +582,10 @@ export default function DrumTransport({
               <button
                 key={preset.id}
                 onClick={() => onSelectPreset(preset)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-2 ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all text-left flex items-center gap-2 cursor-pointer ${
                   isSelected
                     ? 'bg-gradient-electric text-white border-transparent shadow-glow-violet font-semibold'
-                    : 'bg-surface-slate border-white/5 text-gray-300 hover:text-white hover:border-white/20'
+                    : 'bg-white dark:bg-[#0B0F19] border-slate-200 dark:border-white/5 text-slate-700 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-white/20'
                 }`}
               >
                 <span>{preset.name}</span>

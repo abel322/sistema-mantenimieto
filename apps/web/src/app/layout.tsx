@@ -29,7 +29,7 @@ export default function RootLayout({
           <main className="min-h-[calc(100vh-80px)]">{children}</main>
 
           {/* Footer */}
-          <footer className="border-t border-slate-200 dark:border-white/10 bg-slate-100/90 dark:bg-[#070A11] backdrop-blur-md py-8 px-6 text-sm text-slate-600 dark:text-slate-400 transition-colors">
+          <footer className="border-t border-slate-200 dark:border-white/10 bg-slate-100/90 dark:bg-[#0B0F19] backdrop-blur-md py-8 px-6 text-sm text-slate-600 dark:text-slate-400 transition-colors">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-gradient-electric flex items-center justify-center font-bold text-white text-xs shadow-sm">

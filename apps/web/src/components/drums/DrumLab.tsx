@@ -497,7 +497,7 @@ export default function DrumLab() {
       </div>
 
       {/* 1. Master Transport Bar (Play/Stop/BPM/Presets/Meter) - Sticky Floating Bar */}
-      <div className="sticky top-2 z-40 bg-white/95 dark:bg-[#0B0F19]/95 backdrop-blur-md rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-2xl transition-all">
+      <div className="sticky top-2 z-40 rounded-2xl">
         <DrumTransport
           isPlaying={audio.isPlaying}
           bpm={audio.bpm}
