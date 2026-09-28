@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import * as Tone from 'tone';
 import {
   InstrumentType,
   TuningId,
@@ -113,6 +114,12 @@ export default function FretboardSequencerStudio() {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    try {
+      if (Tone.getTransport().state === 'started') {
+        Tone.getTransport().stop();
+        Tone.getTransport().position = 0;
+      }
+    } catch {}
     setIsPlaying(false);
     setCurrentStep(0);
     setActiveHits([]);
@@ -228,11 +235,23 @@ export default function FretboardSequencerStudio() {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      try {
+        if (Tone.getTransport().state === 'started') {
+          Tone.getTransport().stop();
+          Tone.getTransport().position = 0;
+        }
+      } catch {}
       setIsPlaying(false);
       setActiveHits([]);
       stringsAudioEngine.stopAll();
       return;
     }
+
+    try {
+      Tone.getTransport().bpm.value = bpm;
+      Tone.getTransport().position = 0;
+      Tone.getTransport().start();
+    } catch {}
 
     setIsPlaying(true);
     const totalSteps = measuresCount * 16;
@@ -258,6 +277,10 @@ export default function FretboardSequencerStudio() {
 
   // Handle BPM live changes during playback
   useEffect(() => {
+    try {
+      Tone.getTransport().bpm.value = bpm;
+    } catch {}
+
     if (isPlaying) {
       if (timerRef.current) clearInterval(timerRef.current);
       const totalSteps = measuresCount * 16;
@@ -971,6 +994,8 @@ export default function FretboardSequencerStudio() {
         measuresCount={measuresCount}
         currentStep={currentStep}
         isPlaying={isPlaying}
+        bpm={bpm}
+        activeHits={activeHits}
         onUpdateStep={handleUpdateStep}
         onClearGrid={handleClearGrid}
         onLoadPreset={handleLoadPreset}

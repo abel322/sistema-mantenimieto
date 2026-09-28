@@ -15,8 +15,12 @@ import {
   Music2,
   ChevronRight,
   Sparkles,
+  FileText,
+  Rocket,
 } from 'lucide-react';
 import { calculateFretNote } from '@/services/audio/stringsAudioEngine';
+import StringsRunwayView from './StringsRunwayView';
+import { ActiveFretHit } from './InteractiveFretboard';
 
 interface StringsSequencerGridProps {
   instrument: InstrumentType;
@@ -24,6 +28,8 @@ interface StringsSequencerGridProps {
   measuresCount: number;
   currentStep: number;
   isPlaying: boolean;
+  bpm?: number;
+  activeHits?: ActiveFretHit[];
   onUpdateStep: (stringIndex: number, stepIndex: number, stepData: SequencerStepCell) => void;
   onClearGrid: () => void;
   onLoadPreset: (presetId: string) => void;
@@ -49,6 +55,8 @@ export default function StringsSequencerGrid({
   measuresCount,
   currentStep,
   isPlaying,
+  bpm = 104,
+  activeHits = [],
   onUpdateStep,
   onClearGrid,
   onLoadPreset,
@@ -56,6 +64,10 @@ export default function StringsSequencerGrid({
   const isBass = instrument.startsWith('bass');
   const totalSteps = measuresCount * 16;
   const numStrings = tracks.length;
+
+  // View Mode: Classic TAB Stave vs Dynamic Runway Mode
+  const [viewMode, setViewMode] = useState<'classic' | 'runway'>('classic');
+  const [runwayZoom, setRunwayZoom] = useState<1 | 2 | 4>(2);
 
   const [selectedCell, setSelectedCell] = useState<{ stringIndex: number; stepIndex: number } | null>(null);
   const [fretPickerValue, setFretPickerValue] = useState<number>(0);
@@ -159,23 +171,95 @@ export default function StringsSequencerGrid({
 
   return (
     <div className="w-full bg-[#0A0E17] border border-white/10 rounded-2xl p-5 shadow-2xl overflow-x-auto flex flex-col gap-4">
-      {/* 1. Header Bar: Riff Presets & Clean Controls */}
+      {/* 1. Header Bar: View Mode Toggle, Zoom, Riff Presets & Clean Controls */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
-            <Music2 className="w-4 h-4" />
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
+              <Music2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                Tablatura de Estudio (Guitar & Bass TAB)
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  {measuresCount} {measuresCount === 1 ? 'Compás' : 'Compases'} • 16th Notes
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                {viewMode === 'classic'
+                  ? 'Notación profesional con números de traste posados en cuerda, divisiones de compás y métrica'
+                  : 'Pista continua de desplazamiento en tiempo real con línea de impacto al 18%'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-              Tablatura de Estudio (Guitar & Bass TAB)
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                {measuresCount} {measuresCount === 1 ? 'Compás' : 'Compases'} • 16th Notes
-              </span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Notación profesional con números de traste posados en cuerda, divisiones de compás y métrica
-            </p>
+
+          {/* TOGGLE DE VISTA: [ 📄 Tablatura Clásica ] | [ 🚀 Modo Runway ] */}
+          <div className="flex items-center bg-black/60 border border-white/10 p-0.5 rounded-xl ml-0 sm:ml-2">
+            <button
+              type="button"
+              onClick={() => setViewMode('classic')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'classic'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Tablatura Clásica</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('runway')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'runway'
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              <span>Modo Runway</span>
+            </button>
           </div>
+
+          {/* SELECTOR DE ZOOM DE PISTA (Visible en Modo Runway) */}
+          {viewMode === 'runway' && (
+            <div className="flex items-center gap-1 bg-black/60 border border-white/10 p-0.5 rounded-xl text-xs font-mono animate-in fade-in">
+              <span className="text-[10px] text-slate-400 px-2 uppercase font-bold">Zoom:</span>
+              <button
+                type="button"
+                onClick={() => setRunwayZoom(1)}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  runwayZoom === 1
+                    ? 'bg-cyan-500/25 text-cyan-300 font-bold border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                1 Compás
+              </button>
+              <button
+                type="button"
+                onClick={() => setRunwayZoom(2)}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  runwayZoom === 2
+                    ? 'bg-cyan-500/25 text-cyan-300 font-bold border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                2 Compases
+              </button>
+              <button
+                type="button"
+                onClick={() => setRunwayZoom(4)}
+                className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                  runwayZoom === 4
+                    ? 'bg-cyan-500/25 text-cyan-300 font-bold border border-cyan-500/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                4 Compases
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Preset Selector Chips */}
@@ -203,9 +287,10 @@ export default function StringsSequencerGrid({
         </div>
       </div>
 
-      {/* 2. LIENZO DE TABLATURA PROFESIONAL (Scrollable) */}
-      <div className="w-full overflow-x-auto custom-scrollbar pb-3 select-none">
-        <div style={{ minWidth: `${gridTotalWidth}px` }} className="flex flex-col relative py-2">
+      {/* 2. VISTA CONDICIONAL: TABLATURA CLÁSICA O MODO RUNWAY */}
+      {viewMode === 'classic' ? (
+        <div className="w-full overflow-x-auto custom-scrollbar pb-3 select-none">
+          <div style={{ minWidth: `${gridTotalWidth}px` }} className="flex flex-col relative py-2">
           {/* Fila superior de compás y subdivisiones (Regla de tiempos horizontal) */}
           <div className="flex flex-row items-center w-full mb-2 select-none border-b border-white/5 pb-1">
             {/* Espaciador de Clave TAB para alineación exacta con las cuerdas */}
@@ -417,6 +502,21 @@ export default function StringsSequencerGrid({
           </div>
         </div>
       </div>
+    ) : (
+      <StringsRunwayView
+        instrument={instrument}
+        tracks={tracks}
+        measuresCount={measuresCount}
+        currentStep={currentStep}
+        isPlaying={isPlaying}
+        bpm={bpm}
+        zoom={runwayZoom}
+        activeHits={activeHits}
+        selectedCell={selectedCell}
+        onSelectCell={setSelectedCell}
+        onUpdateStep={onUpdateStep}
+      />
+    )}
 
       {/* 3. Barra de Edición Rápida de Traste & Articulación para el Paso Seleccionado */}
       {selectedCell && (
