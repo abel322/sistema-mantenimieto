@@ -14,6 +14,8 @@ import {
   VoicingShapeId,
   StringTrack,
   SequencerStepCell,
+  PracticePattern,
+  PracticeSubdivision,
 } from '@/types/strings';
 import {
   getInstrumentStrings,
@@ -35,7 +37,7 @@ import {
   VOICING_SHAPE_OPTIONS,
   getChordVoicing,
 } from '@/services/audio/stringsTheoryEngine';
-import { Guitar, Sparkles, Music, Layers, Volume2, Info, Play, Radio } from 'lucide-react';
+import { Guitar, Sparkles, Music, Layers, Volume2, Info, Play, Radio, Rocket } from 'lucide-react';
 
 // Generates blank tracks for an instrument setup
 function generateInitialTracks(
@@ -58,33 +60,241 @@ function generateInitialTracks(
   }));
 }
 
+// Generates intelligent default musical tracks (Tríada Menor de Mi / E Minor Arpeggio en corcheas)
+function generateDefaultMusicalTracks(
+  instrument: InstrumentType,
+  tuning: TuningId,
+  measuresCount: number
+): StringTrack[] {
+  const baseTracks = generateInitialTracks(instrument, tuning, measuresCount);
+
+  if (instrument === 'guitar_6' && tuning === 'standard') {
+    // Tríada Menor de Mi (E Minor Arpeggio) en corcheas a lo largo de 2 compases
+    const notes = [
+      // Compás 1: Ascendente (E2, G2, B2, E3, G3, B3, E4, G4)
+      { s: 5, f: 0, step: 0 },
+      { s: 5, f: 3, step: 2 },
+      { s: 4, f: 2, step: 4 },
+      { s: 3, f: 2, step: 6 },
+      { s: 2, f: 0, step: 8 },
+      { s: 1, f: 0, step: 10 },
+      { s: 0, f: 0, step: 12 },
+      { s: 0, f: 3, step: 14 },
+      // Compás 2: Descendente y resolución en tónica
+      { s: 0, f: 0, step: 16 },
+      { s: 1, f: 0, step: 18 },
+      { s: 2, f: 0, step: 20 },
+      { s: 3, f: 2, step: 22 },
+      { s: 4, f: 2, step: 24 },
+      { s: 5, f: 3, step: 26 },
+      { s: 5, f: 0, step: 28 },
+      { s: 5, f: 0, step: 30 },
+    ];
+    notes.forEach(({ s, f, step }) => {
+      if (baseTracks[s]?.steps[step]) {
+        baseTracks[s].steps[step] = { fret: f, articulation: 'normal' };
+      }
+    });
+  } else if (instrument.startsWith('bass')) {
+    // Bajo Eléctrico: Tríada Menor de Mi (E1, G1, B1, E2, G2, B2...)
+    const notes = [
+      { s: 3, f: 0, step: 0 },
+      { s: 3, f: 3, step: 2 },
+      { s: 2, f: 2, step: 4 },
+      { s: 1, f: 2, step: 6 },
+      { s: 0, f: 0, step: 8 },
+      { s: 0, f: 4, step: 10 },
+      { s: 1, f: 2, step: 12 },
+      { s: 2, f: 2, step: 14 },
+      { s: 3, f: 3, step: 16 },
+      { s: 3, f: 0, step: 18 },
+      { s: 3, f: 0, step: 20 },
+      { s: 2, f: 2, step: 22 },
+      { s: 3, f: 3, step: 24 },
+      { s: 3, f: 0, step: 26 },
+      { s: 3, f: 0, step: 28 },
+      { s: 3, f: 0, step: 30 },
+    ];
+    notes.forEach(({ s, f, step }) => {
+      if (baseTracks[s]?.steps[step]) {
+        baseTracks[s].steps[step] = { fret: f, articulation: 'normal' };
+      }
+    });
+  }
+
+  return baseTracks;
+}
+
+// Extrae las notas activas en el mástil respetando tónica, escala/arpegio y caja (rango)
+function extractActiveFretboardNotes(
+  instrument: InstrumentType,
+  tuning: TuningId,
+  theoryMode: TheoryMode,
+  musicalKey: MusicalKey,
+  scaleType: ScaleType,
+  arpeggioType: ArpeggioType,
+  arpeggioRange: 'all' | 'box_root' | 'box_octave',
+  chordVoicingType: ChordVoicingType,
+  voicingShapeId: VoicingShapeId
+): { stringIndex: number; fret: number; midi: number; fullNote: string; noteName: string }[] {
+  const strings = getInstrumentStrings(instrument, tuning);
+  const rootIdx = CHROMATIC_INDEX[musicalKey] ?? 0;
+
+  if (theoryMode === 'chord_voicing') {
+    const voicing = getChordVoicing(instrument, musicalKey, chordVoicingType, voicingShapeId);
+    const notes: { stringIndex: number; fret: number; midi: number; fullNote: string; noteName: string }[] = [];
+    voicing.notes.forEach((vn) => {
+      if (vn.fret !== null && strings[vn.stringIndex]) {
+        const noteInfo = calculateFretNote(strings[vn.stringIndex].basePitch, vn.fret);
+        notes.push({
+          stringIndex: vn.stringIndex,
+          fret: vn.fret,
+          midi: noteInfo.midi,
+          fullNote: noteInfo.fullNote,
+          noteName: noteInfo.noteName,
+        });
+      }
+    });
+    return notes.sort((a, b) => a.midi - b.midi);
+  }
+
+  let semitones: number[] = [0, 4, 7];
+  if (theoryMode === 'arpeggio') {
+    const arpDef = ARPEGGIO_CATALOGUE.find((a) => a.id === arpeggioType) || ARPEGGIO_CATALOGUE[0];
+    semitones = arpDef.semitones;
+  } else if (theoryMode === 'scale') {
+    const scDef =
+      SCALE_CATALOGUE.find((s) => s.id === scaleType) ||
+      (scaleType === 'major' ? SCALE_CATALOGUE.find((s) => s.id === 'ionian') : null) ||
+      SCALE_CATALOGUE[0];
+    semitones = scDef.semitones;
+  }
+
+  // Traste de tónica en la cuerda más grave
+  const lowestStr = strings[strings.length - 1];
+  const m = lowestStr.basePitch.match(/^([A-Ga-g][#b]?)/);
+  const lowBaseIdx = CHROMATIC_INDEX[m ? m[1].toUpperCase() : 'E'] ?? 4;
+  const rootFretLow = (rootIdx - lowBaseIdx + 12) % 12;
+
+  const foundNotes: { stringIndex: number; fret: number; midi: number; fullNote: string; noteName: string }[] = [];
+
+  // Recorrer cuerdas desde la más grave (índice N-1) hacia la más aguda (índice 0)
+  for (let sIdx = strings.length - 1; sIdx >= 0; sIdx--) {
+    const str = strings[sIdx];
+    for (let f = 0; f <= 24; f++) {
+      const noteInfo = calculateFretNote(str.basePitch, f);
+      const noteDistance = (CHROMATIC_INDEX[noteInfo.noteName] - rootIdx + 12) % 12;
+
+      if (semitones.includes(noteDistance)) {
+        let inRange = true;
+        if (arpeggioRange !== 'all') {
+          if (arpeggioRange === 'box_root') {
+            inRange = f >= Math.max(0, rootFretLow - 1) && f <= rootFretLow + 4;
+          } else if (arpeggioRange === 'box_octave') {
+            inRange = f >= Math.max(0, rootFretLow + 11) && f <= rootFretLow + 16;
+          }
+        }
+
+        if (inRange) {
+          foundNotes.push({
+            stringIndex: sIdx,
+            fret: f,
+            midi: noteInfo.midi,
+            fullNote: noteInfo.fullNote,
+            noteName: noteInfo.noteName,
+          });
+        }
+      }
+    }
+  }
+
+  // Ordenar por altura tonal (pitch / MIDI) de más grave a más agudo
+  foundNotes.sort((a, b) => a.midi - b.midi);
+
+  // Filtrar notas unísonas para que la línea melódica progrese limpiamente
+  const uniqueAscending: typeof foundNotes = [];
+  const seenMidi = new Set<number>();
+  for (const n of foundNotes) {
+    if (!seenMidi.has(n.midi)) {
+      seenMidi.add(n.midi);
+      uniqueAscending.push(n);
+    }
+  }
+
+  return uniqueAscending;
+}
+
+// Aplica el patrón melódico de práctica
+function generatePatternNotes(
+  sourceNotes: { stringIndex: number; fret: number; midi: number; fullNote: string; noteName: string }[],
+  pattern: PracticePattern
+): { stringIndex: number; fret: number; midi: number; fullNote: string; noteName: string }[] {
+  if (sourceNotes.length === 0) return [];
+
+  if (pattern === 'ascending') {
+    return [...sourceNotes];
+  }
+
+  if (pattern === 'descending') {
+    return [...sourceNotes].reverse();
+  }
+
+  if (pattern === 'up_down') {
+    if (sourceNotes.length <= 1) return [...sourceNotes];
+    return [...sourceNotes, ...sourceNotes.slice(0, -1).reverse()];
+  }
+
+  if (pattern === 'broken') {
+    // Arpegio Quebrado (1-5-3-5 / Grados saltados característicos)
+    if (sourceNotes.length < 3) {
+      return [...sourceNotes, ...sourceNotes.slice().reverse()];
+    }
+
+    const broken: typeof sourceNotes = [];
+    for (let i = 0; i < sourceNotes.length; i += 3) {
+      const n1 = sourceNotes[i];
+      const n3 = sourceNotes[i + 1] || sourceNotes[i];
+      const n5 = sourceNotes[i + 2] || sourceNotes[i + 1] || sourceNotes[i];
+      // Secuencia: Tónica (1) -> 5ta -> 3ra -> 5ta
+      broken.push(n1, n5, n3, n5);
+    }
+    return broken;
+  }
+
+  return [...sourceNotes];
+}
+
 export default function FretboardSequencerStudio() {
   // Instrument and Tuning
   const [instrument, setInstrument] = useState<InstrumentType>('guitar_6');
   const [tuning, setTuning] = useState<TuningId>('standard');
 
-  // Theory Toolbar: 4 Distinct Modes
-  const [theoryMode, setTheoryMode] = useState<TheoryMode>('scale');
+  // Theory Toolbar: 4 Distinct Modes (Inicia en Arpegio Tríada Menor en Caja 1)
+  const [theoryMode, setTheoryMode] = useState<TheoryMode>('arpeggio');
   const [musicalKey, setMusicalKey] = useState<MusicalKey>('E');
 
   // Mode 2: Scales State (12 scales)
   const [scaleType, setScaleType] = useState<ScaleType>('ionian');
 
   // Mode 3: Arpeggios State (12 arpeggios)
-  const [arpeggioType, setArpeggioType] = useState<ArpeggioType>('major_triad');
-  const [arpeggioRange, setArpeggioRange] = useState<'all' | 'box_root' | 'box_octave'>('all');
+  const [arpeggioType, setArpeggioType] = useState<ArpeggioType>('minor_triad');
+  const [arpeggioRange, setArpeggioRange] = useState<'all' | 'box_root' | 'box_octave'>('box_root');
 
   // Mode 4: Chord Voicings State (12 chords & 5 shapes)
   const [chordVoicingType, setChordVoicingType] = useState<ChordVoicingType>('major');
   const [voicingShapeId, setVoicingShapeId] = useState<VoicingShapeId>('open');
 
+  // Practice Pattern & Subdivision Selector State
+  const [practicePattern, setPracticePattern] = useState<PracticePattern>('up_down');
+  const [subdivision, setSubdivision] = useState<PracticeSubdivision>('8n');
+
   // Fretboard Overlays (Etiquetas: Notas / Intervalos / Digitación)
   const [overlayMode, setOverlayMode] = useState<FretboardOverlayMode>('notes');
 
-  // Sequencer Settings
+  // Sequencer Settings: Preset Inicial Inteligente (Tríada Menor en corcheas)
   const [measuresCount, setMeasuresCount] = useState<number>(2);
   const [tracks, setTracks] = useState<StringTrack[]>(() =>
-    generateInitialTracks('guitar_6', 'standard', 2)
+    generateDefaultMusicalTracks('guitar_6', 'standard', 2)
   );
 
   // Transport State
@@ -99,8 +309,11 @@ export default function FretboardSequencerStudio() {
   // Shared active live notes state (id for auto-off timer)
   const [activeHitNotes, setActiveHitNotes] = useState<{ stringIndex: number; fret: number; id: string }[]>([]);
 
-  // Selected cell shared between Tablatura/Runway and Fretboard
-  const [selectedCell, setSelectedCell] = useState<{ stringIndex: number; stepIndex: number } | null>(null);
+  // Selected cell shared between Tablatura/Runway and Fretboard (Inicia en Compás 1, Paso 0)
+  const [selectedCell, setSelectedCell] = useState<{ stringIndex: number; stepIndex: number } | null>({
+    stringIndex: 5,
+    stepIndex: 0,
+  });
 
   // Timer Ref for playback clock
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -273,14 +486,14 @@ export default function FretboardSequencerStudio() {
     []
   );
 
-  // Click on wooden fretboard (Diapasón ➔ Tablatura editing linkage)
+  // Click on wooden fretboard (Grabación Directa por Pasos: Diapasón ➔ Escribe en TAB & Auto-Advance)
   const handleFretboardClick = useCallback(
     (stringIndex: number, fret: number) => {
-      // 1. Audition sound immediately
+      // 1. Audition sound immediately with Tone.js
       const track = tracksRef.current[stringIndex];
       if (track) {
         const noteInfo = calculateFretNote(track.basePitch, fret);
-        stringsAudioEngine.playNote(instrumentRef.current, noteInfo.fullNote, 'normal');
+        stringsAudioEngine.playNote(instrumentRef.current, noteInfo.fullNote, 'normal', '8n');
       }
 
       // 2. Flash neon glow on fretboard
@@ -288,26 +501,30 @@ export default function FretboardSequencerStudio() {
       setActiveHitNotes((prev) => [...prev, { stringIndex, fret, id: triggerId }]);
       setTimeout(() => {
         setActiveHitNotes((prev) => prev.filter((n) => n.id !== triggerId));
-      }, 180);
+      }, 200);
 
-      // 3. If a step is selected in Tablatura or Runway, assign this fret!
-      if (selectedCell) {
-        handleUpdateStep(selectedCell.stringIndex, selectedCell.stepIndex, {
-          fret,
-          articulation:
-            tracksRef.current[selectedCell.stringIndex]?.steps[selectedCell.stepIndex]?.articulation || 'normal',
-        });
-      } else {
-        // If none was selected, assign to currentStep
-        const stepToEdit = currentStepRef.current;
-        handleUpdateStep(stringIndex, stepToEdit, {
-          fret,
-          articulation: 'normal',
-        });
-        setSelectedCell({ stringIndex, stepIndex: stepToEdit });
-      }
+      // 3. Registrar inmediatamente esa cuerda y ese traste en el paso actual de la tablatura
+      const totalSteps = measuresCount * 16;
+      const targetStep = selectedCell ? selectedCell.stepIndex : 0;
+
+      // Update tracks: register this fret at targetStep on stringIndex and keep monophonic melodic clarity
+      setTracks((prev) =>
+        prev.map((t, sIdx) => {
+          const nextSteps = [...t.steps];
+          if (sIdx === stringIndex) {
+            nextSteps[targetStep] = { fret, articulation: 'normal' };
+          } else if (nextSteps[targetStep]?.fret !== null) {
+            nextSteps[targetStep] = { fret: null, articulation: 'normal' };
+          }
+          return { ...t, steps: nextSteps };
+        })
+      );
+
+      // 4. Auto-advance: El cursor de la tablatura avanza automáticamente al paso siguiente
+      const nextStep = (targetStep + 1) % totalSteps;
+      setSelectedCell({ stringIndex, stepIndex: nextStep });
     },
-    [selectedCell, handleUpdateStep]
+    [selectedCell, measuresCount]
   );
 
   // Playback Loop Runner
@@ -392,6 +609,88 @@ export default function FretboardSequencerStudio() {
     setVolume(vol);
     stringsAudioEngine.setVolume(vol);
   };
+
+  // -------------------------------------------------------------
+  // GENERADOR AUTOMÁTICO DE EJERCICIOS (Fretboard ➔ Tab/Runway)
+  // -------------------------------------------------------------
+  const handleLoadExerciseToTab = useCallback(
+    (opts?: {
+      overrideArpeggio?: ArpeggioType;
+      overrideScale?: ScaleType;
+      overridePattern?: PracticePattern;
+      overrideSubdivision?: PracticeSubdivision;
+    }) => {
+      const effArp = opts?.overrideArpeggio ?? arpeggioType;
+      const effScale = opts?.overrideScale ?? scaleType;
+      const effPattern = opts?.overridePattern ?? practicePattern;
+      const effSub = opts?.overrideSubdivision ?? subdivision;
+
+      const activeNotes = extractActiveFretboardNotes(
+        instrument,
+        tuning,
+        theoryMode,
+        musicalKey,
+        effScale,
+        effArp,
+        arpeggioRange,
+        chordVoicingType,
+        voicingShapeId
+      );
+
+      if (activeNotes.length === 0) return;
+
+      const patternNotes = generatePatternNotes(activeNotes, effPattern);
+      if (patternNotes.length === 0) return;
+
+      const totalSteps = measuresCount * 16;
+      const stepDelta = effSub === '8n' ? 2 : 1;
+
+      // Matriz limpia con la configuración instrumental actual
+      const newTracks = generateInitialTracks(instrument, tuning, measuresCount);
+
+      let patternIdx = 0;
+      for (let step = 0; step < totalSteps; step += stepDelta) {
+        const note = patternNotes[patternIdx % patternNotes.length];
+        if (newTracks[note.stringIndex]) {
+          newTracks[note.stringIndex].steps[step] = {
+            fret: note.fret,
+            articulation: 'normal',
+          };
+        }
+        patternIdx++;
+      }
+
+      setTracks(newTracks);
+      setCurrentStep(0);
+      const firstNote = patternNotes[0];
+      setSelectedCell({
+        stringIndex: firstNote.stringIndex,
+        stepIndex: 0,
+      });
+
+      // Audicionar nota inicial y feedback visual en mástil
+      stringsAudioEngine.playNote(instrument, firstNote.fullNote, 'normal', '8n');
+      const triggerId = `${firstNote.stringIndex}-${firstNote.fret}-${Date.now()}`;
+      setActiveHitNotes([{ stringIndex: firstNote.stringIndex, fret: firstNote.fret, id: triggerId }]);
+      setTimeout(() => {
+        setActiveHitNotes((prev) => prev.filter((n) => n.id !== triggerId));
+      }, 250);
+    },
+    [
+      arpeggioType,
+      scaleType,
+      practicePattern,
+      subdivision,
+      instrument,
+      tuning,
+      theoryMode,
+      musicalKey,
+      arpeggioRange,
+      chordVoicingType,
+      voicingShapeId,
+      measuresCount,
+    ]
+  );
 
   // -------------------------------------------------------------
   // ARPEGGIO AUDITION: Plays notes sequentially ascending/descending
@@ -751,14 +1050,106 @@ export default function FretboardSequencerStudio() {
         {/* SECCIÓN 2: ESCALAS (12 - 7 Griegos + Menor & Blues)           */}
         {/* ------------------------------------------------------------- */}
         {theoryMode === 'scale' && (
-          <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
-            <div className="flex items-center justify-between text-[11px] font-mono">
-              <span className="text-cyan-400 font-bold uppercase tracking-wider">
+          <div className="flex flex-col gap-3 pt-2 border-t border-white/5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-cyan-400 font-bold uppercase tracking-wider text-[11px] font-mono">
                 Catálogo de Escalas (12): Modos Griegos & Familia Menor/Blues
               </span>
-              <span className="text-slate-400 text-[10px]">
-                Desplázate para ver los 12 modos
-              </span>
+
+              {/* Botón Principal Cargar en Tablatura para Escala */}
+              <button
+                type="button"
+                onClick={() => handleLoadExerciseToTab()}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white font-bold px-4 py-2 rounded-xl shadow-lg shadow-cyan-900/40 flex items-center gap-2 cursor-pointer active:scale-95 transition-all text-xs"
+              >
+                <Rocket className="w-4 h-4 text-cyan-200" />
+                <span>🚀 Cargar en Tablatura / Runway</span>
+              </button>
+            </div>
+
+            {/* Barra de Patrón de Práctica y Subdivisión para Escalas */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl bg-black/40 border border-white/10 text-xs font-mono">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">
+                  Patrón:
+                </span>
+                <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded-lg border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('ascending')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'ascending'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Ascendente ↗
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('descending')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'descending'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Descendente ↘
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('up_down')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'up_down'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Ida y Vuelta ↗↘
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('broken')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'broken'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Arpegio Quebrado (1-5-3-5)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
+                  Subdivisión:
+                </span>
+                <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded-lg border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setSubdivision('8n')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      subdivision === '8n'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Corcheas 1/8
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubdivision('16n')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      subdivision === '16n'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Semicorcheas 1/16
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Responsive scrollable card grid */}
@@ -773,7 +1164,13 @@ export default function FretboardSequencerStudio() {
                   <button
                     key={sc.id}
                     type="button"
-                    onClick={() => setScaleType(sc.id)}
+                    onClick={() => {
+                      setScaleType(sc.id);
+                      const isTabEmpty = tracks.every((t) => t.steps.every((s) => s.fret === null));
+                      if (isTabEmpty) {
+                        handleLoadExerciseToTab({ overrideScale: sc.id });
+                      }
+                    }}
                     className={`p-3 rounded-xl text-left border transition-all cursor-pointer flex flex-col gap-1.5 ${
                       isSelected
                         ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(6,182,212,0.25)]'
@@ -808,10 +1205,10 @@ export default function FretboardSequencerStudio() {
           <div className="flex flex-col gap-3 pt-2 border-t border-white/5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-[10px] font-mono text-purple-400 font-bold uppercase tracking-wider">
-                Catálogo de Arpegios Melódicos (12):
+                Catálogo de Arpegios Melódicos ({ARPEGGIO_CATALOGUE.length}):
               </span>
 
-              {/* Range Filter & Audition Button */}
+              {/* Range Filter, Audition Button & Main Injector Button */}
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-lg p-1 text-[11px] font-mono">
                   <span className="text-slate-400 px-1">Rango:</span>
@@ -858,6 +1255,103 @@ export default function FretboardSequencerStudio() {
                   <Play className="w-3.5 h-3.5 fill-current" />
                   <span>Audicionar Arpegio</span>
                 </button>
+
+                {/* BOTÓN PRINCIPAL DESTACADO: CARGAR EN TABLATURA / RUNWAY */}
+                <button
+                  type="button"
+                  onClick={() => handleLoadExerciseToTab()}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 text-white font-bold px-4 py-2 rounded-xl shadow-lg shadow-cyan-900/40 flex items-center gap-2 cursor-pointer active:scale-95 transition-all text-xs"
+                >
+                  <Rocket className="w-4 h-4 text-cyan-200" />
+                  <span>🚀 Cargar en Tablatura / Runway</span>
+                </button>
+              </div>
+            </div>
+
+            {/* BARRA DE PATRÓN DE PRÁCTICA Y FIGURA RÍTMICA */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 rounded-xl bg-black/40 border border-white/10 text-xs font-mono">
+              {/* Selector de Patrón de Práctica */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider">
+                  Patrón:
+                </span>
+                <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded-lg border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('ascending')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'ascending'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Ascendente ↗
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('descending')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'descending'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Descendente ↘
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('up_down')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'up_down'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Ida y Vuelta ↗↘
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPracticePattern('broken')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      practicePattern === 'broken'
+                        ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Arpegio Quebrado (1-5-3-5)
+                  </button>
+                </div>
+              </div>
+
+              {/* Selector de Figura Rítmica */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
+                  Subdivisión:
+                </span>
+                <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded-lg border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setSubdivision('8n')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      subdivision === '8n'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Corcheas 1/8
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubdivision('16n')}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
+                      subdivision === '16n'
+                        ? 'bg-amber-400 text-slate-950 shadow-sm'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    Semicorcheas 1/16
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -870,7 +1364,13 @@ export default function FretboardSequencerStudio() {
                   <button
                     key={arp.id}
                     type="button"
-                    onClick={() => setArpeggioType(arp.id)}
+                    onClick={() => {
+                      setArpeggioType(arp.id);
+                      const isTabEmpty = tracks.every((t) => t.steps.every((s) => s.fret === null));
+                      if (isTabEmpty) {
+                        handleLoadExerciseToTab({ overrideArpeggio: arp.id });
+                      }
+                    }}
                     className={`p-3 rounded-xl text-left border transition-all cursor-pointer flex flex-col gap-1.5 ${
                       isSelected
                         ? 'bg-purple-500/20 border-purple-400 text-purple-200 shadow-[0_0_12px_rgba(168,85,247,0.25)]'

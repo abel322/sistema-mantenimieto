@@ -133,3 +133,6 @@ export interface StringsPattern {
   measuresCount: number; // 1, 2, 3, 4
   tracks: StringTrack[];
 }
+
+export type PracticePattern = 'ascending' | 'descending' | 'up_down' | 'broken';
+export type PracticeSubdivision = '8n' | '16n';

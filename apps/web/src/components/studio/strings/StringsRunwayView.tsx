@@ -398,6 +398,22 @@ export default function StringsRunwayView({
             )}
           </div>
         ))}
+
+        {/* Step Recording cursor line on Runway when paused */}
+        {!isPlaying && selectedCell && (() => {
+          const stepX = hitX + (selectedCell.stepIndex - effectiveStep) * stepWidthPx;
+          if (stepX < 0 || stepX > containerWidth) return null;
+          return (
+            <div
+              style={{ left: `${stepX}px` }}
+              className="absolute top-0 bottom-0 w-[2px] bg-cyan-400 border-r border-cyan-300 shadow-[0_0_12px_#22d3ee] pointer-events-none z-15 animate-pulse"
+            >
+              <span className="absolute bottom-2 left-1.5 text-[9px] font-mono font-bold text-cyan-300 bg-cyan-950/90 px-1.5 py-0.5 rounded border border-cyan-500/40 whitespace-nowrap shadow">
+                ⏺ Paso {selectedCell.stepIndex + 1}
+              </span>
+            </div>
+          );
+        })()}
       </div>
 
       {/* 2. Horizontal String Highway Lanes */}

@@ -242,6 +242,20 @@ export default function StringsSequencerGrid({
             </button>
           </div>
 
+          {/* STEP RECORDING STATUS BADGE */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-500/40 text-xs font-mono text-cyan-300 shadow-sm ml-0 sm:ml-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_#22d3ee]" />
+            <span className="font-bold text-[11px] uppercase tracking-wider text-cyan-200">
+              Grabación por Pasos:
+            </span>
+            <span className="font-extrabold text-white bg-black/60 px-2 py-0.5 rounded border border-white/10">
+              Compás {Math.floor((selectedCell?.stepIndex ?? 0) / 16) + 1}, Pulso {Math.floor(((selectedCell?.stepIndex ?? 0) % 16) / 4) + 1}.{(((selectedCell?.stepIndex ?? 0) % 4) + 1)}
+            </span>
+            <span className="text-[10px] text-cyan-400/80 hidden lg:inline">
+              • Clic en mástil escribe notas
+            </span>
+          </div>
+
           {/* SELECTOR DE ZOOM DE PISTA (Visible en Modo Runway) */}
           {viewMode === 'runway' && (
             <div className="flex items-center gap-1 bg-black/60 border border-white/10 p-0.5 rounded-xl text-xs font-mono animate-in fade-in">
@@ -349,6 +363,7 @@ export default function StringsSequencerGrid({
                       const subIdx = stepInMeasure % 4;
                       const isDownbeat = subIdx === 0;
                       const isPlayhead = isPlaying && currentStep === globalStep;
+                      const isStepRecordingCursor = !isPlaying && selectedCell?.stepIndex === globalStep;
 
                       let subLabel = 'a';
                       let colorClass = 'text-slate-500';
@@ -369,6 +384,8 @@ export default function StringsSequencerGrid({
                           className={`inline-flex items-center justify-center h-6 select-none transition-colors ${
                             isPlayhead
                               ? 'text-amber-300 font-extrabold bg-amber-500/25 rounded'
+                              : isStepRecordingCursor
+                              ? 'text-cyan-300 font-extrabold bg-cyan-500/30 border-b-2 border-cyan-400 rounded-t shadow-[0_0_8px_rgba(6,182,212,0.4)]'
                               : colorClass
                           }`}
                         >
@@ -448,6 +465,7 @@ export default function StringsSequencerGrid({
                               const stepData = track.steps[stepIdx];
                               const hasNote = stepData && stepData.fret !== null;
                               const isPlayhead = isPlaying && currentStep === stepIdx;
+                              const isStepRecordingCol = !isPlaying && selectedCell?.stepIndex === stepIdx;
                               const isSelected =
                                 selectedCell?.stringIndex === sIdx &&
                                 selectedCell?.stepIndex === stepIdx;
@@ -459,14 +477,22 @@ export default function StringsSequencerGrid({
                                 <div
                                   key={`tab-cell-${sIdx}-${stepIdx}`}
                                   style={{ width: `${stepWidth}px` }}
-                                  className="h-full flex items-center justify-center relative cursor-pointer group/step"
+                                  className={`h-full flex items-center justify-center relative cursor-pointer group/step transition-colors ${
+                                    isStepRecordingCol ? 'bg-cyan-500/[0.04]' : ''
+                                  }`}
                                   onClick={() => handleCellClick(sIdx, stepIdx)}
                                 >
-                                  {/* Empty Step Hover Placeholder */}
+                                  {/* Empty Step Hover Placeholder or Active Step Recording Target */}
                                   {!hasNote && (
-                                    <div className="w-5 h-5 rounded-full border border-dashed border-slate-600/60 opacity-0 group-hover/step:opacity-100 bg-[#0A0E17] flex items-center justify-center text-[10px] text-slate-400 transition-all z-10 shadow-sm">
-                                      +
-                                    </div>
+                                    isSelected ? (
+                                      <div className="w-5 h-5 rounded-full border-2 border-dashed border-cyan-400 bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] animate-pulse shadow-[0_0_8px_rgba(6,182,212,0.6)] z-10 font-bold">
+                                        ●
+                                      </div>
+                                    ) : (
+                                      <div className="w-5 h-5 rounded-full border border-dashed border-slate-600/60 opacity-0 group-hover/step:opacity-100 bg-[#0A0E17] flex items-center justify-center text-[10px] text-slate-400 transition-all z-10 shadow-sm">
+                                        +
+                                      </div>
+                                    )
                                   )}
 
                                   {/* Active Fret Number directly seated on the string */}
@@ -484,7 +510,7 @@ export default function StringsSequencerGrid({
                                           isPlayhead
                                             ? 'border-amber-300 text-amber-200 ring-2 ring-amber-400/80 shadow-[0_0_16px_rgba(251,191,36,0.9)] scale-110'
                                             : isSelected
-                                            ? 'border-cyan-400 text-cyan-300 ring-1 ring-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.5)]'
+                                            ? 'border-cyan-400 text-cyan-300 ring-2 ring-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.6)]'
                                             : 'border-amber-500/40 text-amber-300 hover:border-amber-400 shadow-sm'
                                         }`}
                                       >
