@@ -20,9 +20,11 @@ interface StringsRunwayViewProps {
   bpm: number;
   zoom: 1 | 2 | 4; // 1, 2 or 4 measures visible in viewport
   activeHits: ActiveFretHit[];
+  activeHitNotes?: { stringIndex: number; fret: number; id: string }[];
   selectedCell: { stringIndex: number; stepIndex: number } | null;
   onSelectCell: (cell: { stringIndex: number; stepIndex: number } | null) => void;
   onUpdateStep: (stringIndex: number, stepIndex: number, stepData: SequencerStepCell) => void;
+  onNoteTrigger?: (note: { stringIndex: number; fret: number; duration?: string }) => void;
 }
 
 export default function StringsRunwayView({
@@ -34,9 +36,11 @@ export default function StringsRunwayView({
   bpm,
   zoom,
   activeHits,
+  activeHitNotes = [],
   selectedCell,
   onSelectCell,
   onUpdateStep,
+  onNoteTrigger,
 }: StringsRunwayViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const highwayCanvasRef = useRef<HTMLDivElement | null>(null);
@@ -93,6 +97,7 @@ export default function StringsRunwayView({
 
   // Real-time animation position state (fractional step position)
   const [animFractionalStep, setAnimFractionalStep] = useState<number>(0);
+  const lastHitStepRef = useRef<number>(-1);
 
   // Continuous 60fps RAF animation loop synchronized with Tone.Transport
   useEffect(() => {
@@ -102,6 +107,7 @@ export default function StringsRunwayView({
         rafIdRef.current = null;
       }
       setAnimFractionalStep(currentStep);
+      lastHitStepRef.current = -1;
       return;
     }
 
@@ -124,6 +130,25 @@ export default function StringsRunwayView({
       }
 
       setAnimFractionalStep(fractional);
+
+      // Trigger onNoteTrigger callback at the instant note reaches target hitline
+      const currentIntStep = Math.floor(fractional);
+      if (currentIntStep !== lastHitStepRef.current) {
+        lastHitStepRef.current = currentIntStep;
+        if (onNoteTrigger) {
+          tracks.forEach((track, sIdx) => {
+            const cell = track.steps[currentIntStep];
+            if (cell && cell.fret !== null) {
+              onNoteTrigger({
+                stringIndex: sIdx,
+                fret: cell.fret,
+                duration: '16n',
+              });
+            }
+          });
+        }
+      }
+
       rafIdRef.current = requestAnimationFrame(animate);
     };
 
@@ -136,7 +161,7 @@ export default function StringsRunwayView({
         rafIdRef.current = null;
       }
     };
-  }, [isPlaying, currentStep, loopDurationSec, stepDurationSec, totalSteps]);
+  }, [isPlaying, currentStep, loopDurationSec, stepDurationSec, totalSteps, onNoteTrigger, tracks]);
 
   // Current effective play position in step units
   const effectiveStep = isPlaying ? animFractionalStep : scrubStepOffset;
@@ -244,7 +269,12 @@ export default function StringsRunwayView({
         // Only render if within visible viewport bounds with small buffer
         if (x >= -40 && x <= containerWidth + 60) {
           const distToHit = Math.abs(x - hitX);
-          const isHitting = distToHit < 14;
+          const isHitting =
+            distToHit < 14 ||
+            (activeHitNotes &&
+              activeHitNotes.some(
+                (n) => n.stringIndex === sIdx && n.fret === cell.fret
+              ));
           const isSelected =
             selectedCell?.stringIndex === sIdx &&
             selectedCell?.stepIndex === stepIdx;
@@ -374,7 +404,9 @@ export default function StringsRunwayView({
       <div ref={highwayCanvasRef} className="absolute inset-0">
         {tracks.map((track, sIdx) => {
           const y = stringYPositions[sIdx];
-          const isHitActive = activeHits.some((hit) => hit.stringIndex === sIdx);
+          const isHitActive =
+            activeHits.some((hit) => hit.stringIndex === sIdx) ||
+            (activeHitNotes && activeHitNotes.some((hit) => hit.stringIndex === sIdx));
 
           return (
             <div
@@ -408,7 +440,9 @@ export default function StringsRunwayView({
       >
         {tracks.map((track, sIdx) => {
           const y = stringYPositions[sIdx];
-          const isHitActive = activeHits.some((hit) => hit.stringIndex === sIdx);
+          const isHitActive =
+            activeHits.some((hit) => hit.stringIndex === sIdx) ||
+            (activeHitNotes && activeHitNotes.some((hit) => hit.stringIndex === sIdx));
 
           return (
             <div
@@ -456,7 +490,9 @@ export default function StringsRunwayView({
       <div className="absolute inset-0 pointer-events-none z-25">
         {tracks.map((_, sIdx) => {
           const y = stringYPositions[sIdx];
-          const isHitActive = activeHits.some((hit) => hit.stringIndex === sIdx);
+          const isHitActive =
+            activeHits.some((hit) => hit.stringIndex === sIdx) ||
+            (activeHitNotes && activeHitNotes.some((hit) => hit.stringIndex === sIdx));
 
           if (!isHitActive) return null;
 

@@ -30,9 +30,13 @@ interface StringsSequencerGridProps {
   isPlaying: boolean;
   bpm?: number;
   activeHits?: ActiveFretHit[];
+  activeHitNotes?: { stringIndex: number; fret: number; id: string }[];
+  selectedCell?: { stringIndex: number; stepIndex: number } | null;
+  onSelectCell?: (cell: { stringIndex: number; stepIndex: number } | null) => void;
   onUpdateStep: (stringIndex: number, stepIndex: number, stepData: SequencerStepCell) => void;
   onClearGrid: () => void;
   onLoadPreset: (presetId: string) => void;
+  onNoteTrigger?: (note: { stringIndex: number; fret: number; duration?: string }) => void;
 }
 
 const BASS_ARTICULATIONS: { id: BassArticulation; label: string; icon: string; desc: string }[] = [
@@ -57,9 +61,13 @@ export default function StringsSequencerGrid({
   isPlaying,
   bpm = 104,
   activeHits = [],
+  activeHitNotes = [],
+  selectedCell: propSelectedCell,
+  onSelectCell: propOnSelectCell,
   onUpdateStep,
   onClearGrid,
   onLoadPreset,
+  onNoteTrigger,
 }: StringsSequencerGridProps) {
   const isBass = instrument.startsWith('bass');
   const totalSteps = measuresCount * 16;
@@ -69,8 +77,21 @@ export default function StringsSequencerGrid({
   const [viewMode, setViewMode] = useState<'classic' | 'runway'>('classic');
   const [runwayZoom, setRunwayZoom] = useState<1 | 2 | 4>(2);
 
-  const [selectedCell, setSelectedCell] = useState<{ stringIndex: number; stepIndex: number } | null>(null);
+  const [internalSelectedCell, setInternalSelectedCell] = useState<{ stringIndex: number; stepIndex: number } | null>(null);
+  const selectedCell = propSelectedCell !== undefined ? propSelectedCell : internalSelectedCell;
+  const setSelectedCell = propOnSelectCell || setInternalSelectedCell;
+
   const [fretPickerValue, setFretPickerValue] = useState<number>(0);
+
+  // Sync fretPickerValue when selectedCell changes
+  useEffect(() => {
+    if (selectedCell) {
+      const fret = tracks[selectedCell.stringIndex]?.steps[selectedCell.stepIndex]?.fret;
+      if (fret !== null && fret !== undefined) {
+        setFretPickerValue(fret);
+      }
+    }
+  }, [selectedCell, tracks]);
 
   // Step width in pixels
   const stepWidth = 42;
@@ -512,9 +533,11 @@ export default function StringsSequencerGrid({
         bpm={bpm}
         zoom={runwayZoom}
         activeHits={activeHits}
+        activeHitNotes={activeHitNotes}
         selectedCell={selectedCell}
         onSelectCell={setSelectedCell}
         onUpdateStep={onUpdateStep}
+        onNoteTrigger={onNoteTrigger}
       />
     )}
 

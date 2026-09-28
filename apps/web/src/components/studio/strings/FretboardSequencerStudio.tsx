@@ -96,6 +96,11 @@ export default function FretboardSequencerStudio() {
 
   // Active glowing fret notes currently sounding
   const [activeHits, setActiveHits] = useState<ActiveFretHit[]>([]);
+  // Shared active live notes state (id for auto-off timer)
+  const [activeHitNotes, setActiveHitNotes] = useState<{ stringIndex: number; fret: number; id: string }[]>([]);
+
+  // Selected cell shared between Tablatura/Runway and Fretboard
+  const [selectedCell, setSelectedCell] = useState<{ stringIndex: number; stepIndex: number } | null>(null);
 
   // Timer Ref for playback clock
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -123,6 +128,7 @@ export default function FretboardSequencerStudio() {
     setIsPlaying(false);
     setCurrentStep(0);
     setActiveHits([]);
+    setActiveHitNotes([]);
     stringsAudioEngine.stopAll();
   }, []);
 
@@ -203,6 +209,7 @@ export default function FretboardSequencerStudio() {
     const currentTracks = tracksRef.current;
     const currentInst = instrumentRef.current;
     const hitsThisStep: ActiveFretHit[] = [];
+    const newHitNotes: { stringIndex: number; fret: number; id: string }[] = [];
 
     currentTracks.forEach((track, sIdx) => {
       const cell = track.steps[stepIdx];
@@ -220,11 +227,88 @@ export default function FretboardSequencerStudio() {
           fret: cell.fret,
           articulation: cell.articulation,
         });
+
+        newHitNotes.push({
+          stringIndex: sIdx,
+          fret: cell.fret,
+          id: `${sIdx}-${cell.fret}-${stepIdx}-${Date.now()}`,
+        });
       }
     });
 
     setActiveHits(hitsThisStep);
+    if (newHitNotes.length > 0) {
+      setActiveHitNotes(newHitNotes);
+      setTimeout(() => {
+        setActiveHitNotes((prev) =>
+          prev.filter((n) => !newHitNotes.some((nh) => nh.id === n.id))
+        );
+      }, 160);
+    }
   }, []);
+
+  // Real-time note trigger from Runway or external events
+  const handleNoteTrigger = useCallback(
+    ({
+      stringIndex,
+      fret,
+      duration = '16n',
+    }: {
+      stringIndex: number;
+      fret: number;
+      duration?: string;
+    }) => {
+      const track = tracksRef.current[stringIndex];
+      if (track) {
+        const noteInfo = calculateFretNote(track.basePitch, fret);
+        stringsAudioEngine.playNote(instrumentRef.current, noteInfo.fullNote, 'normal', duration);
+      }
+
+      const id = `${stringIndex}-${fret}-${Date.now()}`;
+      setActiveHitNotes((prev) => [...prev, { stringIndex, fret, id }]);
+      setTimeout(() => {
+        setActiveHitNotes((prev) => prev.filter((n) => n.id !== id));
+      }, 160);
+    },
+    []
+  );
+
+  // Click on wooden fretboard (Diapasón ➔ Tablatura editing linkage)
+  const handleFretboardClick = useCallback(
+    (stringIndex: number, fret: number) => {
+      // 1. Audition sound immediately
+      const track = tracksRef.current[stringIndex];
+      if (track) {
+        const noteInfo = calculateFretNote(track.basePitch, fret);
+        stringsAudioEngine.playNote(instrumentRef.current, noteInfo.fullNote, 'normal');
+      }
+
+      // 2. Flash neon glow on fretboard
+      const triggerId = `${stringIndex}-${fret}-${Date.now()}`;
+      setActiveHitNotes((prev) => [...prev, { stringIndex, fret, id: triggerId }]);
+      setTimeout(() => {
+        setActiveHitNotes((prev) => prev.filter((n) => n.id !== triggerId));
+      }, 180);
+
+      // 3. If a step is selected in Tablatura or Runway, assign this fret!
+      if (selectedCell) {
+        handleUpdateStep(selectedCell.stringIndex, selectedCell.stepIndex, {
+          fret,
+          articulation:
+            tracksRef.current[selectedCell.stringIndex]?.steps[selectedCell.stepIndex]?.articulation || 'normal',
+        });
+      } else {
+        // If none was selected, assign to currentStep
+        const stepToEdit = currentStepRef.current;
+        handleUpdateStep(stringIndex, stepToEdit, {
+          fret,
+          articulation: 'normal',
+        });
+        setSelectedCell({ stringIndex, stepIndex: stepToEdit });
+      }
+    },
+    [selectedCell, handleUpdateStep]
+  );
 
   // Playback Loop Runner
   const togglePlay = useCallback(async () => {
@@ -534,9 +618,9 @@ export default function FretboardSequencerStudio() {
   }, [theoryMode, musicalKey, scaleType, arpeggioType, arpeggioRange, chordVoicingType, voicingShapeId]);
 
   return (
-    <div className="w-full flex flex-col gap-6">
+    <div className="w-full max-w-7xl mx-auto flex flex-col gap-3 px-4 select-none pb-8">
       {/* Studio Header Card */}
-      <div className="w-full bg-[#0E1526]/80 border border-white/10 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl">
+      <div className="w-full bg-[#0E1526]/80 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 via-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-[0_0_20px_rgba(245,158,11,0.3)] shrink-0">
             <Guitar className="w-6 h-6" />
@@ -572,28 +656,7 @@ export default function FretboardSequencerStudio() {
         </div>
       </div>
 
-      {/* 1. Barra de Transporte */}
-      <StringsTransportBar
-        isPlaying={isPlaying}
-        bpm={bpm}
-        isLoop={isLoop}
-        measuresCount={measuresCount}
-        instrument={instrument}
-        tuning={tuning}
-        overlayMode={overlayMode}
-        volume={volume}
-        onTogglePlay={togglePlay}
-        onStop={stopPlayback}
-        onBpmChange={setBpm}
-        onToggleLoop={() => setIsLoop((prev) => !prev)}
-        onMeasuresCountChange={handleMeasuresCountChange}
-        onInstrumentChange={handleInstrumentChange}
-        onTuningChange={handleTuningChange}
-        onOverlayModeChange={setOverlayMode}
-        onVolumeChange={handleVolumeChange}
-      />
-
-      {/* 2. Barra de Teoría: 4 Modos Independientes */}
+      {/* 1. Barra de Teoría: 4 Modos Independientes */}
       <div className="w-full bg-[#0E1526]/90 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 shadow-2xl">
         {/* Header & 4 Mode Switcher with Exact Counters */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
@@ -981,13 +1044,33 @@ export default function FretboardSequencerStudio() {
           chordVoicingType={chordVoicingType}
           voicingShapeId={voicingShapeId}
           activeHits={activeHits}
-          onFretClick={(sIdx, fret) => {
-            // Audition handled internally
-          }}
+          activeHitNotes={activeHitNotes}
+          onFretClick={handleFretboardClick}
         />
       </div>
 
-      {/* 4. Secuenciador por Pasos & Tablatura */}
+      {/* 3. Barra de Transporte Unificada y Métricas (Docked entre Mástil y Tablatura) */}
+      <StringsTransportBar
+        isPlaying={isPlaying}
+        bpm={bpm}
+        isLoop={isLoop}
+        measuresCount={measuresCount}
+        instrument={instrument}
+        tuning={tuning}
+        overlayMode={overlayMode}
+        volume={volume}
+        onTogglePlay={togglePlay}
+        onStop={stopPlayback}
+        onBpmChange={setBpm}
+        onToggleLoop={() => setIsLoop((prev) => !prev)}
+        onMeasuresCountChange={handleMeasuresCountChange}
+        onInstrumentChange={handleInstrumentChange}
+        onTuningChange={handleTuningChange}
+        onOverlayModeChange={setOverlayMode}
+        onVolumeChange={handleVolumeChange}
+      />
+
+      {/* 4. Tablatura de Estudio / Modo Runway */}
       <StringsSequencerGrid
         instrument={instrument}
         tracks={tracks}
@@ -996,9 +1079,13 @@ export default function FretboardSequencerStudio() {
         isPlaying={isPlaying}
         bpm={bpm}
         activeHits={activeHits}
+        activeHitNotes={activeHitNotes}
+        selectedCell={selectedCell}
+        onSelectCell={setSelectedCell}
         onUpdateStep={handleUpdateStep}
         onClearGrid={handleClearGrid}
         onLoadPreset={handleLoadPreset}
+        onNoteTrigger={handleNoteTrigger}
       />
     </div>
   );

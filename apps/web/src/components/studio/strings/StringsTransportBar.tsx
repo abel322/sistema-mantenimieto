@@ -53,7 +53,7 @@ export default function StringsTransportBar({
   onVolumeChange,
 }: StringsTransportBarProps) {
   return (
-    <div className="w-full bg-[#0E1526]/90 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 shadow-2xl">
+    <div className="w-full bg-[#0A0E17] border border-white/10 rounded-2xl p-3 sm:p-4 flex flex-col gap-3 shadow-2xl">
       {/* Top Row: Main Transport & Tempo */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Left: Play / Stop / Loop Controls */}

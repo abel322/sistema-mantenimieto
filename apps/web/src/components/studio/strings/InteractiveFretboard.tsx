@@ -27,6 +27,12 @@ export interface ActiveFretHit {
   articulation?: string;
 }
 
+export interface ActiveHitNote {
+  stringIndex: number;
+  fret: number;
+  id: string;
+}
+
 interface InteractiveFretboardProps {
   instrument: InstrumentType;
   tuning: TuningId;
@@ -39,6 +45,7 @@ interface InteractiveFretboardProps {
   chordVoicingType?: ChordVoicingType;
   voicingShapeId?: VoicingShapeId;
   activeHits?: ActiveFretHit[];
+  activeHitNotes?: ActiveHitNote[];
   onFretClick?: (stringIndex: number, fret: number) => void;
   className?: string;
 }
@@ -142,6 +149,7 @@ export default function InteractiveFretboard({
   chordVoicingType = 'major',
   voicingShapeId = 'root6_barre',
   activeHits = [],
+  activeHitNotes = [],
   onFretClick,
   className = '',
 }: InteractiveFretboardProps) {
@@ -649,9 +657,9 @@ export default function InteractiveFretboard({
                     (CHROMATIC_INDEX[noteInfo.noteName] - rootIndex + 12) % 12;
                   const isRoot = noteDistance === 0;
 
-                  const isActive = activeHits.some(
-                    (hit) => hit.stringIndex === sIdx && hit.fret === fret
-                  );
+                  const isActive =
+                    (activeHitNotes && activeHitNotes.some((hit) => hit.stringIndex === sIdx && hit.fret === fret)) ||
+                    (activeHits && activeHits.some((hit) => hit.stringIndex === sIdx && hit.fret === fret));
 
                   const genericFinger = fret === 0 ? 0 : ((fret - 1) % 4) + 1;
 
@@ -802,26 +810,39 @@ export default function InteractiveFretboard({
                       {isHighlighted && (
                         <g filter={badgeFilter}>
                           {isActive && (
-                            <circle
-                              cx={noteX}
-                              cy={stringY}
-                              r={14}
-                              fill="none"
-                              stroke="#ffffff"
-                              strokeWidth="1.8"
-                              opacity="0.85"
-                              className="animate-ping"
-                            />
+                            <>
+                              <circle
+                                cx={noteX}
+                                cy={stringY}
+                                r={17}
+                                fill="none"
+                                stroke="#22d3ee"
+                                strokeWidth="2.5"
+                                opacity="0.9"
+                                className="animate-ping"
+                              />
+                              <circle
+                                cx={noteX}
+                                cy={stringY}
+                                r={14.5}
+                                fill="none"
+                                stroke="#38bdf8"
+                                strokeWidth="2"
+                                opacity="0.8"
+                              />
+                            </>
                           )}
 
                           <circle
                             cx={noteX}
                             cy={stringY}
-                            r={isRoot || isActive ? 10.5 : 9}
+                            r={isActive ? 12 : isRoot ? 10.5 : 9}
                             fill={badgeFill}
                             stroke={badgeStroke}
-                            strokeWidth={isRoot || isActive ? 2.4 : 1.5}
-                            className="transition-transform duration-150 group-hover:scale-125"
+                            strokeWidth={isActive ? 3 : isRoot ? 2.4 : 1.5}
+                            className={`transition-transform duration-75 ${
+                              isActive ? 'scale-110 drop-shadow-[0_0_12px_#22d3ee]' : 'group-hover:scale-125'
+                            }`}
                           />
 
                           <text
