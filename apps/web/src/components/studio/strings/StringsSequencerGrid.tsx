@@ -206,65 +206,73 @@ export default function StringsSequencerGrid({
       {/* 2. LIENZO DE TABLATURA PROFESIONAL (Scrollable) */}
       <div className="w-full overflow-x-auto custom-scrollbar pb-3 select-none">
         <div style={{ minWidth: `${gridTotalWidth}px` }} className="flex flex-col relative py-2">
-          {/* Top Metric Header: Measures and Traditional 1 e & a Beat Division */}
-          <div className="flex items-end mb-1">
-            {/* Clave Gap */}
-            <div style={{ width: `${clefWidth}px` }} className="shrink-0 flex items-center justify-center pr-2">
-              <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest font-bold">
-                COMPÁS
-              </span>
+          {/* Fila superior de compás y subdivisiones (Regla de tiempos horizontal) */}
+          <div className="flex flex-row items-center w-full mb-2 select-none border-b border-white/5 pb-1">
+            {/* Espaciador de Clave TAB para alineación exacta con las cuerdas */}
+            <div
+              style={{ width: `${clefWidth}px` }}
+              className="shrink-0 flex items-center justify-center pr-2 font-mono text-[10px] font-bold text-slate-500 tracking-wider uppercase"
+            >
+              TIEMPO
             </div>
 
-            {/* Time Divisions Ruler */}
-            <div className="flex-1 flex">
-              {Array.from({ length: measuresCount }).map((_, mIdx) => {
-                return (
+            {/* Repite por cada compás (16 pasos en horizontal) */}
+            <div className="flex-1 flex flex-row">
+              {Array.from({ length: measuresCount }).map((_, mIdx) => (
+                <div
+                  key={`measure-head-${mIdx}`}
+                  style={{ width: `${16 * stepWidth}px` }}
+                  className="shrink-0 flex flex-row items-center border-r-2 border-slate-400/90 relative pt-1"
+                >
+                  {/* Etiqueta discreta de compás */}
+                  <span className="absolute -top-3 left-1 text-[9px] font-mono font-bold text-amber-400/80 select-none">
+                    COMPÁS {mIdx + 1}
+                  </span>
+
+                  {/* 16 subdivisiones horizontales: | 1 e & a | 2 e & a | 3 e & a | 4 e & a | */}
                   <div
-                    key={`measure-head-${mIdx}`}
-                    style={{ width: `${16 * stepWidth}px` }}
-                    className="relative flex flex-col border-r-2 border-slate-400/90"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(16, ${stepWidth}px)`,
+                    }}
+                    className="grid grid-cols-16 flex-1 text-center font-mono text-[11px]"
                   >
-                    {/* Measure Number Badge */}
-                    <div className="px-2 py-0.5 mb-1 flex items-center gap-1.5 text-[10px] font-mono font-bold text-amber-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span>COMPÁS {mIdx + 1}</span>
-                    </div>
+                    {Array.from({ length: 16 }).map((_, stepInMeasure) => {
+                      const globalStep = mIdx * 16 + stepInMeasure;
+                      const beatNum = Math.floor(stepInMeasure / 4) + 1;
+                      const subIdx = stepInMeasure % 4;
+                      const isDownbeat = subIdx === 0;
+                      const isPlayhead = isPlaying && currentStep === globalStep;
 
-                    {/* Beats: 1 e & a | 2 e & a | 3 e & a | 4 e & a */}
-                    <div className="grid grid-cols-16">
-                      {Array.from({ length: 16 }).map((_, stepInMeasure) => {
-                        const globalStep = mIdx * 16 + stepInMeasure;
-                        const beatNum = Math.floor(stepInMeasure / 4) + 1;
-                        const subIdx = stepInMeasure % 4;
-                        const isDownbeat = subIdx === 0;
-                        const isPlayhead = isPlaying && currentStep === globalStep;
+                      let subLabel = 'a';
+                      let colorClass = 'text-slate-500';
 
-                        let subLabel = '';
-                        if (subIdx === 0) subLabel = `${beatNum}`;
-                        else if (subIdx === 1) subLabel = 'e';
-                        else if (subIdx === 2) subLabel = '&';
-                        else if (subIdx === 3) subLabel = 'a';
+                      if (isDownbeat) {
+                        subLabel = `${beatNum}`;
+                        colorClass = beatNum === 1 ? 'text-amber-400 font-bold' : 'text-slate-200 font-bold';
+                      } else if (subIdx === 1) {
+                        subLabel = 'e';
+                      } else if (subIdx === 2) {
+                        subLabel = '&';
+                      }
 
-                        return (
-                          <div
-                            key={`beat-tick-${globalStep}`}
-                            style={{ width: `${stepWidth}px` }}
-                            className={`flex flex-col items-center justify-center py-1 transition-colors ${
-                              isPlayhead
-                                ? 'text-amber-400 font-extrabold bg-amber-500/20 rounded-t'
-                                : isDownbeat
-                                ? 'text-white font-bold text-xs'
-                                : 'text-slate-500 text-[10px]'
-                            }`}
-                          >
-                            <span>{subLabel}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                      return (
+                        <span
+                          key={`beat-col-${globalStep}`}
+                          style={{ width: `${stepWidth}px` }}
+                          className={`inline-flex items-center justify-center h-6 select-none transition-colors ${
+                            isPlayhead
+                              ? 'text-amber-300 font-extrabold bg-amber-500/25 rounded'
+                              : colorClass
+                          }`}
+                        >
+                          {subLabel}
+                        </span>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
 
