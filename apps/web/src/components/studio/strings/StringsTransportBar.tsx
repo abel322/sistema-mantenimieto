@@ -6,18 +6,11 @@ import {
   Square,
   Repeat,
   Volume2,
-  Sliders,
-  Music,
-  Activity,
-  Layers,
-  Sparkles,
 } from 'lucide-react';
 import {
   InstrumentType,
   TuningId,
   FretboardOverlayMode,
-  MusicalKey,
-  ScaleType,
 } from '@/types/strings';
 
 interface StringsTransportBarProps {
@@ -28,8 +21,6 @@ interface StringsTransportBarProps {
   instrument: InstrumentType;
   tuning: TuningId;
   overlayMode: FretboardOverlayMode;
-  musicalKey: MusicalKey;
-  scaleType: ScaleType;
   volume: number; // in dB -30 to 6
   onTogglePlay: () => void;
   onStop: () => void;
@@ -39,22 +30,8 @@ interface StringsTransportBarProps {
   onInstrumentChange: (inst: InstrumentType) => void;
   onTuningChange: (tuning: TuningId) => void;
   onOverlayModeChange: (mode: FretboardOverlayMode) => void;
-  onKeyChange: (key: MusicalKey) => void;
-  onScaleChange: (scale: ScaleType) => void;
   onVolumeChange: (vol: number) => void;
 }
-
-const MUSICAL_KEYS: MusicalKey[] = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
-
-const SCALE_OPTIONS: { id: ScaleType; label: string }[] = [
-  { id: 'minor_pentatonic', label: 'Pentatónica Menor' },
-  { id: 'major_pentatonic', label: 'Pentatónica Mayor' },
-  { id: 'minor', label: 'Menor Natural' },
-  { id: 'major', label: 'Mayor Natural' },
-  { id: 'dorian', label: 'Dórico' },
-  { id: 'mixolydian', label: 'Mixolidio' },
-  { id: 'blues', label: 'Escala Blues' },
-];
 
 export default function StringsTransportBar({
   isPlaying,
@@ -64,8 +41,6 @@ export default function StringsTransportBar({
   instrument,
   tuning,
   overlayMode,
-  musicalKey,
-  scaleType,
   volume,
   onTogglePlay,
   onStop,
@@ -75,8 +50,6 @@ export default function StringsTransportBar({
   onInstrumentChange,
   onTuningChange,
   onOverlayModeChange,
-  onKeyChange,
-  onScaleChange,
   onVolumeChange,
 }: StringsTransportBarProps) {
   return (
@@ -186,7 +159,7 @@ export default function StringsTransportBar({
         </div>
       </div>
 
-      {/* Bottom Row: Instrument, Tuning, Overlay & Scale Configuration */}
+      {/* Bottom Row: Instrument, Tuning, Overlay Display Mode */}
       <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
         {/* Instrument Switcher */}
         <div className="flex items-center gap-1.5">
@@ -242,7 +215,7 @@ export default function StringsTransportBar({
 
         {/* Overlays Mode (Notas / Intervalos / Digitación) */}
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-mono text-slate-400 uppercase mr-1">Mástil:</span>
+          <span className="text-[10px] font-mono text-slate-400 uppercase mr-1">Etiquetas:</span>
           <button
             type="button"
             onClick={() => onOverlayModeChange('notes')}
@@ -277,36 +250,6 @@ export default function StringsTransportBar({
             Digitación (1-4)
           </button>
         </div>
-
-        {/* Tonalidad y Escala */}
-        {overlayMode === 'intervals' && (
-          <div className="flex items-center gap-2 bg-black/40 border border-cyan-500/30 rounded-xl p-1.5 px-3">
-            <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase">Tonalidad:</span>
-            <select
-              value={musicalKey}
-              onChange={(e) => onKeyChange(e.target.value as MusicalKey)}
-              className="px-2 py-1 rounded bg-black/60 border border-white/10 text-white font-mono font-bold cursor-pointer"
-            >
-              {MUSICAL_KEYS.map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={scaleType}
-              onChange={(e) => onScaleChange(e.target.value as ScaleType)}
-              className="px-2 py-1 rounded bg-black/60 border border-white/10 text-white font-mono cursor-pointer"
-            >
-              {SCALE_OPTIONS.map((sc) => (
-                <option key={sc.id} value={sc.id}>
-                  {sc.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </div>
     </div>
   );

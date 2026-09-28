@@ -5,16 +5,47 @@ export type TuningId = 'standard' | 'drop_d' | 'half_step_down';
 export interface TuningConfig {
   id: TuningId;
   name: string;
-  notes: string[]; // High string to low string or low to high (we will standardize)
-  // Low to high MIDI notes or pitch notation
-  stringPitches: string[]; // e.g. ['E1', 'A1', 'D2', 'G2']
+  notes: string[];
+  stringPitches: string[];
 }
 
 export type FretboardOverlayMode = 'notes' | 'intervals' | 'fingering';
 
-export type MusicalKey = 'C' | 'G' | 'D' | 'A' | 'E' | 'B' | 'F#' | 'Db' | 'Ab' | 'Eb' | 'Bb' | 'F';
+export type TheoryMode = 'free' | 'scale' | 'chord';
 
-export type ScaleType = 'major' | 'minor' | 'minor_pentatonic' | 'major_pentatonic' | 'dorian' | 'mixolydian' | 'blues';
+export type MusicalKey =
+  | 'C'
+  | 'C#'
+  | 'D'
+  | 'D#'
+  | 'E'
+  | 'F'
+  | 'F#'
+  | 'G'
+  | 'G#'
+  | 'A'
+  | 'A#'
+  | 'B';
+
+export type ScaleType =
+  | 'minor_pentatonic'
+  | 'major_pentatonic'
+  | 'blues'
+  | 'major'
+  | 'minor'
+  | 'dorian'
+  | 'mixolydian'
+  | 'harmonic_minor';
+
+export type ChordType =
+  | 'major'
+  | 'minor'
+  | 'dom7'
+  | 'maj7'
+  | 'm7'
+  | 'm7b5'
+  | 'sus4'
+  | 'sus2';
 
 export type BassArticulation = 'normal' | 'slap' | 'pop' | 'ghost';
 export type GuitarArticulation = 'normal' | 'downstroke' | 'upstroke' | 'palmmute';
