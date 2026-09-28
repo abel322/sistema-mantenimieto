@@ -13,9 +13,9 @@ export type FretboardOverlayMode = 'notes' | 'intervals' | 'fingering';
 
 // 4 distinct pedagogical theory modes:
 // 1. Free Mode (visualize whatever overlay without filtering)
-// 2. Scales (8 scales across fretboard)
-// 3. Arpeggios (8 melodic arpeggios, with range box and audition)
-// 4. Chords / Voicings (real hand fingerings, 1 note per string, mute/open indicators, strum button)
+// 2. Scales (12 complete scales: 7 Greek modes + Minor & Blues family)
+// 3. Arpeggios (12 melodic arpeggios, with range box and audition)
+// 4. Chords / Voicings (12 real hand fingerings with shapes, mute/open indicators, strum)
 export type TheoryMode = 'free' | 'scale' | 'arpeggio' | 'chord_voicing';
 
 export type MusicalKey =
@@ -32,28 +32,40 @@ export type MusicalKey =
   | 'A#'
   | 'B';
 
+// 12 Scales: 7 Greek Modes + 5 Minor & Blues
 export type ScaleType =
+  | 'ionian'
+  | 'dorian'
+  | 'phrygian'
+  | 'lydian'
+  | 'mixolydian'
+  | 'aeolian'
+  | 'locrian'
+  | 'harmonic_minor'
+  | 'melodic_minor'
   | 'minor_pentatonic'
   | 'major_pentatonic'
   | 'blues'
-  | 'major'
-  | 'minor'
-  | 'dorian'
-  | 'mixolydian'
-  | 'harmonic_minor';
+  | 'major' // alias for ionian
+  | 'minor'; // alias for aeolian
 
-// 8 Arpeggio Types
+// 12 Arpeggio Types
 export type ArpeggioType =
   | 'major_triad'
   | 'minor_triad'
-  | 'maj7'
+  | 'dim_triad'
+  | 'aug_triad'
   | 'dom7'
+  | 'maj7'
   | 'm7'
+  | 'm_maj7'
   | 'm7b5'
   | 'dim7'
-  | 'aug';
+  | 'dom9'
+  | 'm9'
+  | 'aug'; // alias for aug_triad
 
-// 7 Chord Voicing Families
+// 12 Chord Voicing Families
 export type ChordVoicingType =
   | 'major'
   | 'minor'
@@ -61,7 +73,12 @@ export type ChordVoicingType =
   | 'maj7'
   | 'm7'
   | 'sus4'
-  | 'add9';
+  | 'sus2'
+  | 'm7b5'
+  | 'dim7'
+  | 'add9'
+  | 'hendrix7s9'
+  | 'shell';
 
 // Backward compatibility alias
 export type ChordType = ChordVoicingType;
@@ -78,7 +95,7 @@ export interface VoicingNote {
   stringIndex: number; // 0 (highest string) to N-1 (lowest)
   fret: number | null; // null = muted (✕), 0 = open (○), 1..24 = fretted
   finger: number | null; // 1, 2, 3, 4 or null (0 for open)
-  interval: string; // 'R', '3M', 'b3', '5', '7M', 'b7', '4', '9'
+  interval: string; // 'R', '3M', 'b3', '5', '7M', 'b7', '#9', etc.
 }
 
 export interface ChordVoicingDef {

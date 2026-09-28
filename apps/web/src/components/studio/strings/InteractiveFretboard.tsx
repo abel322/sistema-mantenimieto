@@ -136,7 +136,7 @@ export default function InteractiveFretboard({
   overlayMode,
   theoryMode = 'scale',
   musicalKey,
-  scaleType = 'minor_pentatonic',
+  scaleType = 'ionian',
   arpeggioType = 'major_triad',
   arpeggioRange = 'all',
   chordVoicingType = 'major',
@@ -215,18 +215,26 @@ export default function InteractiveFretboard({
   // Root note chromatic index
   const rootIndex = CHROMATIC_INDEX[musicalKey] ?? 0;
 
-  // 1. Active semitones for Scales / Arpeggios
-  const activeScaleDef = useMemo(
-    () => SCALE_CATALOGUE.find((s) => s.id === scaleType) || SCALE_CATALOGUE[0],
-    [scaleType]
-  );
+  // 1. Active semitones for Scales
+  const activeScaleDef = useMemo(() => {
+    return (
+      SCALE_CATALOGUE.find((s) => s.id === scaleType) ||
+      (scaleType === 'major' ? SCALE_CATALOGUE.find((s) => s.id === 'ionian') : null) ||
+      (scaleType === 'minor' ? SCALE_CATALOGUE.find((s) => s.id === 'aeolian') : null) ||
+      SCALE_CATALOGUE[0]
+    );
+  }, [scaleType]);
 
-  const activeArpeggioDef = useMemo(
-    () => ARPEGGIO_CATALOGUE.find((a) => a.id === arpeggioType) || ARPEGGIO_CATALOGUE[0],
-    [arpeggioType]
-  );
+  // 2. Active semitones for Arpeggios
+  const activeArpeggioDef = useMemo(() => {
+    return (
+      ARPEGGIO_CATALOGUE.find((a) => a.id === arpeggioType) ||
+      (arpeggioType === 'aug' ? ARPEGGIO_CATALOGUE.find((a) => a.id === 'aug_triad') : null) ||
+      ARPEGGIO_CATALOGUE[0]
+    );
+  }, [arpeggioType]);
 
-  // 2. Active Chord Voicing (1 note per string max)
+  // 3. Active Chord Voicing (1 note per string max)
   const activeVoicing = useMemo(() => {
     return getChordVoicing(instrument, musicalKey, chordVoicingType, voicingShapeId);
   }, [instrument, musicalKey, chordVoicingType, voicingShapeId]);
@@ -236,7 +244,6 @@ export default function InteractiveFretboard({
     if (theoryMode !== 'arpeggio' || arpeggioRange === 'all') {
       return (fret: number) => true;
     }
-    // Root on low string
     const lowestString = stringsConfig[numStrings - 1];
     const match = lowestString.basePitch.match(/^([A-Ga-g][#b]?)/);
     const lowBaseName = match ? match[1].toUpperCase() : 'E';
@@ -270,7 +277,7 @@ export default function InteractiveFretboard({
   // Center X for any fret slot (0 to 24)
   const getFretSlotCenterX = (fret: number) => {
     if (fret === 0) {
-      return (14 + nutX) / 2; // Midpoint between headstock edge and nut
+      return (14 + nutX) / 2;
     }
     return (fretXPositions[fret - 1] + fretXPositions[fret]) / 2;
   };
@@ -329,22 +336,18 @@ export default function InteractiveFretboard({
               <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#f59e0b" floodOpacity="0.85" />
             </filter>
 
-            {/* Electric Cyan Scale/Arpeggio Glow */}
+            {/* Electric Cyan Scale Glow */}
             <filter id="cyanScaleGlow" x="-50%" y="-50%" width="200%" height="200%">
               <feDropShadow dx="0" dy="0" stdDeviation="2.8" floodColor="#06b6d4" floodOpacity="0.75" />
             </filter>
 
-            {/* Voicing Green / Gold Glow */}
+            {/* Voicing Sky Glow */}
             <filter id="voicingGlow" x="-50%" y="-50%" width="200%" height="200%">
               <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#38bdf8" floodOpacity="0.8" />
             </filter>
           </defs>
 
-          {/* ======================================================= */}
-          {/* CUERPO DEL DIAPASÓN Y RIBETES (BINDING)                  */}
-          {/* ======================================================= */}
-
-          {/* Headstock Area (Pala) */}
+          {/* CUERPO DEL DIAPASÓN Y RIBETES (BINDING) */}
           <rect
             x={10}
             y={boardTopY}
@@ -356,7 +359,6 @@ export default function InteractiveFretboard({
             strokeWidth="1.2"
           />
 
-          {/* Fretboard Wooden Neck Slab (Rosewood / Palisandro) */}
           <rect
             x={nutX}
             y={boardTopY}
@@ -368,7 +370,6 @@ export default function InteractiveFretboard({
             strokeWidth="1.5"
           />
 
-          {/* Ribete (Binding) color crema/marfil superior e inferior */}
           <line
             x1={nutX}
             y1={boardTopY}
@@ -388,11 +389,7 @@ export default function InteractiveFretboard({
             strokeWidth="1.5"
           />
 
-          {/* ======================================================= */}
-          {/* MARCADORES DE POSICIÓN PERLADOS (INLAYS / DOTS)          */}
-          {/* ======================================================= */}
-
-          {/* Single Dots (Trastes 3, 5, 7, 9, 15, 17, 19, 21) */}
+          {/* INLAYS PERLADOS (DOTS) */}
           {SINGLE_DOT_FRETS.map((fret) => {
             const midX = getFretSlotCenterX(fret);
             return (
@@ -409,7 +406,6 @@ export default function InteractiveFretboard({
             );
           })}
 
-          {/* Double Dots (Trastes 12 y 24) */}
           {DOUBLE_DOT_FRETS.map((fret) => {
             const midX = getFretSlotCenterX(fret);
             const dotY1 = boardTopY + boardHeight * 0.3;
@@ -439,18 +435,13 @@ export default function InteractiveFretboard({
             );
           })}
 
-          {/* ======================================================= */}
-          {/* TRASTES METÁLICOS NIQUELADOS Y CEJUELA                   */}
-          {/* ======================================================= */}
-
-          {/* Fret Wires (Trastes 1 al 24) */}
+          {/* TRASTES METÁLICOS NIQUELADOS Y CEJUELA */}
           {fretXPositions.map((x, f) => {
-            if (f === 0) return null; // Nut rendered below
+            if (f === 0) return null;
             const isOctaveFret = f === 12 || f === 24;
 
             return (
               <g key={`fret-wire-${f}`}>
-                {/* Main nickel fret wire with subtle shadow */}
                 <line
                   x1={x}
                   y1={boardTopY}
@@ -461,7 +452,6 @@ export default function InteractiveFretboard({
                   strokeLinecap="round"
                   filter="url(#fretWireShadow)"
                 />
-                {/* Specular line highlight */}
                 <line
                   x1={x - 0.4}
                   y1={boardTopY + 2}
@@ -475,7 +465,7 @@ export default function InteractiveFretboard({
             );
           })}
 
-          {/* Cejuela (Nut / Traste 0): Color hueso / marfil con sombra */}
+          {/* Cejuela hueso / marfil */}
           <line
             x1={nutX}
             y1={boardTopY}
@@ -486,7 +476,6 @@ export default function InteractiveFretboard({
             strokeLinecap="round"
             filter="url(#nutShadow)"
           />
-          {/* Cejuela specular accent */}
           <line
             x1={nutX - 1.5}
             y1={boardTopY + 3}
@@ -498,9 +487,7 @@ export default function InteractiveFretboard({
             opacity={0.65}
           />
 
-          {/* ======================================================= */}
-          {/* REGLA NUMÉRICA SUPERIOR E INFERIOR (0 AL 24)             */}
-          {/* ======================================================= */}
+          {/* REGLA NUMÉRICA (0 AL 24) */}
           {Array.from({ length: numFrets + 1 }).map((_, f) => {
             const midX = getFretSlotCenterX(f);
             const isKeyFret = KEY_FRETS.includes(f);
@@ -508,9 +495,9 @@ export default function InteractiveFretboard({
 
             let textColor = '#94a3b8';
             if (isOctave) {
-              textColor = '#f59e0b'; // Amber for Octaves
+              textColor = '#f59e0b';
             } else if (isKeyFret) {
-              textColor = '#38bdf8'; // Sky blue for Key Frets
+              textColor = '#38bdf8';
             }
 
             return (
@@ -541,15 +528,12 @@ export default function InteractiveFretboard({
             );
           })}
 
-          {/* ======================================================= */}
-          {/* CUERDAS HORIZONTALES CON CALIBRE REAL                    */}
-          {/* ======================================================= */}
+          {/* CUERDAS HORIZONTALES CON CALIBRE REAL */}
           {stringsConfig.map((str, sIdx) => {
             const stringY = stringYPositions[sIdx];
 
             return (
               <g key={`string-line-${sIdx}`}>
-                {/* String shadow on wood */}
                 <line
                   x1={12}
                   y1={stringY + str.gauge * 0.4}
@@ -559,7 +543,6 @@ export default function InteractiveFretboard({
                   strokeWidth={str.gauge + 1.2}
                   opacity={0.65}
                 />
-                {/* Continuous metallic string wire */}
                 <line
                   x1={12}
                   y1={stringY}
@@ -573,15 +556,12 @@ export default function InteractiveFretboard({
             );
           })}
 
-          {/* ======================================================= */}
-          {/* NOTAS Y LÓGICA DE ILUMINACIÓN SEGÚN LOS 4 MODOS         */}
-          {/* ======================================================= */}
+          {/* NOTAS Y LÓGICA DE ILUMINACIÓN SEGÚN LOS 4 MODOS */}
           {stringsConfig.map((str, sIdx) => {
             const stringY = stringYPositions[sIdx];
             const slotHeight =
               numStrings === 4 ? 37 : numStrings === 5 ? 30 : 25;
 
-            // Voicing note for this specific string (if in chord_voicing mode)
             const voicingNote =
               theoryMode === 'chord_voicing'
                 ? activeVoicing.notes.find((n) => n.stringIndex === sIdx)
@@ -589,11 +569,10 @@ export default function InteractiveFretboard({
 
             return (
               <g key={`fret-notes-${sIdx}`}>
-                {/* 1. In chord_voicing mode: Indicator on left of Nut for Muted (✕) or Open (○) */}
+                {/* Voicing Indicators: Muted (✕) or Open (○) to left of Nut */}
                 {theoryMode === 'chord_voicing' && (
                   <g key={`voicing-nut-indicator-${sIdx}`}>
                     {voicingNote?.fret === null ? (
-                      // Muted String Indicator: ✕
                       <g className="select-none">
                         <title>{`Cuerda ${str.name}: SILENCIADA (✕)`}</title>
                         <circle cx="42" cy={stringY} r="9.5" fill="#450a0a" stroke="#f43f5e" strokeWidth="1.5" />
@@ -610,7 +589,6 @@ export default function InteractiveFretboard({
                         </text>
                       </g>
                     ) : voicingNote?.fret === 0 ? (
-                      // Open String Indicator: ○
                       <g
                         className="select-none cursor-pointer group"
                         onClick={() => handleFretInteraction(sIdx, 0)}
@@ -638,7 +616,6 @@ export default function InteractiveFretboard({
                         </text>
                       </g>
                     ) : (
-                      // Fretted string: subtle indicator on headstock
                       <g
                         className="select-none cursor-pointer opacity-50 hover:opacity-100 transition-opacity"
                         onClick={() => handleFretInteraction(sIdx, 0)}
@@ -661,7 +638,7 @@ export default function InteractiveFretboard({
                   </g>
                 )}
 
-                {/* 2. Frets 0 to 24 slots */}
+                {/* Frets 0 to 24 slots */}
                 {Array.from({ length: numFrets + 1 }).map((_, fret) => {
                   const x1 = fret === 0 ? 10 : fretXPositions[fret - 1];
                   const x2 = fret === 0 ? nutX : fretXPositions[fret];
@@ -672,15 +649,12 @@ export default function InteractiveFretboard({
                     (CHROMATIC_INDEX[noteInfo.noteName] - rootIndex + 12) % 12;
                   const isRoot = noteDistance === 0;
 
-                  // Active check from sequencer playhead
                   const isActive = activeHits.some(
                     (hit) => hit.stringIndex === sIdx && hit.fret === fret
                   );
 
-                  // Suggested generic fingering (1 to 4)
                   const genericFinger = fret === 0 ? 0 : ((fret - 1) % 4) + 1;
 
-                  // Visibility & Label calculation per mode
                   let isHighlighted = false;
                   let badgeFill = '#06b6d4';
                   let badgeStroke = '#22d3ee';
@@ -690,14 +664,12 @@ export default function InteractiveFretboard({
                   let label = noteInfo.noteName;
 
                   if (theoryMode === 'chord_voicing') {
-                    // VOICING MODE: Only highlight the EXACT fret chosen for this string!
                     const isVoicingFret =
                       voicingNote?.fret !== null && voicingNote?.fret === fret;
 
                     isHighlighted = isVoicingFret;
                     if (isVoicingFret) {
                       const fingerNum = voicingNote?.finger ?? genericFinger;
-                      // In voicing mode, show suggested finger number inside dot!
                       if (overlayMode === 'intervals') {
                         label = voicingNote?.interval || INTERVAL_NAMES[noteDistance] || 'R';
                       } else if (overlayMode === 'notes') {
@@ -720,7 +692,6 @@ export default function InteractiveFretboard({
                       }
                     }
                   } else if (theoryMode === 'scale') {
-                    // SCALES MODE: Highlight scale semitones
                     const isScaleNote = activeScaleDef.semitones.includes(noteDistance);
                     isHighlighted = isScaleNote;
 
@@ -741,7 +712,6 @@ export default function InteractiveFretboard({
                       if (overlayMode === 'intervals') label = 'R';
                     }
                   } else if (theoryMode === 'arpeggio') {
-                    // ARPEGGIOS MODE: Melodic notes of arpeggio with optional range box
                     const isArpNote = activeArpeggioDef.semitones.includes(noteDistance);
                     const isInRange = arpeggioFretFilter(fret);
                     isHighlighted = isArpNote && isInRange;
@@ -763,7 +733,7 @@ export default function InteractiveFretboard({
                       if (overlayMode === 'intervals') label = 'R';
                     }
                   } else {
-                    // FREE MODE: All notes visible
+                    // FREE MODE
                     isHighlighted = true;
                     if (overlayMode === 'intervals') {
                       label = INTERVAL_NAMES[noteDistance] || '';
@@ -788,7 +758,6 @@ export default function InteractiveFretboard({
                     }
                   }
 
-                  // Active hit during playback
                   if (isActive) {
                     badgeFill = '#38bdf8';
                     badgeStroke = '#ffffff';
@@ -798,7 +767,6 @@ export default function InteractiveFretboard({
                     isHighlighted = true;
                   }
 
-                  // In chord_voicing mode, skip fret 0 if already drawn as nut indicator
                   if (theoryMode === 'chord_voicing' && fret === 0) {
                     return null;
                   }
@@ -811,7 +779,6 @@ export default function InteractiveFretboard({
                     >
                       <title>{`Cuerda ${str.name} • Traste ${fret} (${noteInfo.fullNote})${isRoot ? ' • [TÓNICA]' : ''}`}</title>
 
-                      {/* Wide clickable slot hitbox */}
                       <rect
                         x={x1}
                         y={stringY - slotHeight / 2}
@@ -821,7 +788,6 @@ export default function InteractiveFretboard({
                         className="transition-colors hover:fill-amber-500/10"
                       />
 
-                      {/* Ghost dot or faint placeholder when NOT highlighted in scale/arpeggio mode */}
                       {!isHighlighted && !isActive && (
                         <circle
                           cx={noteX}
@@ -833,10 +799,8 @@ export default function InteractiveFretboard({
                         />
                       )}
 
-                      {/* Interactive Illuminated Note Badge */}
                       {isHighlighted && (
                         <g filter={badgeFilter}>
-                          {/* Pulsing ring when active in sequencer */}
                           {isActive && (
                             <circle
                               cx={noteX}
@@ -850,7 +814,6 @@ export default function InteractiveFretboard({
                             />
                           )}
 
-                          {/* Note circle badge */}
                           <circle
                             cx={noteX}
                             cy={stringY}
@@ -861,7 +824,6 @@ export default function InteractiveFretboard({
                             className="transition-transform duration-150 group-hover:scale-125"
                           />
 
-                          {/* Note text label */}
                           <text
                             x={noteX}
                             y={stringY + 3.2}

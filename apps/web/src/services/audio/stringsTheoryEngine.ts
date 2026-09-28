@@ -8,8 +8,6 @@ import {
   ChordVoicingDef,
   VoicingNote,
 } from '@/types/strings';
-import { calculateFretNote } from './stringsAudioEngine';
-import { getInstrumentStrings } from '@/components/studio/strings/InteractiveFretboard';
 
 // Semitone distances from chromatic C
 export const CHROMATIC_INDEX: Record<string, number> = {
@@ -62,79 +60,129 @@ export const INTERVAL_NAMES: Record<number, string> = {
   11: '7M',
 };
 
-// 1. SCALE CATALOGUE (8 Scales)
+// =======================================================
+// 1. CATÁLOGO COMPLETO DE ESCALAS (12)
+// A) 7 Modos Griegos + B) Familia Menor & Blues (5)
+// =======================================================
 export interface ScaleDef {
   id: ScaleType;
   name: string;
+  category: 'Griegos' | 'Menor & Blues';
   formula: string;
   recommendedFor: string;
   semitones: number[];
 }
 
 export const SCALE_CATALOGUE: ScaleDef[] = [
+  // A) MODOS GRIEGOS (Los 7 Modos de la Escala Mayor)
+  {
+    id: 'ionian',
+    name: '1. Jónica / Mayor Natural',
+    category: 'Griegos',
+    formula: '1 - 2 - 3 - 4 - 5 - 6 - 7',
+    recommendedFor: 'Tonalidad mayor, pop, baladas, consonancia',
+    semitones: [0, 2, 4, 5, 7, 9, 11],
+  },
+  {
+    id: 'dorian',
+    name: '2. Dórica',
+    category: 'Griegos',
+    formula: '1 - 2 - b3 - 4 - 5 - 6 - b7',
+    recommendedFor: 'Funk, Jazz Fusion, Soul, vamp con 6ª mayor',
+    semitones: [0, 2, 3, 5, 7, 9, 10],
+  },
+  {
+    id: 'phrygian',
+    name: '3. Frigia',
+    category: 'Griegos',
+    formula: '1 - b2 - b3 - 4 - 5 - b6 - b7',
+    recommendedFor: 'Metal, Flamenco, sonoridad oscura con 2ª menor',
+    semitones: [0, 1, 3, 5, 7, 8, 10],
+  },
+  {
+    id: 'lydian',
+    name: '4. Lidia',
+    category: 'Griegos',
+    formula: '1 - 2 - 3 - #4 - 5 - 6 - 7',
+    recommendedFor: 'Bandas sonoras, rock progresivo, 4ª aumentada',
+    semitones: [0, 2, 4, 6, 7, 9, 11],
+  },
+  {
+    id: 'mixolydian',
+    name: '5. Mixolidia',
+    category: 'Griegos',
+    formula: '1 - 2 - 3 - 4 - 5 - 6 - b7',
+    recommendedFor: 'Rock clásico, Blues, Funk con acorde dominante 7',
+    semitones: [0, 2, 4, 5, 7, 9, 10],
+  },
+  {
+    id: 'aeolian',
+    name: '6. Eólica / Menor Natural',
+    category: 'Griegos',
+    formula: '1 - 2 - b3 - 4 - 5 - b6 - b7',
+    recommendedFor: 'Rock, baladas menores, sonido melancólico',
+    semitones: [0, 2, 3, 5, 7, 8, 10],
+  },
+  {
+    id: 'locrian',
+    name: '7. Locria',
+    category: 'Griegos',
+    formula: '1 - b2 - b3 - 4 - b5 - b6 - b7',
+    recommendedFor: 'Tensión máxima, acorde m7b5, metal extremo',
+    semitones: [0, 1, 3, 5, 6, 8, 10],
+  },
+
+  // B) FAMILIA MENOR & BLUES
+  {
+    id: 'harmonic_minor',
+    name: '8. Menor Armónica',
+    category: 'Menor & Blues',
+    formula: '1 - 2 - b3 - 4 - 5 - b6 - 7',
+    recommendedFor: 'Metal neoclásico, tango, cadencias V7-Im',
+    semitones: [0, 2, 3, 5, 7, 8, 11],
+  },
+  {
+    id: 'melodic_minor',
+    name: '9. Menor Melódica (Jazz Minor)',
+    category: 'Menor & Blues',
+    formula: '1 - 2 - b3 - 4 - 5 - 6 - 7',
+    recommendedFor: 'Jazz, fusión, acordes mMaj7 y dominantes alterados',
+    semitones: [0, 2, 3, 5, 7, 9, 11],
+  },
   {
     id: 'minor_pentatonic',
-    name: 'Pentatónica Menor',
+    name: '10. Pentatónica Menor',
+    category: 'Menor & Blues',
     formula: '1 - b3 - 4 - 5 - b7',
-    recommendedFor: 'Rock, Blues, Funk & Solos',
+    recommendedFor: 'Blues, Rock, solos expresivos universales',
     semitones: [0, 3, 5, 7, 10],
   },
   {
     id: 'major_pentatonic',
-    name: 'Pentatónica Mayor',
+    name: '11. Pentatónica Mayor',
+    category: 'Menor & Blues',
     formula: '1 - 2 - 3 - 5 - 6',
-    recommendedFor: 'Soul, Country, R&B, Pop',
+    recommendedFor: 'Country, Southern Rock, Soul, R&B brillante',
     semitones: [0, 2, 4, 7, 9],
   },
   {
     id: 'blues',
-    name: 'Blues (con Blue Note)',
+    name: '12. Blues (con Blue Note)',
+    category: 'Menor & Blues',
     formula: '1 - b3 - 4 - b5 - 5 - b7',
-    recommendedFor: 'Blues clásico, Chicago & Shuffle',
+    recommendedFor: 'Blues shuffle, Chicago, expresividad vocal',
     semitones: [0, 3, 5, 6, 7, 10],
-  },
-  {
-    id: 'major',
-    name: 'Escala Mayor (Jónica)',
-    formula: '1 - 2 - 3 - 4 - 5 - 6 - 7',
-    recommendedFor: 'Baladas, Armonía tonal clásica',
-    semitones: [0, 2, 4, 5, 7, 9, 11],
-  },
-  {
-    id: 'minor',
-    name: 'Menor Natural (Eólica)',
-    formula: '1 - 2 - b3 - 4 - 5 - b6 - b7',
-    recommendedFor: 'Rock melódico, Metal, Pop',
-    semitones: [0, 2, 3, 5, 7, 8, 10],
-  },
-  {
-    id: 'dorian',
-    name: 'Dórica (Funk Groove)',
-    formula: '1 - 2 - b3 - 4 - 5 - 6 - b7',
-    recommendedFor: 'Líneas de Bajo Funk, Jazz Fusion',
-    semitones: [0, 2, 3, 5, 7, 9, 10],
-  },
-  {
-    id: 'mixolydian',
-    name: 'Mixolidia (Rock / Blues)',
-    formula: '1 - 2 - 3 - 4 - 5 - 6 - b7',
-    recommendedFor: 'Riffs con acorde dominante 7',
-    semitones: [0, 2, 4, 5, 7, 9, 10],
-  },
-  {
-    id: 'harmonic_minor',
-    name: 'Menor Armónica',
-    formula: '1 - 2 - b3 - 4 - 5 - b6 - 7',
-    recommendedFor: 'Neoclásico, Flamenco & Tensión V7',
-    semitones: [0, 2, 3, 5, 7, 8, 11],
   },
 ];
 
-// 2. ARPEGGIO CATALOGUE (8 Melodic Arpeggios)
+// =======================================================
+// 2. CATÁLOGO EXPANDIDO DE ARPEGIOS (12)
+// =======================================================
 export interface ArpeggioDef {
   id: ArpeggioType;
   name: string;
   formula: string;
+  context: string;
   semitones: number[];
   intervalLabels: string[];
 }
@@ -142,77 +190,125 @@ export interface ArpeggioDef {
 export const ARPEGGIO_CATALOGUE: ArpeggioDef[] = [
   {
     id: 'major_triad',
-    name: 'Tríada Mayor',
+    name: '1. Tríada Mayor',
     formula: '1 - 3 - 5',
+    context: 'Consonancia mayor, pop & himnos',
     semitones: [0, 4, 7],
     intervalLabels: ['R', '3M', '5'],
   },
   {
     id: 'minor_triad',
-    name: 'Tríada Menor',
+    name: '2. Tríada Menor',
     formula: '1 - b3 - 5',
+    context: 'Tonalidad menor, introspección',
     semitones: [0, 3, 7],
     intervalLabels: ['R', 'b3', '5'],
   },
   {
-    id: 'maj7',
-    name: 'Maj7 (Mayor 7)',
-    formula: '1 - 3 - 5 - 7',
-    semitones: [0, 4, 7, 11],
-    intervalLabels: ['R', '3M', '5', '7M'],
+    id: 'dim_triad',
+    name: '3. Tríada Disminuida',
+    formula: '1 - b3 - b5',
+    context: 'Tensión tríada, paso armónico',
+    semitones: [0, 3, 6],
+    intervalLabels: ['R', 'b3', 'b5'],
+  },
+  {
+    id: 'aug_triad',
+    name: '4. Tríada Aumentada',
+    formula: '1 - 3 - #5',
+    context: 'Tensión flotante simétrica',
+    semitones: [0, 4, 8],
+    intervalLabels: ['R', '3M', '#5'],
   },
   {
     id: 'dom7',
-    name: 'Dominante 7',
+    name: '5. Dominante 7',
     formula: '1 - 3 - 5 - b7',
+    context: 'Blues, Funk & cadencias V7',
     semitones: [0, 4, 7, 10],
     intervalLabels: ['R', '3M', '5', 'b7'],
   },
   {
+    id: 'maj7',
+    name: '6. Mayor 7 (Maj7)',
+    formula: '1 - 3 - 5 - 7',
+    context: 'Jazz, Bossa Nova & Neo-Soul',
+    semitones: [0, 4, 7, 11],
+    intervalLabels: ['R', '3M', '5', '7M'],
+  },
+  {
     id: 'm7',
-    name: 'Menor 7 (m7)',
+    name: '7. Menor 7 (m7)',
     formula: '1 - b3 - 5 - b7',
+    context: 'Soul, R&B & armonía modal menor',
     semitones: [0, 3, 7, 10],
     intervalLabels: ['R', 'b3', '5', 'b7'],
   },
   {
+    id: 'm_maj7',
+    name: '8. Menor / Maj7 (mMaj7)',
+    formula: '1 - b3 - 5 - 7',
+    context: 'Acorde James Bond, Jazz Minor, misterio',
+    semitones: [0, 3, 7, 11],
+    intervalLabels: ['R', 'b3', '5', '7M'],
+  },
+  {
     id: 'm7b5',
-    name: 'm7b5 (Semidisminuido)',
+    name: '9. Semidisminuido (m7b5)',
     formula: '1 - b3 - b5 - b7',
+    context: 'ii grado en modo menor, Jazz, Bossa',
     semitones: [0, 3, 6, 10],
     intervalLabels: ['R', 'b3', 'b5', 'b7'],
   },
   {
     id: 'dim7',
-    name: 'Disminuido 7 (Dim7)',
+    name: '10. Disminuido Completo (dim7)',
     formula: '1 - b3 - b5 - bb7',
+    context: 'Tensión simétrica de tono y medio',
     semitones: [0, 3, 6, 9],
     intervalLabels: ['R', 'b3', 'b5', '6'],
   },
   {
-    id: 'aug',
-    name: 'Aumentado (Aug)',
-    formula: '1 - 3 - #5',
-    semitones: [0, 4, 8],
-    intervalLabels: ['R', '3M', '#5'],
+    id: 'dom9',
+    name: '11. Dominante 9',
+    formula: '1 - 3 - 5 - b7 - 9',
+    context: 'Funk rítmico, James Brown, Blues 9',
+    semitones: [0, 2, 4, 7, 10],
+    intervalLabels: ['R', '9', '3M', '5', 'b7'],
+  },
+  {
+    id: 'm9',
+    name: '12. Menor 9 (m9)',
+    formula: '1 - b3 - 5 - b7 - 9',
+    context: 'Neo-Soul & baladas R&B sofisticadas',
+    semitones: [0, 2, 3, 7, 10],
+    intervalLabels: ['R', '9', 'b3', '5', 'b7'],
   },
 ];
 
-// 3. CHORD VOICINGS SELECTORS
+// =======================================================
+// 3. CATÁLOGO EXPANDIDO DE ACORDES / VOICINGS (12)
+// =======================================================
 export interface ChordTypeOption {
   id: ChordVoicingType;
   name: string;
   symbol: string;
+  context: string;
 }
 
 export const CHORD_TYPE_OPTIONS: ChordTypeOption[] = [
-  { id: 'major', name: 'Mayor', symbol: 'Maj' },
-  { id: 'minor', name: 'Menor', symbol: 'm' },
-  { id: 'dom7', name: 'Dominante 7', symbol: '7' },
-  { id: 'maj7', name: 'Maj7', symbol: 'Δ7' },
-  { id: 'm7', name: 'Menor 7', symbol: 'm7' },
-  { id: 'sus4', name: 'Sus4', symbol: 'sus4' },
-  { id: 'add9', name: 'Add9', symbol: 'add9' },
+  { id: 'major', name: 'Mayor', symbol: 'Maj', context: 'Tríada abierta y con cejilla' },
+  { id: 'minor', name: 'Menor', symbol: 'm', context: 'Tríada abierta y con cejilla' },
+  { id: 'dom7', name: 'Dominante 7', symbol: '7', context: 'Blues, Rock & Funk' },
+  { id: 'maj7', name: 'Mayor 7 (Maj7)', symbol: 'Δ7', context: 'Jazz & Neo-Soul sofisticado' },
+  { id: 'm7', name: 'Menor 7 (m7)', symbol: 'm7', context: 'Soul, R&B & Jazz menor' },
+  { id: 'sus4', name: 'Suspendido 4', symbol: 'sus4', context: 'Tensión modal a resolver' },
+  { id: 'sus2', name: 'Suspendido 2', symbol: 'sus2', context: 'Apertura acústica moderna' },
+  { id: 'm7b5', name: 'Semidisminuido', symbol: 'm7b5', context: 'Grado ii en modo menor' },
+  { id: 'dim7', name: 'Disminuido 7', symbol: 'dim7', context: 'Acorde simétrico de paso' },
+  { id: 'add9', name: 'Add9', symbol: 'add9', context: 'Color pop & acústico brillante' },
+  { id: 'hendrix7s9', name: 'Acorde Hendrix (7#9)', symbol: '7#9', context: 'Rock psicodélico & Funk' },
+  { id: 'shell', name: 'Shell Voicing', symbol: 'shell', context: 'Tónica + 3ª + 7ª para comping' },
 ];
 
 export interface VoicingShapeOption {
@@ -264,11 +360,9 @@ function getGuitarVoicing(
   chordType: ChordVoicingType,
   shapeId: VoicingShapeId
 ): ChordVoicingDef {
-  // Fret on 6th string (low E): E is 4. R6 = (rootIdx - 4 + 12) % 12
   const r6Raw = (rootIdx - 4 + 12) % 12;
   const r6 = r6Raw === 0 ? 12 : r6Raw;
 
-  // Fret on 5th string (A): A is 9. R5 = (rootIdx - 9 + 12) % 12
   const r5Raw = (rootIdx - 9 + 12) % 12;
   const r5 = r5Raw === 0 ? 12 : r5Raw;
 
@@ -329,6 +423,53 @@ function getGuitarVoicing(
         { stringIndex: 2, fret: r6 + 2, finger: 4, interval: '4' },
         { stringIndex: 1, fret: r6, finger: 1, interval: '5' },
         { stringIndex: 0, fret: r6, finger: 1, interval: 'R' },
+      ];
+    } else if (chordType === 'sus2') {
+      notes = [
+        { stringIndex: 5, fret: r6, finger: 1, interval: 'R' },
+        { stringIndex: 4, fret: r6 + 2, finger: 3, interval: '5' },
+        { stringIndex: 3, fret: r6 + 2, finger: 4, interval: 'R' },
+        { stringIndex: 2, fret: Math.max(0, r6 - 1), finger: 1, interval: '2' },
+        { stringIndex: 1, fret: r6, finger: 1, interval: '5' },
+        { stringIndex: 0, fret: r6, finger: 1, interval: 'R' },
+      ];
+    } else if (chordType === 'm7b5') {
+      notes = [
+        { stringIndex: 5, fret: r6, finger: 1, interval: 'R' },
+        { stringIndex: 4, fret: null, finger: null, interval: '' },
+        { stringIndex: 3, fret: r6, finger: 2, interval: 'b7' },
+        { stringIndex: 2, fret: r6, finger: 3, interval: 'b3' },
+        { stringIndex: 1, fret: Math.max(0, r6 - 1), finger: 1, interval: 'b5' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
+      ];
+    } else if (chordType === 'dim7') {
+      notes = [
+        { stringIndex: 5, fret: r6, finger: 1, interval: 'R' },
+        { stringIndex: 4, fret: null, finger: null, interval: '' },
+        { stringIndex: 3, fret: Math.max(0, r6 - 1), finger: 1, interval: 'bb7' },
+        { stringIndex: 2, fret: r6, finger: 2, interval: 'b3' },
+        { stringIndex: 1, fret: Math.max(0, r6 - 1), finger: 1, interval: 'b5' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
+      ];
+    } else if (chordType === 'hendrix7s9') {
+      // Classic Jimi Hendrix 7#9 on 5th string (or low 6th)
+      notes = [
+        { stringIndex: 5, fret: null, finger: null, interval: '' },
+        { stringIndex: 4, fret: r5, finger: 2, interval: 'R' },
+        { stringIndex: 3, fret: Math.max(0, r5 - 1), finger: 1, interval: '3M' },
+        { stringIndex: 2, fret: r5, finger: 3, interval: 'b7' },
+        { stringIndex: 1, fret: r5 + 1, finger: 4, interval: '#9' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
+      ];
+    } else if (chordType === 'shell') {
+      // Shell voicing (R + 7 + 3)
+      notes = [
+        { stringIndex: 5, fret: r6, finger: 1, interval: 'R' },
+        { stringIndex: 4, fret: null, finger: null, interval: '' },
+        { stringIndex: 3, fret: r6, finger: 2, interval: 'b7' },
+        { stringIndex: 2, fret: r6 + 1, finger: 3, interval: '3M' },
+        { stringIndex: 1, fret: null, finger: null, interval: '' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
       ];
     } else {
       // add9
@@ -397,6 +538,51 @@ function getGuitarVoicing(
         { stringIndex: 1, fret: r5 + 3, finger: 4, interval: '4' },
         { stringIndex: 0, fret: r5, finger: 1, interval: '5' },
       ];
+    } else if (chordType === 'sus2') {
+      notes = [
+        { stringIndex: 5, fret: null, finger: null, interval: '' },
+        { stringIndex: 4, fret: r5, finger: 1, interval: 'R' },
+        { stringIndex: 3, fret: r5 + 2, finger: 2, interval: '5' },
+        { stringIndex: 2, fret: r5 + 2, finger: 3, interval: 'R' },
+        { stringIndex: 1, fret: r5, finger: 1, interval: '2' },
+        { stringIndex: 0, fret: r5, finger: 1, interval: '5' },
+      ];
+    } else if (chordType === 'hendrix7s9') {
+      notes = [
+        { stringIndex: 5, fret: null, finger: null, interval: '' },
+        { stringIndex: 4, fret: r5, finger: 2, interval: 'R' },
+        { stringIndex: 3, fret: Math.max(0, r5 - 1), finger: 1, interval: '3M' },
+        { stringIndex: 2, fret: r5, finger: 3, interval: 'b7' },
+        { stringIndex: 1, fret: r5 + 1, finger: 4, interval: '#9' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
+      ];
+    } else if (chordType === 'm7b5') {
+      notes = [
+        { stringIndex: 5, fret: null, finger: null, interval: '' },
+        { stringIndex: 4, fret: r5, finger: 1, interval: 'R' },
+        { stringIndex: 3, fret: r5 + 1, finger: 2, interval: 'b5' },
+        { stringIndex: 2, fret: r5, finger: 1, interval: 'b7' },
+        { stringIndex: 1, fret: r5 + 1, finger: 3, interval: 'b3' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
+      ];
+    } else if (chordType === 'dim7') {
+      notes = [
+        { stringIndex: 5, fret: null, finger: null, interval: '' },
+        { stringIndex: 4, fret: r5, finger: 2, interval: 'R' },
+        { stringIndex: 3, fret: r5 + 1, finger: 3, interval: 'b5' },
+        { stringIndex: 2, fret: Math.max(0, r5 - 1), finger: 1, interval: 'bb7' },
+        { stringIndex: 1, fret: r5 + 1, finger: 4, interval: 'b3' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
+      ];
+    } else if (chordType === 'shell') {
+      notes = [
+        { stringIndex: 5, fret: null, finger: null, interval: '' },
+        { stringIndex: 4, fret: r5, finger: 1, interval: 'R' },
+        { stringIndex: 3, fret: null, finger: null, interval: '' },
+        { stringIndex: 2, fret: r5, finger: 2, interval: 'b7' },
+        { stringIndex: 1, fret: r5 + 2, finger: 3, interval: '3M' },
+        { stringIndex: 0, fret: null, finger: null, interval: '' },
+      ];
     } else {
       // add9
       notes = [
@@ -409,9 +595,18 @@ function getGuitarVoicing(
       ];
     }
   } else if (shapeId === 'open') {
-    // Open Chords (C, A, G, E, D open positions or low CAGED position)
+    // Open Chords
     if (key === 'C') {
-      if (chordType === 'major') {
+      if (chordType === 'hendrix7s9') {
+        notes = [
+          { stringIndex: 5, fret: null, finger: null, interval: '' },
+          { stringIndex: 4, fret: 3, finger: 2, interval: 'R' },
+          { stringIndex: 3, fret: 2, finger: 1, interval: '3M' },
+          { stringIndex: 2, fret: 3, finger: 3, interval: 'b7' },
+          { stringIndex: 1, fret: 4, finger: 4, interval: '#9' },
+          { stringIndex: 0, fret: null, finger: null, interval: '' },
+        ];
+      } else if (chordType === 'major') {
         notes = [
           { stringIndex: 5, fret: null, finger: null, interval: '' },
           { stringIndex: 4, fret: 3, finger: 3, interval: 'R' },
@@ -420,26 +615,16 @@ function getGuitarVoicing(
           { stringIndex: 1, fret: 1, finger: 1, interval: 'R' },
           { stringIndex: 0, fret: 0, finger: 0, interval: '3M' },
         ];
-      } else if (chordType === 'dom7') {
+      } else if (chordType === 'sus2') {
         notes = [
           { stringIndex: 5, fret: null, finger: null, interval: '' },
           { stringIndex: 4, fret: 3, finger: 3, interval: 'R' },
-          { stringIndex: 3, fret: 2, finger: 2, interval: '3M' },
-          { stringIndex: 2, fret: 3, finger: 4, interval: 'b7' },
-          { stringIndex: 1, fret: 1, finger: 1, interval: 'R' },
-          { stringIndex: 0, fret: 0, finger: 0, interval: '3M' },
-        ];
-      } else if (chordType === 'maj7') {
-        notes = [
-          { stringIndex: 5, fret: null, finger: null, interval: '' },
-          { stringIndex: 4, fret: 3, finger: 3, interval: 'R' },
-          { stringIndex: 3, fret: 2, finger: 2, interval: '3M' },
+          { stringIndex: 3, fret: 0, finger: 0, interval: '5' },
           { stringIndex: 2, fret: 0, finger: 0, interval: '5' },
-          { stringIndex: 1, fret: 0, finger: 0, interval: '7M' },
-          { stringIndex: 0, fret: 0, finger: 0, interval: '3M' },
+          { stringIndex: 1, fret: 1, finger: 1, interval: 'R' },
+          { stringIndex: 0, fret: 0, finger: 0, interval: '2' },
         ];
       } else {
-        // Cm open / low
         notes = [
           { stringIndex: 5, fret: null, finger: null, interval: '' },
           { stringIndex: 4, fret: 3, finger: 3, interval: 'R' },
@@ -450,7 +635,16 @@ function getGuitarVoicing(
         ];
       }
     } else if (key === 'A') {
-      if (chordType === 'minor' || chordType === 'm7') {
+      if (chordType === 'sus2') {
+        notes = [
+          { stringIndex: 5, fret: null, finger: null, interval: '' },
+          { stringIndex: 4, fret: 0, finger: 0, interval: 'R' },
+          { stringIndex: 3, fret: 2, finger: 1, interval: '5' },
+          { stringIndex: 2, fret: 2, finger: 2, interval: 'R' },
+          { stringIndex: 1, fret: 0, finger: 0, interval: '2' },
+          { stringIndex: 0, fret: 0, finger: 0, interval: '5' },
+        ];
+      } else if (chordType === 'minor' || chordType === 'm7') {
         notes = [
           { stringIndex: 5, fret: null, finger: null, interval: '' },
           { stringIndex: 4, fret: 0, finger: 0, interval: 'R' },
@@ -469,17 +663,26 @@ function getGuitarVoicing(
           { stringIndex: 0, fret: 0, finger: 0, interval: '5' },
         ];
       }
-    } else if (key === 'G') {
-      notes = [
-        { stringIndex: 5, fret: 3, finger: 2, interval: 'R' },
-        { stringIndex: 4, fret: 2, finger: 1, interval: '3M' },
-        { stringIndex: 3, fret: 0, finger: 0, interval: '5' },
-        { stringIndex: 2, fret: 0, finger: 0, interval: 'R' },
-        { stringIndex: 1, fret: 0, finger: 0, interval: '3M' },
-        { stringIndex: 0, fret: 3, finger: 3, interval: 'R' },
-      ];
     } else if (key === 'E') {
-      if (chordType === 'minor' || chordType === 'm7') {
+      if (chordType === 'hendrix7s9') {
+        notes = [
+          { stringIndex: 5, fret: 0, finger: 0, interval: 'R' },
+          { stringIndex: 4, fret: 7, finger: 2, interval: 'R' },
+          { stringIndex: 3, fret: 6, finger: 1, interval: '3M' },
+          { stringIndex: 2, fret: 7, finger: 3, interval: 'b7' },
+          { stringIndex: 1, fret: 8, finger: 4, interval: '#9' },
+          { stringIndex: 0, fret: null, finger: null, interval: '' },
+        ];
+      } else if (chordType === 'sus2') {
+        notes = [
+          { stringIndex: 5, fret: 0, finger: 0, interval: 'R' },
+          { stringIndex: 4, fret: 2, finger: 1, interval: '5' },
+          { stringIndex: 3, fret: 4, finger: 3, interval: '2' },
+          { stringIndex: 2, fret: 4, finger: 4, interval: '5' },
+          { stringIndex: 1, fret: 0, finger: 0, interval: '5' },
+          { stringIndex: 0, fret: 0, finger: 0, interval: 'R' },
+        ];
+      } else if (chordType === 'minor' || chordType === 'm7') {
         notes = [
           { stringIndex: 5, fret: 0, finger: 0, interval: 'R' },
           { stringIndex: 4, fret: 2, finger: 2, interval: '5' },
@@ -498,17 +701,8 @@ function getGuitarVoicing(
           { stringIndex: 0, fret: 0, finger: 0, interval: 'R' },
         ];
       }
-    } else if (key === 'D') {
-      notes = [
-        { stringIndex: 5, fret: null, finger: null, interval: '' },
-        { stringIndex: 4, fret: null, finger: null, interval: '' },
-        { stringIndex: 3, fret: 0, finger: 0, interval: 'R' },
-        { stringIndex: 2, fret: 2, finger: 1, interval: '5' },
-        { stringIndex: 1, fret: 3, finger: 3, interval: 'R' },
-        { stringIndex: 0, fret: 2, finger: 2, interval: '3M' },
-      ];
     } else {
-      // General low-position barre (Form A at low frets)
+      // General open/low CAGED position
       const r = r5Raw <= 5 ? r5Raw : r6Raw <= 5 ? r6Raw : 1;
       notes = [
         { stringIndex: 5, fret: null, finger: null, interval: '' },
@@ -520,7 +714,6 @@ function getGuitarVoicing(
       ];
     }
   } else if (shapeId === 'triad_high') {
-    // Triads on strings 1, 2, 3 (strings 2, 1, 0)
     const baseF = r6Raw;
     notes = [
       { stringIndex: 5, fret: null, finger: null, interval: '' },
@@ -554,9 +747,6 @@ function getGuitarVoicing(
 
 // -------------------------------------------------------------
 // BASS 4 / 5 VOICINGS
-// String Index Order:
-// Bass 4: 0: G (G2), 1: D (D2), 2: A (A1), 3: E (E1)
-// Bass 5: 0: G (G2), 1: D (D2), 2: A (A1), 3: E (E1), 4: B (B0)
 // -------------------------------------------------------------
 function getBassVoicing(
   instrument: InstrumentType,
@@ -566,21 +756,19 @@ function getBassVoicing(
   shapeId: VoicingShapeId
 ): ChordVoicingDef {
   const is5 = instrument === 'bass_5';
-  // Root fret on E string (index 3)
   const rE = (rootIdx - 4 + 12) % 12;
   const rootFretE = rE === 0 ? 12 : rE;
 
-  // Root fret on A string (index 2)
   const rA = (rootIdx - 9 + 12) % 12;
   const rootFretA = rA === 0 ? 12 : rA;
 
-  const isMinor = chordType === 'minor' || chordType === 'm7';
-  const tenthOffset = isMinor ? 3 : 4; // 10th interval = 1 octave + 3rd
+  const isMinor =
+    chordType === 'minor' || chordType === 'm7' || chordType === 'm7b5' || chordType === 'dim7';
+  const tenthOffset = isMinor ? 3 : 4;
 
   let notes: VoicingNote[] = [];
 
   if (shapeId === 'open') {
-    // Open position bass chord (Root + 5th / Octave)
     notes = [
       { stringIndex: 0, fret: (rootFretE + tenthOffset) % 12, finger: 2, interval: isMinor ? 'b3' : '3M' },
       { stringIndex: 1, fret: rootFretE + 2, finger: 4, interval: '5' },
@@ -588,7 +776,6 @@ function getBassVoicing(
       { stringIndex: 3, fret: rootFretE, finger: 1, interval: 'R' },
     ];
   } else if (shapeId === 'root6_barre') {
-    // Tenths voicing (Root on E string + 10th on G string): Classic bass groove
     notes = [
       { stringIndex: 0, fret: rootFretE + (tenthOffset - 1), finger: 3, interval: isMinor ? 'b3' : '3M' },
       { stringIndex: 1, fret: null, finger: null, interval: '' },
@@ -596,7 +783,6 @@ function getBassVoicing(
       { stringIndex: 3, fret: rootFretE, finger: 1, interval: 'R' },
     ];
   } else if (shapeId === 'root5_barre') {
-    // Tenths on A string (Root on A string + 10th on G string)
     notes = [
       { stringIndex: 0, fret: rootFretA + (tenthOffset - 1), finger: 4, interval: isMinor ? 'b3' : '3M' },
       { stringIndex: 1, fret: rootFretA + 2, finger: 3, interval: '5' },
@@ -604,7 +790,7 @@ function getBassVoicing(
       { stringIndex: 3, fret: null, finger: null, interval: '' },
     ];
   } else {
-    // Power Chord / High triad (Root + 5th + Octave)
+    // Shell / Power chord
     notes = [
       { stringIndex: 0, fret: rootFretA + 2, finger: 4, interval: 'R' },
       { stringIndex: 1, fret: rootFretA + 2, finger: 3, interval: '5' },
@@ -614,7 +800,6 @@ function getBassVoicing(
   }
 
   if (is5) {
-    // Add 5th string (B string) as muted
     notes.push({ stringIndex: 4, fret: null, finger: null, interval: '' });
   }
 
