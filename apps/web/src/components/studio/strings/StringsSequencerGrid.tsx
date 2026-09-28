@@ -8,6 +8,7 @@ import {
   SequencerStepCell,
   BassArticulation,
   GuitarArticulation,
+  PracticeSubdivision,
 } from '@/types/strings';
 import {
   Sliders,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { calculateFretNote } from '@/services/audio/stringsAudioEngine';
 import StringsRunwayView from './StringsRunwayView';
+import StringsSubdivisionSelector from './StringsSubdivisionSelector';
 import { ActiveFretHit } from './InteractiveFretboard';
 
 interface StringsSequencerGridProps {
@@ -29,6 +31,8 @@ interface StringsSequencerGridProps {
   currentStep: number;
   isPlaying: boolean;
   bpm?: number;
+  subdivision?: PracticeSubdivision;
+  onSubdivisionChange?: (sub: PracticeSubdivision) => void;
   activeHits?: ActiveFretHit[];
   activeHitNotes?: { stringIndex: number; fret: number; id: string }[];
   selectedCell?: { stringIndex: number; stepIndex: number } | null;
@@ -60,6 +64,8 @@ export default function StringsSequencerGrid({
   currentStep,
   isPlaying,
   bpm = 104,
+  subdivision,
+  onSubdivisionChange,
   activeHits = [],
   activeHitNotes = [],
   selectedCell: propSelectedCell,
@@ -322,6 +328,14 @@ export default function StringsSequencerGrid({
         </div>
       </div>
 
+      {/* Selector Expandido de Subdivisiones (Regulares e Irregulares / Tuplets) */}
+      {subdivision && onSubdivisionChange && (
+        <StringsSubdivisionSelector
+          value={subdivision}
+          onChange={onSubdivisionChange}
+        />
+      )}
+
       {/* 2. VISTA CONDICIONAL: TABLATURA CLÁSICA O MODO RUNWAY */}
       {viewMode === 'classic' ? (
         <div className="w-full overflow-x-auto custom-scrollbar pb-3 select-none">
@@ -504,6 +518,13 @@ export default function StringsSequencerGrid({
                                           : 'group-hover/step:scale-110'
                                       }`}
                                     >
+                                      {/* Tuplet Badge above note if present */}
+                                      {stepData.tupletBadge && (
+                                        <span className="absolute -top-3 px-1 py-0.2 rounded-sm bg-fuchsia-950/90 border border-fuchsia-500/60 text-fuchsia-300 font-mono font-black text-[7.5px] leading-none tracking-tighter shadow-sm pointer-events-none z-20">
+                                          {stepData.tupletBadge}
+                                        </span>
+                                      )}
+
                                       {/* Dark circular pill that cleanly cuts the string line behind the number */}
                                       <div
                                         className={`px-1.5 min-w-[24px] h-6 rounded-full flex items-center justify-center font-mono font-bold text-sm sm:text-base bg-[#0A0E17] border transition-all ${
@@ -531,6 +552,13 @@ export default function StringsSequencerGrid({
                                             : stepData.articulation === 'downstroke'
                                             ? '⊓'
                                             : '∨'}
+                                        </span>
+                                      )}
+
+                                      {/* Harmonic Chord Name badge underneath note if present */}
+                                      {stepData.chordName && (
+                                        <span className="absolute -bottom-3.5 px-1 py-0.2 rounded-sm bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 font-mono font-bold text-[7.5px] leading-none whitespace-nowrap shadow-sm pointer-events-none z-20">
+                                          {stepData.chordName}
                                         </span>
                                       )}
                                     </div>

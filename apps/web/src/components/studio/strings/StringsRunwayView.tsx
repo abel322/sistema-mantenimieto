@@ -142,7 +142,7 @@ export default function StringsRunwayView({
               onNoteTrigger({
                 stringIndex: sIdx,
                 fret: cell.fret,
-                duration: '16n',
+                duration: cell.duration || '16n',
               });
             }
           });
@@ -238,6 +238,8 @@ export default function StringsRunwayView({
       fret: number;
       articulation?: string;
       noteName: string;
+      tupletBadge?: string;
+      chordName?: string;
       x: number;
       y: number;
       isHitting: boolean;
@@ -253,8 +255,9 @@ export default function StringsRunwayView({
         const noteInfo = calculateFretNote(track.basePitch, cell.fret);
         const loopWidthPx = totalSteps * stepWidthPx;
 
-        // Primary position
-        let x = hitX + (stepIdx - effectiveStep) * stepWidthPx;
+        // Primary position (taking into account tuplet micro-timing offset)
+        const timeOffsetRatio = cell.timeOffsetRatio || 0;
+        let x = hitX + (stepIdx + timeOffsetRatio - effectiveStep) * stepWidthPx;
 
         // When looping during playback, wrap position to stay on screen
         if (isPlaying) {
@@ -286,6 +289,8 @@ export default function StringsRunwayView({
             fret: cell.fret,
             articulation: cell.articulation,
             noteName: noteInfo.noteName,
+            tupletBadge: cell.tupletBadge,
+            chordName: cell.chordName,
             x,
             y,
             isHitting,
@@ -555,6 +560,13 @@ export default function StringsRunwayView({
                   : 'hover:scale-110 z-20'
               }`}
             >
+              {/* Tuplet Badge above note if present */}
+              {note.tupletBadge && (
+                <span className="absolute -top-3.5 px-1 py-0.2 rounded-sm bg-fuchsia-950/90 border border-fuchsia-500/60 text-fuchsia-300 font-mono font-black text-[7.5px] leading-none tracking-tighter shadow-sm pointer-events-none">
+                  {note.tupletBadge}
+                </span>
+              )}
+
               {/* Note Fret Number Circular Pill */}
               <div
                 className={`min-w-[26px] h-[26px] px-1.5 rounded-full flex items-center justify-center font-mono font-black text-xs sm:text-sm border transition-all ${
@@ -582,6 +594,13 @@ export default function StringsRunwayView({
                     : note.articulation === 'downstroke'
                     ? '⊓'
                     : '∨'}
+                </span>
+              )}
+
+              {/* Harmonic Chord Name badge underneath note if present */}
+              {note.chordName && (
+                <span className="absolute -bottom-3.5 px-1 py-0.2 rounded-sm bg-emerald-950/90 border border-emerald-500/50 text-emerald-300 font-mono font-bold text-[7.5px] leading-none whitespace-nowrap shadow-sm pointer-events-none">
+                  {note.chordName}
                 </span>
               )}
             </div>

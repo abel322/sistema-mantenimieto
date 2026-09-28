@@ -37,6 +37,18 @@ import {
   VOICING_SHAPE_OPTIONS,
   getChordVoicing,
 } from '@/services/audio/stringsTheoryEngine';
+import HarmonicProgressions from './HarmonicProgressions';
+import StringsSubdivisionSelector from './StringsSubdivisionSelector';
+import {
+  PROGRESSION_CATALOGUE,
+  generateProgressionExerciseTracks,
+  getSubdivisionStepOffsets,
+} from '@/services/audio/stringsProgressionsEngine';
+import {
+  HarmonicProgressionDef,
+  ProgressionChordStep,
+  ProgressionAccompanimentStyle,
+} from '@/types/strings';
 import { Guitar, Sparkles, Music, Layers, Volume2, Info, Play, Radio, Rocket } from 'lucide-react';
 
 // Generates blank tracks for an instrument setup
@@ -284,6 +296,11 @@ export default function FretboardSequencerStudio() {
   const [chordVoicingType, setChordVoicingType] = useState<ChordVoicingType>('major');
   const [voicingShapeId, setVoicingShapeId] = useState<VoicingShapeId>('open');
 
+  // Mode 5: Harmonic Progressions & Cadences (10 analytical progressions)
+  const [selectedProgressionId, setSelectedProgressionId] = useState<string>('jazz_ii_v_i');
+  const [activeProgressionMeasure, setActiveProgressionMeasure] = useState<number>(0);
+  const [progressionStyle, setProgressionStyle] = useState<ProgressionAccompanimentStyle>('walking_bass');
+
   // Practice Pattern & Subdivision Selector State
   const [practicePattern, setPracticePattern] = useState<PracticePattern>('up_down');
   const [subdivision, setSubdivision] = useState<PracticeSubdivision>('8n');
@@ -325,6 +342,29 @@ export default function FretboardSequencerStudio() {
 
   const instrumentRef = useRef<InstrumentType>(instrument);
   instrumentRef.current = instrument;
+
+  // Active progression definition
+  const activeProgressionDef = React.useMemo(() => {
+    return (
+      PROGRESSION_CATALOGUE.find((p) => p.id === selectedProgressionId) ||
+      PROGRESSION_CATALOGUE[0]
+    );
+  }, [selectedProgressionId]);
+
+  const activeProgressionChords = React.useMemo(() => {
+    return activeProgressionDef.chords(musicalKey);
+  }, [activeProgressionDef, musicalKey]);
+
+  // Active progression measure index (synced during playback or manual click)
+  const currentProgressionMeasureIndex = isPlaying
+    ? Math.floor(currentStep / 16) % Math.max(1, activeProgressionChords.length)
+    : activeProgressionMeasure % Math.max(1, activeProgressionChords.length);
+
+  // Active progression chord passing guide tones to fretboard
+  const activeProgressionChord: ProgressionChordStep | undefined =
+    theoryMode === 'progression'
+      ? activeProgressionChords[currentProgressionMeasureIndex]
+      : undefined;
 
   // Stop playback cleanly
   const stopPlayback = useCallback(() => {
@@ -423,17 +463,29 @@ export default function FretboardSequencerStudio() {
     const currentInst = instrumentRef.current;
     const hitsThisStep: ActiveFretHit[] = [];
     const newHitNotes: { stringIndex: number; fret: number; id: string }[] = [];
+    const stepDurationMs = (60000 / bpm) / 4;
 
     currentTracks.forEach((track, sIdx) => {
       const cell = track.steps[stepIdx];
       if (cell && cell.fret !== null) {
         const noteInfo = calculateFretNote(track.basePitch, cell.fret);
-        stringsAudioEngine.playNote(
-          currentInst,
-          noteInfo.fullNote,
-          cell.articulation || 'normal',
-          '16n'
-        );
+        const offsetDelayMs = Math.round((cell.timeOffsetRatio || 0) * stepDurationMs);
+        const playDuration = cell.duration || '16n';
+
+        const doPlay = () => {
+          stringsAudioEngine.playNote(
+            currentInst,
+            noteInfo.fullNote,
+            cell.articulation || 'normal',
+            playDuration
+          );
+        };
+
+        if (offsetDelayMs > 0) {
+          setTimeout(doPlay, offsetDelayMs);
+        } else {
+          doPlay();
+        }
 
         hitsThisStep.push({
           stringIndex: sIdx,
@@ -458,7 +510,7 @@ export default function FretboardSequencerStudio() {
         );
       }, 160);
     }
-  }, []);
+  }, [bpm]);
 
   // Real-time note trigger from Runway or external events
   const handleNoteTrigger = useCallback(
@@ -649,15 +701,21 @@ export default function FretboardSequencerStudio() {
       const newTracks = generateInitialTracks(instrument, tuning, measuresCount);
 
       let patternIdx = 0;
-      for (let step = 0; step < totalSteps; step += stepDelta) {
-        const note = patternNotes[patternIdx % patternNotes.length];
-        if (newTracks[note.stringIndex]) {
-          newTracks[note.stringIndex].steps[step] = {
-            fret: note.fret,
-            articulation: 'normal',
-          };
+      for (let m = 0; m < measuresCount; m++) {
+        const slots = getSubdivisionStepOffsets(effSub, m);
+        for (const slot of slots) {
+          const note = patternNotes[patternIdx % patternNotes.length];
+          if (newTracks[note.stringIndex] && newTracks[note.stringIndex].steps[slot.stepIndex]) {
+            newTracks[note.stringIndex].steps[slot.stepIndex] = {
+              fret: note.fret,
+              articulation: 'normal',
+              timeOffsetRatio: slot.timeOffsetRatio,
+              duration: slot.duration,
+              tupletBadge: slot.tupletBadge,
+            };
+          }
+          patternIdx++;
         }
-        patternIdx++;
       }
 
       setTracks(newTracks);
@@ -689,6 +747,71 @@ export default function FretboardSequencerStudio() {
       chordVoicingType,
       voicingShapeId,
       measuresCount,
+    ]
+  );
+
+  // -------------------------------------------------------------
+  // CARGAR PROGRESIÓN ARMÓNICA EN TABLATURA / RUNWAY
+  // -------------------------------------------------------------
+  const handleLoadProgressionToTab = useCallback(
+    (opts?: {
+      overrideProgressionId?: string;
+      overrideStyle?: ProgressionAccompanimentStyle;
+      overrideSubdivision?: PracticeSubdivision;
+    }) => {
+      const progId = opts?.overrideProgressionId ?? selectedProgressionId;
+      const prog = PROGRESSION_CATALOGUE.find((p) => p.id === progId) || PROGRESSION_CATALOGUE[0];
+      const style = opts?.overrideStyle ?? progressionStyle;
+      const sub = opts?.overrideSubdivision ?? subdivision;
+
+      const { tracks: newTracks, measuresCount: actualMeasures } = generateProgressionExerciseTracks(
+        instrument,
+        tuning,
+        prog,
+        musicalKey,
+        style,
+        sub
+      );
+
+      if (measuresCount !== actualMeasures) {
+        setMeasuresCount(actualMeasures);
+      }
+
+      setTracks(newTracks);
+      setCurrentStep(0);
+      setActiveProgressionMeasure(0);
+
+      // Localizar la primera nota generada para seleccionarla y audicionarla
+      let firstNote: { stringIndex: number; fret: number } | null = null;
+      for (let sIdx = 0; sIdx < newTracks.length; sIdx++) {
+        const cell = newTracks[sIdx].steps[0];
+        if (cell && cell.fret !== null) {
+          firstNote = { stringIndex: sIdx, fret: cell.fret };
+          break;
+        }
+      }
+
+      if (firstNote) {
+        setSelectedCell({ stringIndex: firstNote.stringIndex, stepIndex: 0 });
+        const track = newTracks[firstNote.stringIndex];
+        const noteInfo = calculateFretNote(track.basePitch, firstNote.fret);
+        stringsAudioEngine.playNote(instrument, noteInfo.fullNote, 'normal', '8n');
+
+        const triggerId = `${firstNote.stringIndex}-${firstNote.fret}-${Date.now()}`;
+        setActiveHitNotes([{ stringIndex: firstNote.stringIndex, fret: firstNote.fret, id: triggerId }]);
+        setTimeout(() => {
+          setActiveHitNotes((prev) => prev.filter((n) => n.id !== triggerId));
+        }, 250);
+      }
+    },
+    [
+      selectedProgressionId,
+      progressionStyle,
+      subdivision,
+      instrument,
+      tuning,
+      measuresCount,
+      musicalKey,
     ]
   );
 
@@ -911,10 +1034,14 @@ export default function FretboardSequencerStudio() {
           : 'Caja 2 (Octava)'
       }]`;
     }
+    if (theoryMode === 'progression') {
+      const chord = activeProgressionChord || activeProgressionChords[0];
+      return `Progresión: ${activeProgressionDef.name} (${activeProgressionDef.category === 'Cadencias' ? 'Cadencia Tradicional' : 'Música Moderna'}) • Compás ${(chord?.measureIndex ?? 0) + 1}: ${chord?.degreeRoman || ''} (${chord?.chordSymbol || ''}) • Guías en Mástil: Tónica (Oro), 3ª (Cian), 7ª (Púrpura)`;
+    }
     const ch = CHORD_TYPE_OPTIONS.find((c) => c.id === chordVoicingType) || CHORD_TYPE_OPTIONS[0];
     const sh = VOICING_SHAPE_OPTIONS.find((s) => s.id === voicingShapeId) || VOICING_SHAPE_OPTIONS[0];
     return `Tónica ${musicalKey} • Acorde ${ch?.name || ''} (${musicalKey}${ch?.symbol || ''}) • Postura: ${sh?.name || ''} (${ch?.context || ''})`;
-  }, [theoryMode, musicalKey, scaleType, arpeggioType, arpeggioRange, chordVoicingType, voicingShapeId]);
+  }, [theoryMode, musicalKey, scaleType, arpeggioType, arpeggioRange, chordVoicingType, voicingShapeId, activeProgressionDef, activeProgressionChord, activeProgressionChords]);
 
   return (
     <div className="w-full max-w-7xl mx-auto flex flex-col gap-3 px-4 select-none pb-8">
@@ -1017,7 +1144,18 @@ export default function FretboardSequencerStudio() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Acordes / Voicings ({CHORD_TYPE_OPTIONS.length})
+              Acordes ({CHORD_TYPE_OPTIONS.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheoryMode('progression')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                theoryMode === 'progression'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🎼 Progresiones & Cadencias ({PROGRESSION_CATALOGUE.length})</span>
             </button>
           </div>
         </div>
@@ -1120,37 +1258,13 @@ export default function FretboardSequencerStudio() {
                   </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
-                  Subdivisión:
-                </span>
-                <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded-lg border border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => setSubdivision('8n')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                      subdivision === '8n'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    Corcheas 1/8
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSubdivision('16n')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                      subdivision === '16n'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    Semicorcheas 1/16
-                  </button>
-                </div>
-              </div>
             </div>
+
+            {/* Selector Expandido de Subdivisiones (Regulares & Tuplets) */}
+            <StringsSubdivisionSelector
+              value={subdivision}
+              onChange={setSubdivision}
+            />
 
             {/* Responsive scrollable card grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-[310px] overflow-y-auto pr-1.5 custom-scrollbar">
@@ -1322,38 +1436,13 @@ export default function FretboardSequencerStudio() {
                   </button>
                 </div>
               </div>
-
-              {/* Selector de Figura Rítmica */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">
-                  Subdivisión:
-                </span>
-                <div className="flex items-center gap-1 bg-black/60 p-0.5 rounded-lg border border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => setSubdivision('8n')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                      subdivision === '8n'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    Corcheas 1/8
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSubdivision('16n')}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                      subdivision === '16n'
-                        ? 'bg-amber-400 text-slate-950 shadow-sm'
-                        : 'text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    Semicorcheas 1/16
-                  </button>
-                </div>
-              </div>
             </div>
+
+            {/* Selector Expandido de Subdivisiones (Regulares & Tuplets) */}
+            <StringsSubdivisionSelector
+              value={subdivision}
+              onChange={setSubdivision}
+            />
 
             {/* Responsive scrollable card grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-[310px] overflow-y-auto pr-1.5 custom-scrollbar">
@@ -1465,6 +1554,34 @@ export default function FretboardSequencerStudio() {
             </div>
           </div>
         )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* SECCIÓN 5: PROGRESIONES ARMÓNICAS & CADENCIAS (10)            */}
+        {/* ------------------------------------------------------------- */}
+        {theoryMode === 'progression' && (
+          <HarmonicProgressions
+            musicalKey={musicalKey}
+            selectedProgressionId={selectedProgressionId}
+            onSelectProgression={(id) => {
+              setSelectedProgressionId(id);
+              setActiveProgressionMeasure(0);
+              const prog = PROGRESSION_CATALOGUE.find((p) => p.id === id);
+              if (prog && measuresCount !== prog.measuresCount) {
+                handleMeasuresCountChange(prog.measuresCount);
+              }
+            }}
+            activeMeasureIndex={currentProgressionMeasureIndex}
+            onSelectMeasure={(m) => {
+              setActiveProgressionMeasure(m);
+            }}
+            isPlaying={isPlaying}
+            accompanimentStyle={progressionStyle}
+            onSelectAccompanimentStyle={setProgressionStyle}
+            subdivision={subdivision}
+            onSelectSubdivision={setSubdivision}
+            onLoadProgressionToTab={() => handleLoadProgressionToTab()}
+          />
+        )}
       </div>
 
       {/* 3. Diapasón Interactivo de Palisandro */}
@@ -1482,7 +1599,34 @@ export default function FretboardSequencerStudio() {
 
           {/* Theory Legend & Indicators */}
           <div className="flex items-center gap-3 text-[11px] font-mono text-slate-300 flex-wrap">
-            {theoryMode === 'chord_voicing' ? (
+            {theoryMode === 'progression' ? (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-[10px]">
+                    1
+                  </span>
+                  <span>Tónica (Oro)</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-cyan-400 text-black font-extrabold flex items-center justify-center text-[10px]">
+                    3
+                  </span>
+                  <span>3ª Guía (Cian)</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-purple-400 text-white font-extrabold flex items-center justify-center text-[10px]">
+                    7
+                  </span>
+                  <span>7ª Guía (Púrpura)</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-sky-500 text-white font-extrabold flex items-center justify-center text-[10px]">
+                    5
+                  </span>
+                  <span>5ª (Azul)</span>
+                </span>
+              </>
+            ) : theoryMode === 'chord_voicing' ? (
               <>
                 <span className="flex items-center gap-1">
                   <span className="w-4 h-4 rounded-full bg-rose-950 border border-rose-500 text-rose-400 font-bold flex items-center justify-center text-[10px]">
@@ -1543,6 +1687,7 @@ export default function FretboardSequencerStudio() {
           arpeggioRange={arpeggioRange}
           chordVoicingType={chordVoicingType}
           voicingShapeId={voicingShapeId}
+          activeProgressionChord={activeProgressionChord}
           activeHits={activeHits}
           activeHitNotes={activeHitNotes}
           onFretClick={handleFretboardClick}
@@ -1578,6 +1723,8 @@ export default function FretboardSequencerStudio() {
         currentStep={currentStep}
         isPlaying={isPlaying}
         bpm={bpm}
+        subdivision={subdivision}
+        onSubdivisionChange={setSubdivision}
         activeHits={activeHits}
         activeHitNotes={activeHitNotes}
         selectedCell={selectedCell}

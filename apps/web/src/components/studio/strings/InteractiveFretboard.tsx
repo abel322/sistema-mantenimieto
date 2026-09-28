@@ -11,6 +11,7 @@ import {
   ArpeggioType,
   ChordVoicingType,
   VoicingShapeId,
+  ProgressionChordStep,
 } from '@/types/strings';
 import { calculateFretNote, stringsAudioEngine } from '@/services/audio/stringsAudioEngine';
 import {
@@ -37,13 +38,14 @@ interface InteractiveFretboardProps {
   instrument: InstrumentType;
   tuning: TuningId;
   overlayMode: FretboardOverlayMode;
-  theoryMode?: TheoryMode; // 'free' | 'scale' | 'arpeggio' | 'chord_voicing'
+  theoryMode?: TheoryMode; // 'free' | 'scale' | 'arpeggio' | 'chord_voicing' | 'progression'
   musicalKey: MusicalKey;
   scaleType?: ScaleType;
   arpeggioType?: ArpeggioType;
   arpeggioRange?: 'all' | 'box_root' | 'box_octave';
   chordVoicingType?: ChordVoicingType;
   voicingShapeId?: VoicingShapeId;
+  activeProgressionChord?: ProgressionChordStep;
   activeHits?: ActiveFretHit[];
   activeHitNotes?: ActiveHitNote[];
   onFretClick?: (stringIndex: number, fret: number) => void;
@@ -148,6 +150,7 @@ export default function InteractiveFretboard({
   arpeggioRange = 'all',
   chordVoicingType = 'major',
   voicingShapeId = 'root6_barre',
+  activeProgressionChord,
   activeHits = [],
   activeHitNotes = [],
   onFretClick,
@@ -739,6 +742,54 @@ export default function InteractiveFretboard({
                       textFontWeight = '900';
                       badgeFilter = 'url(#amberRootGlow)';
                       if (overlayMode === 'intervals') label = 'R';
+                    }
+                  } else if (theoryMode === 'progression') {
+                    if (activeProgressionChord) {
+                      const semitoneC = CHROMATIC_INDEX[noteInfo.noteName] ?? 0;
+                      const isChordRoot = semitoneC === activeProgressionChord.guideTones.root;
+                      const isChordThird = semitoneC === activeProgressionChord.guideTones.third;
+                      const isChordSeventh =
+                        activeProgressionChord.guideTones.seventh !== undefined &&
+                        semitoneC === activeProgressionChord.guideTones.seventh;
+                      const isChordFifth =
+                        activeProgressionChord.guideTones.fifth !== undefined &&
+                        semitoneC === activeProgressionChord.guideTones.fifth;
+
+                      isHighlighted = isChordRoot || isChordThird || isChordSeventh || isChordFifth;
+
+                      if (isChordRoot) {
+                        badgeFill = '#f59e0b'; // Oro Tónica
+                        badgeStroke = '#fcd34d';
+                        textColor = '#000000';
+                        textFontWeight = '900';
+                        badgeFilter = 'url(#amberRootGlow)';
+                        label = overlayMode === 'intervals' ? 'R' : noteInfo.noteName;
+                      } else if (isChordThird) {
+                        badgeFill = '#06b6d4'; // Cyan Eléctrico (3ª Guía)
+                        badgeStroke = '#67e8f9';
+                        textColor = '#ffffff';
+                        textFontWeight = 'bold';
+                        badgeFilter = 'url(#cyanScaleGlow)';
+                        const thirdLabel = activeProgressionChord.chordType.includes('m') ? 'b3' : '3M';
+                        label = overlayMode === 'intervals' ? thirdLabel : noteInfo.noteName;
+                      } else if (isChordSeventh) {
+                        badgeFill = '#a855f7'; // Púrpura Neón (7ª Guía)
+                        badgeStroke = '#c084fc';
+                        textColor = '#ffffff';
+                        textFontWeight = 'bold';
+                        badgeFilter = undefined;
+                        const seventhLabel = activeProgressionChord.chordType === 'maj7' ? '7M' : 'b7';
+                        label = overlayMode === 'intervals' ? seventhLabel : noteInfo.noteName;
+                      } else if (isChordFifth) {
+                        badgeFill = '#0284c7'; // Azul Cielo (5ª)
+                        badgeStroke = '#38bdf8';
+                        textColor = '#ffffff';
+                        textFontWeight = 'bold';
+                        badgeFilter = undefined;
+                        label = overlayMode === 'intervals' ? (activeProgressionChord.chordType === 'm7b5' ? 'b5' : '5') : noteInfo.noteName;
+                      }
+                    } else {
+                      isHighlighted = isRoot;
                     }
                   } else {
                     // FREE MODE
