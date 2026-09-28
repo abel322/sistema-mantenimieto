@@ -8,7 +8,9 @@ import {
   TheoryMode,
   MusicalKey,
   ScaleType,
-  ChordType,
+  ArpeggioType,
+  ChordVoicingType,
+  VoicingShapeId,
   StringTrack,
   SequencerStepCell,
 } from '@/types/strings';
@@ -23,101 +25,16 @@ import {
   stringsAudioEngine,
   calculateFretNote,
 } from '@/services/audio/stringsAudioEngine';
-import { Guitar, Sparkles, Music, Layers, Sliders, Volume2, Info } from 'lucide-react';
-
-// Chromatic Root Notes
-const CHROMATIC_KEYS: MusicalKey[] = [
-  'C',
-  'C#',
-  'D',
-  'D#',
-  'E',
-  'F',
-  'F#',
-  'G',
-  'G#',
-  'A',
-  'A#',
-  'B',
-];
-
-// Scale Catalogue
-interface ScaleDef {
-  id: ScaleType;
-  name: string;
-  formula: string;
-  recommendedFor: string;
-}
-
-const SCALE_CATALOGUE: ScaleDef[] = [
-  {
-    id: 'minor_pentatonic',
-    name: 'Pentatónica Menor',
-    formula: '1 - b3 - 4 - 5 - b7',
-    recommendedFor: 'Rock, Blues, Funk & Solos',
-  },
-  {
-    id: 'major_pentatonic',
-    name: 'Pentatónica Mayor',
-    formula: '1 - 2 - 3 - 5 - 6',
-    recommendedFor: 'Soul, Country, R&B, Pop',
-  },
-  {
-    id: 'blues',
-    name: 'Blues (con Blue Note)',
-    formula: '1 - b3 - 4 - b5 - 5 - b7',
-    recommendedFor: 'Blues clásico, Chicago & Shuffle',
-  },
-  {
-    id: 'major',
-    name: 'Escala Mayor (Jónica)',
-    formula: '1 - 2 - 3 - 4 - 5 - 6 - 7',
-    recommendedFor: 'Baladas, Armonía tonal clásica',
-  },
-  {
-    id: 'minor',
-    name: 'Menor Natural (Eólica)',
-    formula: '1 - 2 - b3 - 4 - 5 - b6 - b7',
-    recommendedFor: 'Rock melódico, Metal, Pop',
-  },
-  {
-    id: 'dorian',
-    name: 'Dórica (Funk Groove)',
-    formula: '1 - 2 - b3 - 4 - 5 - 6 - b7',
-    recommendedFor: 'Líneas de Bajo Funk, Jazz Fusion',
-  },
-  {
-    id: 'mixolydian',
-    name: 'Mixolidia (Rock / Blues)',
-    formula: '1 - 2 - 3 - 4 - 5 - 6 - b7',
-    recommendedFor: 'Riffs con acorde dominante 7',
-  },
-  {
-    id: 'harmonic_minor',
-    name: 'Menor Armónica',
-    formula: '1 - 2 - b3 - 4 - 5 - b6 - 7',
-    recommendedFor: 'Neoclásico, Flamenco & Tensión V7',
-  },
-];
-
-// Chord / Arpeggio Catalogue
-interface ChordDef {
-  id: ChordType;
-  name: string;
-  formula: string;
-  symbol: string;
-}
-
-const CHORD_CATALOGUE: ChordDef[] = [
-  { id: 'major', name: 'Mayor Tríada', formula: '1 - 3 - 5', symbol: 'Maj' },
-  { id: 'minor', name: 'Menor Tríada', formula: '1 - b3 - 5', symbol: 'm' },
-  { id: 'dom7', name: 'Dominante 7', formula: '1 - 3 - 5 - b7', symbol: '7' },
-  { id: 'maj7', name: 'Mayor 7 / Maj7', formula: '1 - 3 - 5 - 7', symbol: 'Δ7' },
-  { id: 'm7', name: 'Menor 7', formula: '1 - b3 - 5 - b7', symbol: 'm7' },
-  { id: 'm7b5', name: 'm7b5 / Semidisminuido', formula: '1 - b3 - b5 - b7', symbol: 'ø' },
-  { id: 'sus4', name: 'Suspendido 4 (Sus4)', formula: '1 - 4 - 5', symbol: 'sus4' },
-  { id: 'sus2', name: 'Suspendido 2 (Sus2)', formula: '1 - 2 - 5', symbol: 'sus2' },
-];
+import {
+  CHROMATIC_KEYS,
+  CHROMATIC_INDEX,
+  SCALE_CATALOGUE,
+  ARPEGGIO_CATALOGUE,
+  CHORD_TYPE_OPTIONS,
+  VOICING_SHAPE_OPTIONS,
+  getChordVoicing,
+} from '@/services/audio/stringsTheoryEngine';
+import { Guitar, Sparkles, Music, Layers, Volume2, Info, Play, Radio } from 'lucide-react';
 
 // Generates blank tracks for an instrument setup
 function generateInitialTracks(
@@ -142,22 +59,31 @@ function generateInitialTracks(
 
 export default function FretboardSequencerStudio() {
   // Instrument and Tuning
-  const [instrument, setInstrument] = useState<InstrumentType>('bass_4');
+  const [instrument, setInstrument] = useState<InstrumentType>('guitar_6');
   const [tuning, setTuning] = useState<TuningId>('standard');
 
-  // Theory Toolbar State
+  // Theory Toolbar: 4 Distinct Modes
   const [theoryMode, setTheoryMode] = useState<TheoryMode>('scale');
   const [musicalKey, setMusicalKey] = useState<MusicalKey>('E');
-  const [scaleType, setScaleType] = useState<ScaleType>('minor_pentatonic');
-  const [chordType, setChordType] = useState<ChordType>('major');
 
-  // Fretboard Overlays
+  // Mode 2: Scales State
+  const [scaleType, setScaleType] = useState<ScaleType>('minor_pentatonic');
+
+  // Mode 3: Arpeggios State
+  const [arpeggioType, setArpeggioType] = useState<ArpeggioType>('major_triad');
+  const [arpeggioRange, setArpeggioRange] = useState<'all' | 'box_root' | 'box_octave'>('all');
+
+  // Mode 4: Chord Voicings State
+  const [chordVoicingType, setChordVoicingType] = useState<ChordVoicingType>('major');
+  const [voicingShapeId, setVoicingShapeId] = useState<VoicingShapeId>('open');
+
+  // Fretboard Overlays (Etiquetas: Notas / Intervalos / Digitación)
   const [overlayMode, setOverlayMode] = useState<FretboardOverlayMode>('notes');
 
   // Sequencer Settings
   const [measuresCount, setMeasuresCount] = useState<number>(2);
   const [tracks, setTracks] = useState<StringTrack[]>(() =>
-    generateInitialTracks('bass_4', 'standard', 2)
+    generateInitialTracks('guitar_6', 'standard', 2)
   );
 
   // Transport State
@@ -360,6 +286,125 @@ export default function FretboardSequencerStudio() {
     stringsAudioEngine.setVolume(vol);
   };
 
+  // -------------------------------------------------------------
+  // ARPEGGIO AUDITION: Plays notes sequentially ascending/descending
+  // -------------------------------------------------------------
+  const handleAuditionArpeggio = async () => {
+    await stringsAudioEngine.ensureStarted();
+    const strings = getInstrumentStrings(instrument, tuning);
+    const rootIdx = CHROMATIC_INDEX[musicalKey] ?? 0;
+    const arpDef =
+      ARPEGGIO_CATALOGUE.find((a) => a.id === arpeggioType) || ARPEGGIO_CATALOGUE[0];
+
+    const foundNotes: {
+      noteName: string;
+      fullNote: string;
+      midi: number;
+      stringIdx: number;
+      fret: number;
+    }[] = [];
+
+    strings.forEach((str, sIdx) => {
+      for (let f = 0; f <= 24; f++) {
+        const noteInfo = calculateFretNote(str.basePitch, f);
+        const noteDistance = (CHROMATIC_INDEX[noteInfo.noteName] - rootIdx + 12) % 12;
+
+        if (arpDef.semitones.includes(noteDistance)) {
+          let inRange = true;
+          if (arpeggioRange !== 'all') {
+            const lowestStr = strings[strings.length - 1];
+            const m = lowestStr.basePitch.match(/^([A-Ga-g][#b]?)/);
+            const lowBaseIdx = CHROMATIC_INDEX[m ? m[1].toUpperCase() : 'E'] ?? 4;
+            const rootFretLow = (rootIdx - lowBaseIdx + 12) % 12;
+
+            if (arpeggioRange === 'box_root') {
+              inRange = f >= Math.max(0, rootFretLow - 1) && f <= rootFretLow + 4;
+            } else if (arpeggioRange === 'box_octave') {
+              inRange = f >= Math.max(0, rootFretLow + 11) && f <= rootFretLow + 16;
+            }
+          }
+
+          if (inRange) {
+            foundNotes.push({
+              noteName: noteInfo.noteName,
+              fullNote: noteInfo.fullNote,
+              midi: noteInfo.midi,
+              stringIdx: sIdx,
+              fret: f,
+            });
+          }
+        }
+      }
+    });
+
+    foundNotes.sort((a, b) => a.midi - b.midi);
+
+    // Pick unique pitches (up to 8-10 notes)
+    const uniquePitches: typeof foundNotes = [];
+    const seenMidi = new Set<number>();
+    for (const n of foundNotes) {
+      if (!seenMidi.has(n.midi)) {
+        seenMidi.add(n.midi);
+        uniquePitches.push(n);
+      }
+      if (uniquePitches.length >= 8) break;
+    }
+
+    if (uniquePitches.length === 0) return;
+
+    // Ascending + descending arpeggio sequence
+    const pattern = [...uniquePitches, ...uniquePitches.slice(0, -1).reverse()];
+    const noteStrings = pattern.map((p) => p.fullNote);
+
+    stringsAudioEngine.playArpeggio(instrument, noteStrings, 0.16);
+
+    // Animate glow across the fretboard
+    pattern.forEach((p, idx) => {
+      setTimeout(() => {
+        setActiveHits([{ stringIndex: p.stringIdx, fret: p.fret }]);
+      }, idx * 160);
+    });
+
+    setTimeout(() => {
+      setActiveHits([]);
+    }, pattern.length * 160 + 200);
+  };
+
+  // -------------------------------------------------------------
+  // STRUM CHORD: Plays voicing with 25ms humanized dispersion
+  // -------------------------------------------------------------
+  const handleStrumChord = async () => {
+    await stringsAudioEngine.ensureStarted();
+    const voicing = getChordVoicing(instrument, musicalKey, chordVoicingType, voicingShapeId);
+    const strings = getInstrumentStrings(instrument, tuning);
+
+    const strumHits: ActiveFretHit[] = [];
+    const strumNotes: string[] = [];
+
+    // Order from lowest sounding string (string index N-1) to highest (string 0)
+    const activeNotes = voicing.notes
+      .filter((n) => n.fret !== null)
+      .sort((a, b) => b.stringIndex - a.stringIndex);
+
+    activeNotes.forEach((n) => {
+      const str = strings[n.stringIndex];
+      if (str && n.fret !== null) {
+        const noteInfo = calculateFretNote(str.basePitch, n.fret);
+        strumNotes.push(noteInfo.fullNote);
+        strumHits.push({ stringIndex: n.stringIndex, fret: n.fret });
+      }
+    });
+
+    if (strumNotes.length === 0) return;
+
+    stringsAudioEngine.playStrum(instrument, strumNotes, 25);
+
+    setActiveHits(strumHits);
+    setTimeout(() => {
+      setActiveHits([]);
+    }, 900);
+  };
+
   // Load Presets
   const handleLoadPreset = (presetId: string) => {
     stopPlayback();
@@ -387,8 +432,8 @@ export default function FretboardSequencerStudio() {
       setBpm(120);
       setMeasuresCount(1);
       setMusicalKey('E');
-      setTheoryMode('chord');
-      setChordType('dom7');
+      setTheoryMode('arpeggio');
+      setArpeggioType('dom7');
       const newTracks = generateInitialTracks('bass_4', 'standard', 1);
       newTracks[3].steps[0] = { fret: 0, articulation: 'normal' }; // E
       newTracks[3].steps[4] = { fret: 4, articulation: 'normal' }; // G#
@@ -408,26 +453,14 @@ export default function FretboardSequencerStudio() {
       }
       newTracks[2].steps[14] = { fret: 3, articulation: 'normal' }; // C
       setTracks(newTracks);
-    } else if (presetId === 'bass_disco_octaves') {
-      setInstrument('bass_4');
-      setBpm(118);
-      setMeasuresCount(1);
-      setMusicalKey('A');
-      setTheoryMode('scale');
-      setScaleType('dorian');
-      const newTracks = generateInitialTracks('bass_4', 'standard', 1);
-      for (let i = 0; i < 16; i += 4) {
-        newTracks[3].steps[i] = { fret: 5, articulation: 'normal' }; // A1
-        newTracks[1].steps[i + 2] = { fret: 7, articulation: 'normal' }; // A2
-      }
-      setTracks(newTracks);
     } else if (presetId === 'guitar_neo_soul') {
       setInstrument('guitar_6');
       setBpm(84);
       setMeasuresCount(1);
       setMusicalKey('E');
-      setTheoryMode('chord');
-      setChordType('maj7');
+      setTheoryMode('chord_voicing');
+      setChordVoicingType('maj7');
+      setVoicingShapeId('root5_barre');
       const newTracks = generateInitialTracks('guitar_6', 'standard', 1);
       newTracks[5].steps[0] = { fret: 0, articulation: 'downstroke' }; // E2
       newTracks[3].steps[2] = { fret: 4, articulation: 'downstroke' }; // F#3
@@ -437,54 +470,6 @@ export default function FretboardSequencerStudio() {
       newTracks[1].steps[10] = { fret: 4, articulation: 'downstroke' };
       newTracks[2].steps[12] = { fret: 4, articulation: 'downstroke' };
       newTracks[3].steps[14] = { fret: 4, articulation: 'downstroke' };
-      setTracks(newTracks);
-    } else if (presetId === 'guitar_metal_chug') {
-      setInstrument('guitar_6');
-      setBpm(140);
-      setMeasuresCount(1);
-      setMusicalKey('E');
-      setTheoryMode('scale');
-      setScaleType('minor_pentatonic');
-      const newTracks = generateInitialTracks('guitar_6', 'standard', 1);
-      for (let i = 0; i < 16; i++) {
-        if (i === 6 || i === 14) {
-          newTracks[5].steps[i] = { fret: 3, articulation: 'downstroke' };
-          newTracks[4].steps[i] = { fret: 5, articulation: 'downstroke' };
-        } else {
-          newTracks[5].steps[i] = { fret: 0, articulation: 'palmmute' };
-        }
-      }
-      setTracks(newTracks);
-    } else if (presetId === 'guitar_funk_chops') {
-      setInstrument('guitar_6');
-      setBpm(105);
-      setMeasuresCount(1);
-      setMusicalKey('D');
-      setTheoryMode('chord');
-      setChordType('dom7');
-      const newTracks = generateInitialTracks('guitar_6', 'standard', 1);
-      [0, 3, 6, 8, 11, 14].forEach((s) => {
-        newTracks[0].steps[s] = { fret: 7, articulation: s % 2 === 0 ? 'downstroke' : 'upstroke' };
-        newTracks[1].steps[s] = { fret: 8, articulation: s % 2 === 0 ? 'downstroke' : 'upstroke' };
-        newTracks[2].steps[s] = { fret: 7, articulation: s % 2 === 0 ? 'downstroke' : 'upstroke' };
-      });
-      setTracks(newTracks);
-    } else if (presetId === 'guitar_indie_riff') {
-      setInstrument('guitar_6');
-      setBpm(116);
-      setMeasuresCount(1);
-      setMusicalKey('A');
-      setTheoryMode('scale');
-      setScaleType('major');
-      const newTracks = generateInitialTracks('guitar_6', 'standard', 1);
-      newTracks[0].steps[0] = { fret: 7, articulation: 'downstroke' };
-      newTracks[1].steps[2] = { fret: 8, articulation: 'downstroke' };
-      newTracks[0].steps[4] = { fret: 5, articulation: 'upstroke' };
-      newTracks[1].steps[6] = { fret: 8, articulation: 'downstroke' };
-      newTracks[2].steps[8] = { fret: 7, articulation: 'downstroke' };
-      newTracks[1].steps[10] = { fret: 8, articulation: 'downstroke' };
-      newTracks[0].steps[12] = { fret: 7, articulation: 'downstroke' };
-      newTracks[0].steps[14] = { fret: 10, articulation: 'downstroke' };
       setTracks(newTracks);
     }
   };
@@ -497,18 +482,29 @@ export default function FretboardSequencerStudio() {
     };
   }, []);
 
-  // Summary label for current active theory selection
+  // Summary banner for active selection
   const currentTheorySummary = React.useMemo(() => {
     if (theoryMode === 'free') {
-      return 'Modo Libre • Visualizando todas las posiciones del mástil';
+      return 'Modo Libre • Visualizando todas las posiciones cromáticas del mástil';
     }
     if (theoryMode === 'scale') {
       const sc = SCALE_CATALOGUE.find((s) => s.id === scaleType);
-      return `Tónica ${musicalKey} • ${sc?.name || 'Escala'} (${sc?.formula || ''}) • ${sc?.recommendedFor || ''}`;
+      return `Tónica ${musicalKey} • Escala ${sc?.name || ''} (${sc?.formula || ''}) • ${sc?.recommendedFor || ''}`;
     }
-    const ch = CHORD_CATALOGUE.find((c) => c.id === chordType);
-    return `Tónica ${musicalKey} • Arpegio ${ch?.name || 'Acorde'} [${musicalKey}${ch?.symbol || ''}] (${ch?.formula || ''})`;
-  }, [theoryMode, musicalKey, scaleType, chordType]);
+    if (theoryMode === 'arpeggio') {
+      const arp = ARPEGGIO_CATALOGUE.find((a) => a.id === arpeggioType);
+      return `Tónica ${musicalKey} • Arpegio Melódico ${arp?.name || ''} (${arp?.formula || ''}) • Rango: ${
+        arpeggioRange === 'all'
+          ? 'Todo el mástil'
+          : arpeggioRange === 'box_root'
+          ? 'Caja 1 (Tónica)'
+          : 'Caja 2 (Octava)'
+      }`;
+    }
+    const ch = CHORD_TYPE_OPTIONS.find((c) => c.id === chordVoicingType);
+    const sh = VOICING_SHAPE_OPTIONS.find((s) => s.id === voicingShapeId);
+    return `Tónica ${musicalKey} • Acorde ${ch?.name || ''} (${musicalKey}${ch?.symbol || ''}) • Postura: ${sh?.name || ''} (1 nota por cuerda)`;
+  }, [theoryMode, musicalKey, scaleType, arpeggioType, arpeggioRange, chordVoicingType, voicingShapeId]);
 
   return (
     <div className="w-full flex flex-col gap-6">
@@ -528,10 +524,10 @@ export default function FretboardSequencerStudio() {
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Diapasón de Palisandro & Secuenciador Armónico
+              Estudio Armónico & Diapasón de Palisandro
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Madera cálida realista con iluminación reactiva de Tónica (Oro), Escalas y Arpegios (Cyan Neón)
+              Práctica pedagógica aislada para Escalas, Arpegios melódicos y Voicings de acordes reales
             </p>
           </div>
         </div>
@@ -570,9 +566,9 @@ export default function FretboardSequencerStudio() {
         onVolumeChange={handleVolumeChange}
       />
 
-      {/* 2. Barra de Teoría & Armonía (Root, Modos, Escalas y Arpegios) */}
+      {/* 2. Barra de Teoría: 4 Modos Independientes */}
       <div className="w-full bg-[#0E1526]/90 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col gap-4 shadow-2xl">
-        {/* Header & Mode Switcher */}
+        {/* Header & 4 Mode Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400">
@@ -580,16 +576,16 @@ export default function FretboardSequencerStudio() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                Teoría & Armonía Aplicada al Mástil
+                Teoría & Pedagogía de Cuerdas
               </h3>
               <p className="text-xs text-slate-400">
-                Filtra notas al instante: resalta tónica dorada y grados de la escala o arpegio
+                Elige el modo de estudio según tu objetivo de práctica
               </p>
             </div>
           </div>
 
-          {/* Mode Toggle Buttons: [Modo Libre] | [Escalas] | [Acordes & Arpegios] */}
-          <div className="flex items-center gap-1.5 p-1 bg-black/60 border border-white/10 rounded-xl">
+          {/* 4 Mode Toggle Buttons */}
+          <div className="flex items-center gap-1.5 p-1 bg-black/60 border border-white/10 rounded-xl flex-wrap">
             <button
               type="button"
               onClick={() => setTheoryMode('free')}
@@ -614,14 +610,25 @@ export default function FretboardSequencerStudio() {
             </button>
             <button
               type="button"
-              onClick={() => setTheoryMode('chord')}
+              onClick={() => setTheoryMode('arpeggio')}
               className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
-                theoryMode === 'chord'
+                theoryMode === 'arpeggio'
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.4)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Arpegios ({ARPEGGIO_CATALOGUE.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheoryMode('chord_voicing')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                theoryMode === 'chord_voicing'
                   ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.4)]'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Acordes & Arpegios ({CHORD_CATALOGUE.length})
+              Acordes / Voicings ({CHORD_TYPE_OPTIONS.length})
             </button>
           </div>
         </div>
@@ -650,11 +657,13 @@ export default function FretboardSequencerStudio() {
           </div>
         </div>
 
-        {/* 2. Catálogo de Escalas (si está en Escalas) */}
+        {/* ------------------------------------------------------------- */}
+        {/* SECCIÓN 2: ESCALAS                                            */}
+        {/* ------------------------------------------------------------- */}
         {theoryMode === 'scale' && (
           <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
             <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider">
-              Catálogo de Escalas:
+              Catálogo de Escalas (8):
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {SCALE_CATALOGUE.map((sc) => (
@@ -677,29 +686,141 @@ export default function FretboardSequencerStudio() {
           </div>
         )}
 
-        {/* 3. Catálogo de Acordes & Arpegios (si está en Acordes) */}
-        {theoryMode === 'chord' && (
-          <div className="flex flex-col gap-2 pt-2 border-t border-white/5">
-            <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider">
-              Catálogo de Acordes & Arpegios:
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {CHORD_CATALOGUE.map((ch) => (
+        {/* ------------------------------------------------------------- */}
+        {/* SECCIÓN 3: ARPEGIOS (Recorrido Melódico)                      */}
+        {/* ------------------------------------------------------------- */}
+        {theoryMode === 'arpeggio' && (
+          <div className="flex flex-col gap-3 pt-2 border-t border-white/5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[10px] font-mono text-purple-400 font-bold uppercase tracking-wider">
+                Catálogo de Arpegios Melódicos (8):
+              </span>
+
+              {/* Range Filter & Audition Button */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-lg p-1 text-[11px] font-mono">
+                  <span className="text-slate-400 px-1">Rango:</span>
+                  <button
+                    type="button"
+                    onClick={() => setArpeggioRange('all')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      arpeggioRange === 'all'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Todo el Mástil
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setArpeggioRange('box_root')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      arpeggioRange === 'box_root'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Caja 1 (Tónica)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setArpeggioRange('box_octave')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      arpeggioRange === 'box_octave'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Caja 2 (Octava)
+                  </button>
+                </div>
+
                 <button
-                  key={ch.id}
                   type="button"
-                  onClick={() => setChordType(ch.id)}
+                  onClick={handleAuditionArpeggio}
+                  className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-mono font-bold text-xs shadow-lg flex items-center gap-1.5 cursor-pointer active:scale-95"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Audicionar Arpegio</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {ARPEGGIO_CATALOGUE.map((arp) => (
+                <button
+                  key={arp.id}
+                  type="button"
+                  onClick={() => setArpeggioType(arp.id)}
                   className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer flex flex-col gap-0.5 ${
-                    chordType === ch.id
-                      ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                    arpeggioType === arp.id
+                      ? 'bg-purple-500/20 border-purple-400 text-purple-200 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
                       : 'bg-black/40 border-white/10 text-slate-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-white">{ch.name}</span>
-                    <span className="text-[10px] font-mono font-bold text-amber-400">{musicalKey}{ch.symbol}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-400">{ch.formula}</span>
+                  <span className="font-bold text-xs text-white">{arp.name}</span>
+                  <span className="text-[10px] font-mono text-purple-400/90">{arp.formula}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ------------------------------------------------------------- */}
+        {/* SECCIÓN 4: ACORDES / VOICINGS (Posturas de Mano Reales)       */}
+        {/* ------------------------------------------------------------- */}
+        {theoryMode === 'chord_voicing' && (
+          <div className="flex flex-col gap-3 pt-2 border-t border-white/5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider">
+                Posturas de Acordes Reales (1 nota por cuerda):
+              </span>
+
+              {/* Botón Rasguear Acorde (Strum) */}
+              <button
+                type="button"
+                onClick={handleStrumChord}
+                className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-mono font-black text-xs shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>RASGUEAR ACORDE (STRUM)</span>
+              </button>
+            </div>
+
+            {/* Selector 1: Tipo de Acorde */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] font-mono text-slate-400 uppercase mr-1">Tipo:</span>
+              {CHORD_TYPE_OPTIONS.map((ct) => (
+                <button
+                  key={ct.id}
+                  type="button"
+                  onClick={() => setChordVoicingType(ct.id)}
+                  className={`px-2.5 py-1 rounded-lg border font-mono text-xs font-bold transition-all cursor-pointer ${
+                    chordVoicingType === ct.id
+                      ? 'bg-amber-400 text-black shadow-md scale-105'
+                      : 'bg-black/40 border-white/10 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {ct.name} ({musicalKey}{ct.symbol})
+                </button>
+              ))}
+            </div>
+
+            {/* Selector 2: Posición / Postura (Voicing Shape) */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              <span className="text-[10px] font-mono text-slate-400 uppercase mr-1">Postura:</span>
+              {VOICING_SHAPE_OPTIONS.map((sh) => (
+                <button
+                  key={sh.id}
+                  type="button"
+                  onClick={() => setVoicingShapeId(sh.id)}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    voicingShapeId === sh.id
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-sm'
+                      : 'bg-black/40 border-white/10 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span>{sh.name}</span>
                 </button>
               ))}
             </div>
@@ -721,19 +842,44 @@ export default function FretboardSequencerStudio() {
           </div>
 
           {/* Theory Legend & Indicators */}
-          <div className="flex items-center gap-3 text-[11px] font-mono text-slate-300">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-[9px]">
-                R
-              </span>
-              <span>Tónica (Oro)</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 rounded-full bg-cyan-500 text-white font-bold flex items-center justify-center text-[9px]">
-                •
-              </span>
-              <span>Escala / Acorde</span>
-            </span>
+          <div className="flex items-center gap-3 text-[11px] font-mono text-slate-300 flex-wrap">
+            {theoryMode === 'chord_voicing' ? (
+              <>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-rose-950 border border-rose-500 text-rose-400 font-bold flex items-center justify-center text-[10px]">
+                    ✕
+                  </span>
+                  <span>Silenciada</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-400 font-bold flex items-center justify-center text-[10px]">
+                    ○
+                  </span>
+                  <span>Al Aire</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-4 h-4 rounded-full bg-sky-500 text-white font-bold flex items-center justify-center text-[10px]">
+                    1..4
+                  </span>
+                  <span>Dedos 1 a 4</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 rounded-full bg-amber-400 text-black font-extrabold flex items-center justify-center text-[9px]">
+                    R
+                  </span>
+                  <span>Tónica (Oro)</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 rounded-full bg-cyan-500 text-white font-bold flex items-center justify-center text-[9px]">
+                    •
+                  </span>
+                  <span>Notas Activas</span>
+                </span>
+              </>
+            )}
             <span className="flex items-center gap-1.5">
               <span className="w-3.5 h-3.5 rounded-full bg-sky-400 animate-ping inline-block" />
               <span>Secuenciador</span>
@@ -754,10 +900,13 @@ export default function FretboardSequencerStudio() {
           theoryMode={theoryMode}
           musicalKey={musicalKey}
           scaleType={scaleType}
-          chordType={chordType}
+          arpeggioType={arpeggioType}
+          arpeggioRange={arpeggioRange}
+          chordVoicingType={chordVoicingType}
+          voicingShapeId={voicingShapeId}
           activeHits={activeHits}
           onFretClick={(sIdx, fret) => {
-            // Audition handled internally by InteractiveFretboard
+            // Audition handled internally
           }}
         />
       </div>

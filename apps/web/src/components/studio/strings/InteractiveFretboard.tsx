@@ -8,9 +8,18 @@ import {
   TheoryMode,
   MusicalKey,
   ScaleType,
-  ChordType,
+  ArpeggioType,
+  ChordVoicingType,
+  VoicingShapeId,
 } from '@/types/strings';
 import { calculateFretNote, stringsAudioEngine } from '@/services/audio/stringsAudioEngine';
+import {
+  CHROMATIC_INDEX,
+  INTERVAL_NAMES,
+  SCALE_CATALOGUE,
+  ARPEGGIO_CATALOGUE,
+  getChordVoicing,
+} from '@/services/audio/stringsTheoryEngine';
 
 export interface ActiveFretHit {
   stringIndex: number; // 0 to N-1
@@ -22,75 +31,17 @@ interface InteractiveFretboardProps {
   instrument: InstrumentType;
   tuning: TuningId;
   overlayMode: FretboardOverlayMode;
-  theoryMode?: TheoryMode;
+  theoryMode?: TheoryMode; // 'free' | 'scale' | 'arpeggio' | 'chord_voicing'
   musicalKey: MusicalKey;
-  scaleType: ScaleType;
-  chordType?: ChordType;
+  scaleType?: ScaleType;
+  arpeggioType?: ArpeggioType;
+  arpeggioRange?: 'all' | 'box_root' | 'box_octave';
+  chordVoicingType?: ChordVoicingType;
+  voicingShapeId?: VoicingShapeId;
   activeHits?: ActiveFretHit[];
   onFretClick?: (stringIndex: number, fret: number) => void;
   className?: string;
 }
-
-// Semitone distances from chromatic C
-const CHROMATIC_INDEX: Record<string, number> = {
-  C: 0,
-  'C#': 1,
-  DB: 1,
-  D: 2,
-  'D#': 3,
-  EB: 3,
-  E: 4,
-  F: 5,
-  'F#': 6,
-  GB: 6,
-  G: 7,
-  'G#': 8,
-  AB: 8,
-  A: 9,
-  'A#': 10,
-  BB: 10,
-  B: 11,
-};
-
-// Interval function names
-const INTERVAL_NAMES: Record<number, string> = {
-  0: 'R',
-  1: 'b2',
-  2: '2',
-  3: 'b3',
-  4: '3M',
-  5: '4',
-  6: 'b5',
-  7: '5',
-  8: 'b6',
-  9: '6',
-  10: 'b7',
-  11: '7M',
-};
-
-// Scale formulas (semitone offsets from root)
-export const SCALE_SEMITONES: Record<ScaleType, number[]> = {
-  minor_pentatonic: [0, 3, 5, 7, 10],
-  major_pentatonic: [0, 2, 4, 7, 9],
-  blues: [0, 3, 5, 6, 7, 10],
-  major: [0, 2, 4, 5, 7, 9, 11],
-  minor: [0, 2, 3, 5, 7, 8, 10],
-  dorian: [0, 2, 3, 5, 7, 9, 10],
-  mixolydian: [0, 2, 4, 5, 7, 9, 10],
-  harmonic_minor: [0, 2, 3, 5, 7, 8, 11],
-};
-
-// Chord / Arpeggio formulas (semitone offsets from root)
-export const CHORD_SEMITONES: Record<ChordType, number[]> = {
-  major: [0, 4, 7], // 1, 3, 5
-  minor: [0, 3, 7], // 1, b3, 5
-  dom7: [0, 4, 7, 10], // 1, 3, 5, b7
-  maj7: [0, 4, 7, 11], // 1, 3, 5, 7
-  m7: [0, 3, 7, 10], // 1, b3, 5, b7
-  m7b5: [0, 3, 6, 10], // 1, b3, b5, b7
-  sus4: [0, 5, 7], // 1, 4, 5
-  sus2: [0, 2, 7], // 1, 2, 5
-};
 
 // Key frets that have pearl inlays or rule highlights
 const KEY_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
@@ -185,8 +136,11 @@ export default function InteractiveFretboard({
   overlayMode,
   theoryMode = 'scale',
   musicalKey,
-  scaleType,
-  chordType = 'major',
+  scaleType = 'minor_pentatonic',
+  arpeggioType = 'major_triad',
+  arpeggioRange = 'all',
+  chordVoicingType = 'major',
+  voicingShapeId = 'root6_barre',
   activeHits = [],
   onFretClick,
   className = '',
@@ -196,7 +150,6 @@ export default function InteractiveFretboard({
   const numFrets = 24;
 
   // Real exponential fret spacing calculation
-  // Standard luthiery formula: d = L * (1 - 2^(-n / 17.817))
   const nutX = 72;
   const fretXPositions = useMemo(() => {
     const scaleLength = 2300;
@@ -259,20 +212,49 @@ export default function InteractiveFretboard({
     ];
   }, [numStrings, boardHeight, boardTopY]);
 
-  // Root note index
+  // Root note chromatic index
   const rootIndex = CHROMATIC_INDEX[musicalKey] ?? 0;
 
-  // Active semitones according to theory mode
-  const activeSemitones = useMemo(() => {
-    if (theoryMode === 'scale') {
-      return SCALE_SEMITONES[scaleType] || SCALE_SEMITONES.minor_pentatonic;
+  // 1. Active semitones for Scales / Arpeggios
+  const activeScaleDef = useMemo(
+    () => SCALE_CATALOGUE.find((s) => s.id === scaleType) || SCALE_CATALOGUE[0],
+    [scaleType]
+  );
+
+  const activeArpeggioDef = useMemo(
+    () => ARPEGGIO_CATALOGUE.find((a) => a.id === arpeggioType) || ARPEGGIO_CATALOGUE[0],
+    [arpeggioType]
+  );
+
+  // 2. Active Chord Voicing (1 note per string max)
+  const activeVoicing = useMemo(() => {
+    return getChordVoicing(instrument, musicalKey, chordVoicingType, voicingShapeId);
+  }, [instrument, musicalKey, chordVoicingType, voicingShapeId]);
+
+  // Arpeggio Fret Range calculation for box filtering
+  const arpeggioFretFilter = useMemo(() => {
+    if (theoryMode !== 'arpeggio' || arpeggioRange === 'all') {
+      return (fret: number) => true;
     }
-    if (theoryMode === 'chord') {
-      return CHORD_SEMITONES[chordType] || CHORD_SEMITONES.major;
+    // Root on low string
+    const lowestString = stringsConfig[numStrings - 1];
+    const match = lowestString.basePitch.match(/^([A-Ga-g][#b]?)/);
+    const lowBaseName = match ? match[1].toUpperCase() : 'E';
+    const lowBaseIdx = CHROMATIC_INDEX[lowBaseName] ?? 4;
+    const rootFretLow = (rootIndex - lowBaseIdx + 12) % 12;
+
+    if (arpeggioRange === 'box_root') {
+      const minF = Math.max(0, rootFretLow - 1);
+      const maxF = Math.min(24, rootFretLow + 4);
+      return (fret: number) => fret >= minF && fret <= maxF;
     }
-    // 'free' mode: all 12 chromatic semitones
-    return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  }, [theoryMode, scaleType, chordType]);
+    if (arpeggioRange === 'box_octave') {
+      const minF = Math.max(0, rootFretLow + 11);
+      const maxF = Math.min(24, rootFretLow + 16);
+      return (fret: number) => fret >= minF && fret <= maxF;
+    }
+    return (fret: number) => true;
+  }, [theoryMode, arpeggioRange, rootIndex, stringsConfig, numStrings]);
 
   // Audio audition handler on fret click
   const handleFretInteraction = (stringIdx: number, fret: number) => {
@@ -302,9 +284,7 @@ export default function InteractiveFretboard({
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            {/* ======================================================= */}
-            {/* 1. ACABADO REALISTA DE MADERA (Palisandro / Rosewood)   */}
-            {/* ======================================================= */}
+            {/* 1. ACABADO REALISTA DE MADERA (Palisandro / Rosewood) */}
             <linearGradient id="rosewoodWood" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#382216" />
               <stop offset="50%" stopColor="#2b1910" />
@@ -349,9 +329,14 @@ export default function InteractiveFretboard({
               <feDropShadow dx="0" dy="0" stdDeviation="3.5" floodColor="#f59e0b" floodOpacity="0.85" />
             </filter>
 
-            {/* Electric Cyan Scale Glow */}
+            {/* Electric Cyan Scale/Arpeggio Glow */}
             <filter id="cyanScaleGlow" x="-50%" y="-50%" width="200%" height="200%">
               <feDropShadow dx="0" dy="0" stdDeviation="2.8" floodColor="#06b6d4" floodOpacity="0.75" />
+            </filter>
+
+            {/* Voicing Green / Gold Glow */}
+            <filter id="voicingGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#38bdf8" floodOpacity="0.8" />
             </filter>
           </defs>
 
@@ -530,7 +515,6 @@ export default function InteractiveFretboard({
 
             return (
               <g key={`ruler-number-${f}`}>
-                {/* Upper Fret Ruler */}
                 <text
                   x={midX}
                   y={topRulerY}
@@ -542,8 +526,6 @@ export default function InteractiveFretboard({
                 >
                   {f}
                 </text>
-
-                {/* Lower Fret Ruler */}
                 <text
                   x={midX}
                   y={bottomRulerY}
@@ -592,15 +574,94 @@ export default function InteractiveFretboard({
           })}
 
           {/* ======================================================= */}
-          {/* NOTAS Y LÓGICA DE ILUMINACIÓN REACTIVA                  */}
+          {/* NOTAS Y LÓGICA DE ILUMINACIÓN SEGÚN LOS 4 MODOS         */}
           {/* ======================================================= */}
           {stringsConfig.map((str, sIdx) => {
             const stringY = stringYPositions[sIdx];
             const slotHeight =
               numStrings === 4 ? 37 : numStrings === 5 ? 30 : 25;
 
+            // Voicing note for this specific string (if in chord_voicing mode)
+            const voicingNote =
+              theoryMode === 'chord_voicing'
+                ? activeVoicing.notes.find((n) => n.stringIndex === sIdx)
+                : null;
+
             return (
               <g key={`fret-notes-${sIdx}`}>
+                {/* 1. In chord_voicing mode: Indicator on left of Nut for Muted (✕) or Open (○) */}
+                {theoryMode === 'chord_voicing' && (
+                  <g key={`voicing-nut-indicator-${sIdx}`}>
+                    {voicingNote?.fret === null ? (
+                      // Muted String Indicator: ✕
+                      <g className="select-none">
+                        <title>{`Cuerda ${str.name}: SILENCIADA (✕)`}</title>
+                        <circle cx="42" cy={stringY} r="9.5" fill="#450a0a" stroke="#f43f5e" strokeWidth="1.5" />
+                        <text
+                          x="42"
+                          y={stringY + 3.8}
+                          fill="#fb7185"
+                          fontSize="11"
+                          fontWeight="900"
+                          fontFamily="ui-monospace, monospace"
+                          textAnchor="middle"
+                        >
+                          ✕
+                        </text>
+                      </g>
+                    ) : voicingNote?.fret === 0 ? (
+                      // Open String Indicator: ○
+                      <g
+                        className="select-none cursor-pointer group"
+                        onClick={() => handleFretInteraction(sIdx, 0)}
+                      >
+                        <title>{`Cuerda ${str.name}: AL AIRE (○)`}</title>
+                        <circle
+                          cx="42"
+                          cy={stringY}
+                          r="9.5"
+                          fill="#064e3b"
+                          stroke="#10b981"
+                          strokeWidth="1.8"
+                          className="group-hover:scale-110 transition-transform"
+                        />
+                        <text
+                          x="42"
+                          y={stringY + 3.8}
+                          fill="#34d399"
+                          fontSize="11"
+                          fontWeight="900"
+                          fontFamily="ui-monospace, monospace"
+                          textAnchor="middle"
+                        >
+                          ○
+                        </text>
+                      </g>
+                    ) : (
+                      // Fretted string: subtle indicator on headstock
+                      <g
+                        className="select-none cursor-pointer opacity-50 hover:opacity-100 transition-opacity"
+                        onClick={() => handleFretInteraction(sIdx, 0)}
+                      >
+                        <title>{`Cuerda ${str.name} (Tuning: ${str.basePitch})`}</title>
+                        <circle cx="42" cy={stringY} r="7.5" fill="#1c1917" stroke="#44403c" strokeWidth="1" />
+                        <text
+                          x="42"
+                          y={stringY + 3}
+                          fill="#a8a29e"
+                          fontSize="8.5"
+                          fontWeight="bold"
+                          fontFamily="ui-monospace, monospace"
+                          textAnchor="middle"
+                        >
+                          {str.name}
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                )}
+
+                {/* 2. Frets 0 to 24 slots */}
                 {Array.from({ length: numFrets + 1 }).map((_, fret) => {
                   const x1 = fret === 0 ? 10 : fretXPositions[fret - 1];
                   const x2 = fret === 0 ? nutX : fretXPositions[fret];
@@ -609,8 +670,6 @@ export default function InteractiveFretboard({
                   const noteInfo = calculateFretNote(str.basePitch, fret);
                   const noteDistance =
                     (CHROMATIC_INDEX[noteInfo.noteName] - rootIndex + 12) % 12;
-
-                  const isSelectedTheoryNote = activeSemitones.includes(noteDistance);
                   const isRoot = noteDistance === 0;
 
                   // Active check from sequencer playhead
@@ -618,56 +677,130 @@ export default function InteractiveFretboard({
                     (hit) => hit.stringIndex === sIdx && hit.fret === fret
                   );
 
-                  // Suggested fingering (1 to 4)
-                  const finger = fret === 0 ? 0 : ((fret - 1) % 4) + 1;
+                  // Suggested generic fingering (1 to 4)
+                  const genericFinger = fret === 0 ? 0 : ((fret - 1) % 4) + 1;
 
-                  // Label according to overlay mode
-                  let label = noteInfo.noteName;
-                  if (overlayMode === 'intervals') {
-                    label = INTERVAL_NAMES[noteDistance] || '';
-                  } else if (overlayMode === 'fingering') {
-                    label = fret === 0 ? '0' : String(finger);
-                  }
-
-                  // Determine visibility and badge colors
-                  // In scale or chord mode: notes outside are hidden/atenuadas
-                  const isHighlighted =
-                    theoryMode === 'free'
-                      ? true
-                      : isSelectedTheoryNote;
-
-                  // Color styling
-                  let badgeFill = '#06b6d4'; // Cyan default for scale/chord
+                  // Visibility & Label calculation per mode
+                  let isHighlighted = false;
+                  let badgeFill = '#06b6d4';
                   let badgeStroke = '#22d3ee';
                   let textColor = '#ffffff';
                   let textFontWeight = 'bold';
-                  let badgeFilter = 'url(#cyanScaleGlow)';
+                  let badgeFilter: string | undefined = 'url(#cyanScaleGlow)';
+                  let label = noteInfo.noteName;
 
-                  if (isRoot) {
-                    // TÓNICA: Círculo ámbar/dorado neón con texto negro
-                    badgeFill = '#f59e0b';
-                    badgeStroke = '#fcd34d';
-                    textColor = '#000000';
-                    textFontWeight = '900';
-                    badgeFilter = 'url(#amberRootGlow)';
-                    if (overlayMode === 'intervals') {
-                      label = 'R';
+                  if (theoryMode === 'chord_voicing') {
+                    // VOICING MODE: Only highlight the EXACT fret chosen for this string!
+                    const isVoicingFret =
+                      voicingNote?.fret !== null && voicingNote?.fret === fret;
+
+                    isHighlighted = isVoicingFret;
+                    if (isVoicingFret) {
+                      const fingerNum = voicingNote?.finger ?? genericFinger;
+                      // In voicing mode, show suggested finger number inside dot!
+                      if (overlayMode === 'intervals') {
+                        label = voicingNote?.interval || INTERVAL_NAMES[noteDistance] || 'R';
+                      } else if (overlayMode === 'notes') {
+                        label = noteInfo.noteName;
+                      } else {
+                        label = fret === 0 ? '○' : String(fingerNum);
+                      }
+
+                      if (isRoot) {
+                        badgeFill = '#f59e0b';
+                        badgeStroke = '#fcd34d';
+                        textColor = '#000000';
+                        textFontWeight = '900';
+                        badgeFilter = 'url(#amberRootGlow)';
+                      } else {
+                        badgeFill = '#0284c7';
+                        badgeStroke = '#38bdf8';
+                        textColor = '#ffffff';
+                        badgeFilter = 'url(#voicingGlow)';
+                      }
                     }
-                  } else if (isActive) {
+                  } else if (theoryMode === 'scale') {
+                    // SCALES MODE: Highlight scale semitones
+                    const isScaleNote = activeScaleDef.semitones.includes(noteDistance);
+                    isHighlighted = isScaleNote;
+
+                    if (overlayMode === 'intervals') {
+                      label = INTERVAL_NAMES[noteDistance] || '';
+                    } else if (overlayMode === 'fingering') {
+                      label = fret === 0 ? '0' : String(genericFinger);
+                    } else {
+                      label = noteInfo.noteName;
+                    }
+
+                    if (isRoot) {
+                      badgeFill = '#f59e0b';
+                      badgeStroke = '#fcd34d';
+                      textColor = '#000000';
+                      textFontWeight = '900';
+                      badgeFilter = 'url(#amberRootGlow)';
+                      if (overlayMode === 'intervals') label = 'R';
+                    }
+                  } else if (theoryMode === 'arpeggio') {
+                    // ARPEGGIOS MODE: Melodic notes of arpeggio with optional range box
+                    const isArpNote = activeArpeggioDef.semitones.includes(noteDistance);
+                    const isInRange = arpeggioFretFilter(fret);
+                    isHighlighted = isArpNote && isInRange;
+
+                    if (overlayMode === 'intervals') {
+                      label = INTERVAL_NAMES[noteDistance] || '';
+                    } else if (overlayMode === 'fingering') {
+                      label = fret === 0 ? '0' : String(genericFinger);
+                    } else {
+                      label = noteInfo.noteName;
+                    }
+
+                    if (isRoot) {
+                      badgeFill = '#f59e0b';
+                      badgeStroke = '#fcd34d';
+                      textColor = '#000000';
+                      textFontWeight = '900';
+                      badgeFilter = 'url(#amberRootGlow)';
+                      if (overlayMode === 'intervals') label = 'R';
+                    }
+                  } else {
+                    // FREE MODE: All notes visible
+                    isHighlighted = true;
+                    if (overlayMode === 'intervals') {
+                      label = INTERVAL_NAMES[noteDistance] || '';
+                    } else if (overlayMode === 'fingering') {
+                      label = fret === 0 ? '0' : String(genericFinger);
+                    } else {
+                      label = noteInfo.noteName;
+                    }
+
+                    if (isRoot) {
+                      badgeFill = '#f59e0b';
+                      badgeStroke = '#fcd34d';
+                      textColor = '#000000';
+                      textFontWeight = '900';
+                      badgeFilter = 'url(#amberRootGlow)';
+                      if (overlayMode === 'intervals') label = 'R';
+                    } else {
+                      badgeFill = '#1e293b';
+                      badgeStroke = '#475569';
+                      textColor = '#cbd5e1';
+                      badgeFilter = undefined;
+                    }
+                  }
+
+                  // Active hit during playback
+                  if (isActive) {
                     badgeFill = '#38bdf8';
                     badgeStroke = '#ffffff';
                     textColor = '#000000';
                     textFontWeight = '900';
                     badgeFilter = 'url(#activeGlow)';
-                  } else if (theoryMode === 'free') {
-                    // In free mode, use dark slate styling for non-roots
-                    if (!isRoot) {
-                      badgeFill = '#1e293b';
-                      badgeStroke = '#475569';
-                      textColor = '#cbd5e1';
-                      textFontWeight = 'bold';
-                      badgeFilter = undefined as any;
-                    }
+                    isHighlighted = true;
+                  }
+
+                  // In chord_voicing mode, skip fret 0 if already drawn as nut indicator
+                  if (theoryMode === 'chord_voicing' && fret === 0) {
+                    return null;
                   }
 
                   return (
@@ -688,12 +821,12 @@ export default function InteractiveFretboard({
                         className="transition-colors hover:fill-amber-500/10"
                       />
 
-                      {/* Ghost dot or faint placeholder when NOT highlighted in scale mode */}
+                      {/* Ghost dot or faint placeholder when NOT highlighted in scale/arpeggio mode */}
                       {!isHighlighted && !isActive && (
                         <circle
                           cx={noteX}
                           cy={stringY}
-                          r={3}
+                          r={2.8}
                           fill="#451a03"
                           opacity={0.25}
                           className="group-hover:opacity-60 transition-opacity"

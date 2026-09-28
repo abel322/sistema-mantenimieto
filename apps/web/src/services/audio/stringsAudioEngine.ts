@@ -236,7 +236,7 @@ class StringsAudioEngine {
   }
 
   /**
-   * Strum / play multiple notes simultaneously
+   * Strum / play multiple notes simultaneously with humanized strumming
    */
   public async playChord(
     instrument: InstrumentType,
@@ -249,12 +249,47 @@ class StringsAudioEngine {
 
     const baseTime = time ?? Tone.now();
     const isUpstroke = articulation === 'upstroke';
-    const strumDelay = 0.012; // 12ms realistic strum dispersion
+    const strumDelay = 0.025; // 25ms humanized strum dispersion
 
     const orderedNotes = isUpstroke ? [...notes].reverse() : notes;
 
     orderedNotes.forEach((note, idx) => {
-      this.playNote(instrument, note, articulation, '4n', baseTime + idx * strumDelay);
+      this.playNote(instrument, note, articulation, '2n', baseTime + idx * strumDelay);
+    });
+  }
+
+  /**
+   * Plays notes sequentially as an arpeggio (ascending or pattern)
+   */
+  public async playArpeggio(
+    instrument: InstrumentType,
+    notes: string[],
+    stepSeconds: number = 0.18
+  ) {
+    if (notes.length === 0) return;
+    await this.ensureStarted();
+    const baseTime = Tone.now();
+
+    notes.forEach((note, idx) => {
+      this.playNote(instrument, note, 'normal', '8n', baseTime + idx * stepSeconds);
+    });
+  }
+
+  /**
+   * Humanized chord strum with ~25ms dispersion between strings
+   */
+  public async playStrum(
+    instrument: InstrumentType,
+    notes: string[],
+    strumDelayMs: number = 25
+  ) {
+    if (notes.length === 0) return;
+    await this.ensureStarted();
+    const baseTime = Tone.now();
+    const delaySec = Math.max(0.005, strumDelayMs / 1000);
+
+    notes.forEach((note, idx) => {
+      this.playNote(instrument, note, 'downstroke', '2n', baseTime + idx * delaySec);
     });
   }
 
