@@ -9,7 +9,7 @@ export interface PracticeRoutine {
   rootNote: string;
   texture: AccompanimentTexture;
   voicingType: VoicingType;
-  category: 'scale' | 'chord' | 'progression' | 'cadencia';
+  category: 'scale' | 'cadencia' | 'chord' | 'progression' | 'progresion';
   targetItemId: string;
   targetItemName: string;
   leftHandInstruction: string;
@@ -125,7 +125,7 @@ export const WORKOUT_LEVELS: WorkoutLevel[] = [
         rootNote: 'C',
         texture: 'arpeggio_asc',
         voicingType: 'close',
-        category: 'progresion',
+        category: 'progression',
         targetItemId: 'prog_pop_4chords',
         targetItemName: 'Eje Universal Pop (I - V - vi - IV)',
         leftHandInstruction: 'Mano Izquierda: Bajo en octavas quebradas (1 - 5).',

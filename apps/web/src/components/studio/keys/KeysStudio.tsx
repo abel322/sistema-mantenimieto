@@ -59,7 +59,7 @@ export default function KeysStudio() {
 
   // Theory & Keyboard State
   const [rootNote, setRootNote] = useState('C');
-  const [category, setCategory] = useState<'scale' | 'chord' | 'progression' | 'cadencia'>('cadencia');
+  const [category, setCategory] = useState<'scale' | 'chord' | 'progression' | 'cadencia' | 'progresion'>('cadencia');
   const [selectedItemId, setSelectedItemId] = useState('cad_pac');
   const [voicingType, setVoicingType] = useState<VoicingType>('close');
   const [texture, setTexture] = useState<AccompanimentTexture>('comping');

@@ -42,8 +42,8 @@ export type MasterTab = 'acordes' | 'escalas' | 'armonia';
 interface KeysTheoryBarProps {
   rootNote: string;
   onRootNoteChange: (root: string) => void;
-  selectedCategory: 'scale' | 'chord' | 'progression' | 'cadencia';
-  onCategoryChange: (cat: 'scale' | 'chord' | 'progression' | 'cadencia') => void;
+  selectedCategory: 'scale' | 'chord' | 'progression' | 'cadencia' | 'progresion';
+  onCategoryChange: (cat: 'scale' | 'chord' | 'progression' | 'cadencia' | 'progresion') => void;
   selectedItemId: string;
   onItemSelect: (itemId: string) => void;
   voicingType: VoicingType;

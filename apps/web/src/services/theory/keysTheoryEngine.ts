@@ -1156,7 +1156,7 @@ export interface RunwayStepNote {
 export function generateRunwaySequence(
   rootNote: string,
   itemId: string, // Scale ID, Chord ID, Progression ID or HarmonicFormula ID
-  itemType: 'scale' | 'chord' | 'progression' | 'cadencia',
+  itemType: 'scale' | 'chord' | 'progression' | 'cadencia' | 'progresion',
   texture: AccompanimentTexture,
   voicing: VoicingType = 'close',
   bpm = 120
@@ -1249,7 +1249,7 @@ export function generateRunwaySequence(
         sequence.push({ timeBeats: i * 0.5, durationBeats: 0.5, notes: [n] });
       });
     }
-  } else if (itemType === 'progression') {
+  } else if (itemType === 'progression' || itemType === 'progresion') {
     const prog = PROGRESSION_PRESETS.find((p) => p.id === itemId) || PROGRESSION_PRESETS[0];
     let currentBeat = 0;
 
