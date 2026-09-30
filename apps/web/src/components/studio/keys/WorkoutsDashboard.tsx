@@ -7,7 +7,7 @@ import {
   PracticeRoutine,
   HandFocus,
 } from '@/data/practiceWorkoutsData';
-import CustomWorkoutBuilderModal from './CustomWorkoutBuilderModal';
+import CustomWorkoutModal from './CustomWorkoutModal';
 import {
   Target,
   Sparkles,
@@ -421,7 +421,7 @@ export default function WorkoutsDashboard({
       </div>
 
       {/* Modal: Custom Workout Builder */}
-      <CustomWorkoutBuilderModal
+      <CustomWorkoutModal
         isOpen={isBuilderOpen}
         onClose={() => setIsBuilderOpen(false)}
         onSaveAndLoad={handleSaveAndLoadRoutine}
