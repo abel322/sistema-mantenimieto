@@ -46,6 +46,10 @@ class KeysAudioEngine {
     }
   }
 
+  public async init(): Promise<boolean> {
+    return this.ensureStarted();
+  }
+
   private initAudioNodes() {
     this.masterVol = new Tone.Volume(0).toDestination();
 

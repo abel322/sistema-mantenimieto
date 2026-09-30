@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as Tone from 'tone';
 import {
   NoteInfo,
-  RunwayStepNote,
   CHROMATIC_NOTES,
   midiToNoteInfo,
 } from '@/services/theory/keysTheoryEngine';
 import { PracticeRoutine, HandFocus } from '@/data/practiceWorkoutsData';
+import { RunwayNoteEvent, durationToBeats } from '@/services/theory/workoutEngine';
 import { keysAudioEngine } from '@/services/audio/keysAudioEngine';
 import {
   Play,
@@ -43,8 +43,8 @@ export type TupletSubdivision =
   | '7:4';
 
 interface KeysRunwaySequencerProps {
-  sequenceNotes: RunwayStepNote[];
-  onSequenceUpdate: (seq: RunwayStepNote[]) => void;
+  sequenceNotes: RunwayNoteEvent[];
+  onSequenceUpdate: (seq: RunwayNoteEvent[]) => void;
   onActiveNotesChange: (notesMap: Map<number, NoteInfo>) => void;
   bpm: number;
   onBpmChange: (bpm: number) => void;
@@ -87,20 +87,32 @@ export default function KeysRunwaySequencer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
-  const lastTriggeredStepRef = useRef<number>(-1);
-  const pauseTimeOffsetRef = useRef<number>(0);
+  const triggeredNoteIdsRef = useRef<Set<string>>(new Set());
 
   // Auto-play when triggered from a routine load
   useEffect(() => {
     if (autoPlayTrigger) {
+      keysAudioEngine.init();
+      triggeredNoteIdsRef.current.clear();
+      startTimeRef.current = performance.now();
+      setCurrentBeat(0);
       setIsPlaying(true);
+      try {
+        Tone.Transport.seconds = 0;
+        Tone.Transport.start();
+      } catch (e) {
+        console.warn('Tone.Transport error', e);
+      }
     }
   }, [autoPlayTrigger]);
 
   // Calculate total beats duration of current sequence
   const totalBeats = Math.max(
     16,
-    sequenceNotes.reduce((max, s) => Math.max(max, s.timeBeats + s.durationBeats), 16)
+    sequenceNotes.reduce((max, s) => {
+      const d = durationToBeats(s.duration);
+      return Math.max(max, s.time + d);
+    }, 16)
   );
 
   const getSubdivisionStepBeats = useCallback((sub: TupletSubdivision): number => {
@@ -134,28 +146,20 @@ export default function KeysRunwaySequencer({
 
     const stepBeats = getSubdivisionStepBeats(subdivision);
     const timeBeats = stepPointer * stepBeats;
+    const durStr =
+      stepBeats >= 4 ? '1n' : stepBeats >= 2 ? '2n' : stepBeats >= 1 ? '4n' : stepBeats >= 0.5 ? '8n' : '16n';
 
-    const existingIndex = sequenceNotes.findIndex((s) => Math.abs(s.timeBeats - timeBeats) < 0.01);
-    let updated: RunwayStepNote[] = [...sequenceNotes];
+    const newNote: RunwayNoteEvent = {
+      id: `rec_${Date.now()}_${lastKeyboardTriggerNote.midi}`,
+      note: lastKeyboardTriggerNote.fullNote,
+      midi: lastKeyboardTriggerNote.midi,
+      time: timeBeats,
+      duration: durStr,
+      hand: lastKeyboardTriggerNote.midi < 60 ? 'left' : 'right',
+      velocity: 0.85,
+    };
 
-    if (existingIndex >= 0) {
-      const currentNotes = updated[existingIndex].notes;
-      const alreadyHas = currentNotes.some((n) => n.midi === lastKeyboardTriggerNote.midi);
-      if (!alreadyHas) {
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          notes: [...currentNotes, lastKeyboardTriggerNote],
-        };
-      }
-    } else {
-      updated.push({
-        timeBeats,
-        durationBeats: stepBeats,
-        notes: [lastKeyboardTriggerNote],
-      });
-    }
-
-    onSequenceUpdate(updated);
+    onSequenceUpdate([...sequenceNotes, newNote]);
     setStepPointer((prev) => prev + 1);
   }, [lastKeyboardTriggerNote, stepRecordActive, subdivision, getSubdivisionStepBeats]);
 
@@ -163,10 +167,11 @@ export default function KeysRunwaySequencer({
   useEffect(() => {
     if (!waitForNoteMode || !isWaitingOnStep || waitingTargetStepIdx < 0 || !lastKeyboardTriggerNote) return;
 
-    const step = sequenceNotes[waitingTargetStepIdx];
-    if (!step) return;
+    const targetNote = sequenceNotes[waitingTargetStepIdx];
+    if (!targetNote) return;
 
-    const matchesNote = step.notes.some((n) => n.midi === lastKeyboardTriggerNote.midi || n.name === lastKeyboardTriggerNote.name);
+    const matchesNote =
+      targetNote.midi === lastKeyboardTriggerNote.midi || targetNote.note === lastKeyboardTriggerNote.fullNote;
     if (matchesNote) {
       // Success!
       setHitSuccessFlash(true);
@@ -175,7 +180,7 @@ export default function KeysRunwaySequencer({
       // Advance sequence past this step
       setIsWaitingOnStep(false);
       setWaitingTargetStepIdx(-1);
-      startTimeRef.current = performance.now() - (step.timeBeats + 0.1) * (60 / bpm) * 1000;
+      startTimeRef.current = performance.now() - (targetNote.time + 0.1) * (60 / bpm) * 1000;
     }
   }, [lastKeyboardTriggerNote, waitForNoteMode, isWaitingOnStep, waitingTargetStepIdx, sequenceNotes, bpm]);
 
@@ -189,9 +194,8 @@ export default function KeysRunwaySequencer({
 
     const secPerBeat = 60 / bpm;
     if (startTimeRef.current === 0) {
-      startTimeRef.current = performance.now();
+      startTimeRef.current = performance.now() - currentBeat * secPerBeat * 1000;
     }
-    lastTriggeredStepRef.current = -1;
 
     const loop = () => {
       if (isWaitingOnStep) {
@@ -206,8 +210,11 @@ export default function KeysRunwaySequencer({
       if (beat >= totalBeats) {
         if (isLooping) {
           startTimeRef.current = performance.now();
-          lastTriggeredStepRef.current = -1;
+          triggeredNoteIdsRef.current.clear();
           beat = 0;
+          try {
+            Tone.Transport.seconds = 0;
+          } catch (e) {}
         } else {
           setIsPlaying(false);
           onActiveNotesChange(new Map());
@@ -219,36 +226,38 @@ export default function KeysRunwaySequencer({
 
       // Check hitline triggers
       const activeMap = new Map<number, NoteInfo>();
-      sequenceNotes.forEach((stepNote, idx) => {
-        const start = stepNote.timeBeats;
-        const end = start + stepNote.durationBeats;
+      const notesToTriggerNow: string[] = [];
+
+      sequenceNotes.forEach((n, idx) => {
+        const dBeats = durationToBeats(n.duration);
+        const start = n.time;
+        const end = start + dBeats;
+
+        // Hand focus filter
+        if (handFocus === 'left' && n.hand !== 'left' && n.midi >= 60) return;
+        if (handFocus === 'right' && n.hand !== 'right' && n.midi < 60) return;
 
         if (beat >= start && beat < end) {
-          const notesToTrigger = stepNote.notes.filter((n) => {
-            if (handFocus === 'left') return n.midi < 60;
-            if (handFocus === 'right') return n.midi >= 60;
-            return true;
-          });
+          activeMap.set(n.midi, midiToNoteInfo(n.midi));
 
-          if (notesToTrigger.length > 0) {
-            notesToTrigger.forEach((n) => activeMap.set(n.midi, n));
+          // If Wait For Note mode is active, pause when reaching start of step!
+          if (waitForNoteMode && !triggeredNoteIdsRef.current.has(n.id)) {
+            triggeredNoteIdsRef.current.add(n.id);
+            setIsWaitingOnStep(true);
+            setWaitingTargetStepIdx(idx);
+            return;
+          }
 
-            // If Wait For Note mode is active, pause when reaching start of step!
-            if (waitForNoteMode && idx !== lastTriggeredStepRef.current) {
-              lastTriggeredStepRef.current = idx;
-              setIsWaitingOnStep(true);
-              setWaitingTargetStepIdx(idx);
-              return;
-            }
-
-            if (lastTriggeredStepRef.current !== idx && beat - start < 0.1) {
-              lastTriggeredStepRef.current = idx;
-              const fullNotes = notesToTrigger.map((n) => n.fullNote);
-              keysAudioEngine.playChord(fullNotes, `${stepNote.durationBeats * secPerBeat}s`);
-            }
+          if (!triggeredNoteIdsRef.current.has(n.id) && beat - start < 0.15) {
+            triggeredNoteIdsRef.current.add(n.id);
+            notesToTriggerNow.push(n.note);
           }
         }
       });
+
+      if (notesToTriggerNow.length > 0) {
+        keysAudioEngine.playChord(notesToTriggerNow, '8n');
+      }
 
       onActiveNotesChange(activeMap);
       animationFrameRef.current = requestAnimationFrame(loop);
@@ -259,7 +268,18 @@ export default function KeysRunwaySequencer({
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isPlaying, bpm, isLooping, totalBeats, sequenceNotes, onActiveNotesChange, isWaitingOnStep, waitForNoteMode, handFocus]);
+  }, [
+    isPlaying,
+    bpm,
+    isLooping,
+    totalBeats,
+    sequenceNotes,
+    onActiveNotesChange,
+    isWaitingOnStep,
+    waitForNoteMode,
+    handFocus,
+    currentBeat,
+  ]);
 
   // Canvas Continuous Runway / Pianoroll Renderer
   useEffect(() => {
@@ -303,59 +323,74 @@ export default function KeysRunwaySequencer({
       }
 
       // Draw Pitch Lanes
-      const minMidi = 36; // C2
-      const maxMidi = 96; // C7
+      // Cover full pitch range: minMidi = 21 (A0, bottom), maxMidi = 96 (C7, top)
+      // So all LH notes (e.g. F1=29, G1=31, C2=36) fit comfortably inside the canvas!
+      const minMidi = 21;
+      const maxMidi = 96;
       const totalMidis = maxMidi - minMidi + 1;
       const laneHeight = height / totalMidis;
 
       // Draw Note Blocks
-      sequenceNotes.forEach((stepNote, sIdx) => {
-        const startX = hitlineX + (stepNote.timeBeats - currentBeat) * pixelsPerBeat;
-        const noteWidth = Math.max(12, stepNote.durationBeats * pixelsPerBeat - 2);
+      sequenceNotes.forEach((n, idx) => {
+        // Hand focus filter check
+        if (handFocus === 'left' && n.hand !== 'left' && n.midi >= 60) return;
+        if (handFocus === 'right' && n.hand !== 'right' && n.midi < 60) return;
+
+        const dBeats = durationToBeats(n.duration);
+        const startX = hitlineX + (n.time - currentBeat) * pixelsPerBeat;
+        const noteWidth = Math.max(16, dBeats * pixelsPerBeat - 2);
 
         if (startX + noteWidth < 0 || startX > width) return;
 
-        const isStepWaiting = isWaitingOnStep && waitingTargetStepIdx === sIdx;
+        const isStepWaiting = isWaitingOnStep && waitingTargetStepIdx === idx;
+        const isHit = currentBeat >= n.time && currentBeat < n.time + dBeats;
+        const isLH = n.hand === 'left' || n.midi < 60;
 
-        stepNote.notes.forEach((note) => {
-          if (handFocus === 'left' && note.midi >= 60) return;
-          if (handFocus === 'right' && note.midi < 60) return;
+        // Calculate Y: grave ABAJO (higher Y), agudo ARRIBA (lower Y)
+        const clampedMidi = Math.max(minMidi, Math.min(maxMidi, n.midi));
+        const midiOffset = maxMidi - clampedMidi;
+        const blockHeight = Math.max(10, laneHeight * 2.8);
+        const y = Math.max(
+          0,
+          Math.min(height - blockHeight, midiOffset * laneHeight - blockHeight / 2 + laneHeight / 2)
+        );
 
-          const midiOffset = maxMidi - note.midi;
-          const y = midiOffset * laneHeight;
+        ctx.save();
+        if (isStepWaiting) {
+          ctx.shadowColor = '#eab308';
+          ctx.shadowBlur = 18;
+          ctx.fillStyle = '#facc15';
+        } else if (isHit) {
+          // Neon glow when crossing hitline
+          ctx.shadowColor = isLH ? '#818cf8' : '#22d3ee';
+          ctx.shadowBlur = 16;
+          ctx.fillStyle = isLH ? '#a5b4fc' : '#67e8f9';
+        } else {
+          // Left hand: Bloque color Índigo/Púrpura neón (bg-indigo-500 / #818cf8) con etiqueta de la nota.
+          // Right hand: Bloque color Cyan neón (bg-cyan-400 / #22d3ee).
+          ctx.fillStyle = isLH ? '#818cf8' : '#22d3ee';
+        }
 
-          const isHit = currentBeat >= stepNote.timeBeats && currentBeat < stepNote.timeBeats + stepNote.durationBeats;
-          const isLH = note.midi < 60;
+        ctx.beginPath();
+        ctx.roundRect(startX, y, noteWidth, blockHeight, 4);
+        ctx.fill();
 
-          ctx.save();
-          if (isStepWaiting) {
-            ctx.shadowColor = '#eab308';
-            ctx.shadowBlur = 18;
-            ctx.fillStyle = '#facc15';
-          } else if (isHit) {
-            ctx.shadowColor = isLH ? '#a855f7' : '#06b6d4';
-            ctx.shadowBlur = 14;
-            ctx.fillStyle = isLH ? '#c084fc' : '#22d3ee';
-          } else {
-            ctx.fillStyle = isLH ? '#7e22ce' : '#0284c7';
-          }
+        // Crisp border stroke
+        ctx.strokeStyle = isStepWaiting ? '#ca8a04' : isLH ? '#6366f1' : '#0891b2';
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
-          ctx.beginPath();
-          ctx.roundRect(startX, y + 1, noteWidth, Math.max(6, laneHeight - 2), 4);
-          ctx.fill();
+        // Note label text
+        ctx.fillStyle = isStepWaiting ? '#000000' : isLH ? '#1e1b4b' : '#083344';
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText(n.note, startX + 4, y + blockHeight - 2.5);
 
-          if (noteWidth > 20) {
-            ctx.fillStyle = isStepWaiting ? '#000000' : '#ffffff';
-            ctx.font = 'bold 9px monospace';
-            ctx.fillText(note.name, startX + 4, y + laneHeight - 3);
-          }
-          ctx.restore();
-        });
+        ctx.restore();
       });
 
-      // Draw Cyan Neon Hitline
+      // Draw Cyan Neon Hitline at 18%
       ctx.save();
-      ctx.shadowColor = isWaitingOnStep ? '#eab308' : '#06b6d4';
+      ctx.shadowColor = isWaitingOnStep ? '#eab308' : '#22d3ee';
       ctx.shadowBlur = 16;
       ctx.strokeStyle = isWaitingOnStep ? '#facc15' : '#22d3ee';
       ctx.lineWidth = 3;
@@ -364,16 +399,15 @@ export default function KeysRunwaySequencer({
       ctx.lineTo(hitlineX, height);
       ctx.stroke();
 
-      ctx.fillStyle = isWaitingOnStep ? '#eab308' : '#06b6d4';
+      ctx.fillStyle = isWaitingOnStep ? '#eab308' : '#22d3ee';
       ctx.beginPath();
       ctx.arc(hitlineX, 10, 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-
     } else {
       // --- MODO PIANO ROLL DAW ---
       const pixelsPerBeat = width / totalBeats;
-      const minMidi = 36;
+      const minMidi = 21;
       const maxMidi = 96;
       const laneHeight = height / (maxMidi - minMidi + 1);
 
@@ -387,22 +421,22 @@ export default function KeysRunwaySequencer({
         ctx.stroke();
       }
 
-      sequenceNotes.forEach((stepNote) => {
-        const startX = stepNote.timeBeats * pixelsPerBeat;
-        const noteWidth = stepNote.durationBeats * pixelsPerBeat - 1;
+      sequenceNotes.forEach((n) => {
+        if (handFocus === 'left' && n.hand !== 'left' && n.midi >= 60) return;
+        if (handFocus === 'right' && n.hand !== 'right' && n.midi < 60) return;
 
-        stepNote.notes.forEach((note) => {
-          if (handFocus === 'left' && note.midi >= 60) return;
-          if (handFocus === 'right' && note.midi < 60) return;
+        const dBeats = durationToBeats(n.duration);
+        const startX = n.time * pixelsPerBeat;
+        const noteWidth = dBeats * pixelsPerBeat - 1;
 
-          const y = (maxMidi - note.midi) * laneHeight;
-          const isLH = note.midi < 60;
+        const clampedMidi = Math.max(minMidi, Math.min(maxMidi, n.midi));
+        const y = (maxMidi - clampedMidi) * laneHeight;
+        const isLH = n.hand === 'left' || n.midi < 60;
 
-          ctx.fillStyle = isLH ? '#a855f7' : '#06b6d4';
-          ctx.beginPath();
-          ctx.roundRect(startX, y + 1, Math.max(6, noteWidth), Math.max(5, laneHeight - 2), 3);
-          ctx.fill();
-        });
+        ctx.fillStyle = isLH ? '#818cf8' : '#22d3ee';
+        ctx.beginPath();
+        ctx.roundRect(startX, y, Math.max(6, noteWidth), Math.max(5, laneHeight * 2), 3);
+        ctx.fill();
       });
 
       const playheadX = currentBeat * pixelsPerBeat;
@@ -413,13 +447,21 @@ export default function KeysRunwaySequencer({
       ctx.lineTo(playheadX, height);
       ctx.stroke();
     }
-  }, [viewMode, sequenceNotes, currentBeat, totalBeats, isWaitingOnStep, waitingTargetStepIdx, handFocus]);
+  }, [
+    viewMode,
+    sequenceNotes,
+    currentBeat,
+    totalBeats,
+    isWaitingOnStep,
+    waitingTargetStepIdx,
+    handFocus,
+  ]);
 
   // Compute current and next step notes for lateral feedback
-  const currentStepNote = sequenceNotes.find(
-    (s) => currentBeat >= s.timeBeats && currentBeat < s.timeBeats + s.durationBeats
-  );
-  const nextStepNote = sequenceNotes.find((s) => s.timeBeats > currentBeat);
+  const currentActiveNotes = sequenceNotes.filter((s) => {
+    const d = durationToBeats(s.duration);
+    return currentBeat >= s.time && currentBeat < s.time + d;
+  });
 
   const measureNum = Math.floor(currentBeat / 4) + 1;
   const beatNum = Math.floor(currentBeat % 4) + 1;
@@ -516,9 +558,17 @@ export default function KeysRunwaySequencer({
             onClick={() => {
               if (isPlaying) {
                 setIsPlaying(false);
+                try {
+                  Tone.Transport.pause();
+                } catch (e) {}
               } else {
+                keysAudioEngine.init();
+                triggeredNoteIdsRef.current.clear();
                 startTimeRef.current = performance.now() - currentBeat * (60 / bpm) * 1000;
                 setIsPlaying(true);
+                try {
+                  Tone.Transport.start();
+                } catch (e) {}
               }
             }}
             className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 shadow-lg ${
@@ -536,8 +586,14 @@ export default function KeysRunwaySequencer({
               setIsPlaying(false);
               setCurrentBeat(0);
               startTimeRef.current = 0;
+              triggeredNoteIdsRef.current.clear();
               setIsWaitingOnStep(false);
               setWaitingTargetStepIdx(-1);
+              onActiveNotesChange(new Map());
+              try {
+                Tone.Transport.stop();
+                Tone.Transport.seconds = 0;
+              } catch (e) {}
             }}
             className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
             title="Detener / Reiniciar"
@@ -575,7 +631,13 @@ export default function KeysRunwaySequencer({
               min="40"
               max="240"
               value={bpm}
-              onChange={(e) => onBpmChange(parseInt(e.target.value, 10))}
+              onChange={(e) => {
+                const newBpm = parseInt(e.target.value, 10);
+                onBpmChange(newBpm);
+                try {
+                  Tone.Transport.bpm.value = newBpm;
+                } catch (err) {}
+              }}
               className="w-24 accent-cyan-400 cursor-pointer"
             />
             <span className="font-extrabold text-cyan-400 w-8">{bpm}</span>
@@ -711,25 +773,28 @@ export default function KeysRunwaySequencer({
                     ? 'Mano derecha en reposo sobre el regazo.'
                     : activeRoutine
                     ? activeRoutine.rightHandInstruction
-                    : currentStepNote
-                    ? `Toca notas: ${currentStepNote.notes.filter((n) => n.midi >= 60).map((n) => n.name).join(' - ') || 'Melodía / Acordes'}`
+                    : currentActiveNotes.length > 0
+                    ? `Toca notas: ${currentActiveNotes
+                        .filter((n) => n.hand === 'right' || n.midi >= 60)
+                        .map((n) => n.note)
+                        .join(' - ') || 'Melodía / Acordes'}`
                     : 'Sigue la trayectoria del Runway.'}
                 </p>
               </div>
             </div>
 
             {/* Current Active Step Notes */}
-            {currentStepNote && (
+            {currentActiveNotes.length > 0 && (
               <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 flex items-center justify-between text-[11px]">
                 <span className="text-slate-400">Postura Activa:</span>
                 <span className="text-amber-300 font-black">
-                  {currentStepNote.notes
+                  {currentActiveNotes
                     .filter((n) => {
-                      if (handFocus === 'left') return n.midi < 60;
-                      if (handFocus === 'right') return n.midi >= 60;
+                      if (handFocus === 'left') return n.hand === 'left' || n.midi < 60;
+                      if (handFocus === 'right') return n.hand === 'right' || n.midi >= 60;
                       return true;
                     })
-                    .map((n) => n.name)
+                    .map((n) => n.note)
                     .join(' + ') || '(Mano en reposo)'}
                 </span>
               </div>

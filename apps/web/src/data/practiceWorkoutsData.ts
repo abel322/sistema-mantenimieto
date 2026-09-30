@@ -2,6 +2,16 @@ import { AccompanimentTexture, VoicingType } from '@/services/theory/keysTheoryE
 
 export type HandFocus = 'left' | 'right' | 'both';
 
+export interface RunwayNoteEvent {
+  id: string;
+  note: string;       // Ej: 'C2', 'E3', 'G3', 'B3'
+  midi: number;
+  time: number;       // Posición en compases/pasos en beats (ej: 0, 0.5, 1.0, 1.5...)
+  duration: string;   // '4n', '8n', '16n'
+  hand: 'left' | 'right';
+  velocity?: number;
+}
+
 export interface PracticeRoutine {
   id: string;
   title: string;
@@ -19,6 +29,7 @@ export interface PracticeRoutine {
   pedagogicalTip: string;
   handFocus: HandFocus;
   subdivision?: string;
+  notes?: RunwayNoteEvent[];
 }
 
 export type PracticeWorkout = PracticeRoutine;

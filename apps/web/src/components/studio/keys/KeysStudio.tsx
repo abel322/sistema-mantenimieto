@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import * as Tone from 'tone';
 import {
   NoteInfo,
   RunwayStepNote,
@@ -24,6 +25,11 @@ import {
   PracticeRoutine,
   HandFocus,
 } from '@/data/practiceWorkoutsData';
+import {
+  RunwayNoteEvent,
+  generateWorkoutRunwayNotes,
+  stepNotesToRunwayNoteEvents,
+} from '@/services/theory/workoutEngine';
 import { keysAudioEngine, TimbreType } from '@/services/audio/keysAudioEngine';
 import InteractivePianoKeyboard from './InteractivePianoKeyboard';
 import KeysRunwaySequencer from './KeysRunwaySequencer';
@@ -89,7 +95,7 @@ export default function KeysStudio() {
   const [activeNotesMap, setActiveNotesMap] = useState<Map<number, NoteInfo>>(new Map());
 
   // Runway Sequence array
-  const [sequenceNotes, setSequenceNotes] = useState<RunwayStepNote[]>([]);
+  const [sequenceNotes, setSequenceNotes] = useState<RunwayNoteEvent[]>([]);
 
   // Update Timbre & Audio settings
   const handleTimbreChange = (newTimbre: TimbreType) => {
@@ -191,7 +197,14 @@ export default function KeysStudio() {
       voicingType,
       bpm
     );
-    setSequenceNotes(seq);
+    const events = stepNotesToRunwayNoteEvents(seq);
+    setSequenceNotes(events);
+    try {
+      Tone.Transport.bpm.value = bpm;
+      Tone.Transport.seconds = 0;
+    } catch (e) {
+      console.warn('Tone.Transport error', e);
+    }
   }, [rootNote, selectedItemId, category, texture, voicingType, bpm]);
 
   // Handler: Select a Routine from Workouts Dashboard
@@ -201,23 +214,28 @@ export default function KeysStudio() {
       setHandFocus(routine.handFocus);
     }
     setRootNote(routine.rootNote);
-    setBpm(routine.bpm);
+    const targetBpm = routine.bpm || (routine as any).targetBpm || 120;
+    setBpm(targetBpm);
     setTexture(routine.texture);
     setVoicingType(routine.voicingType);
     setCategory(routine.category);
     setSelectedItemId(routine.targetItemId);
 
-    const seq = generateRunwaySequence(
-      routine.rootNote,
-      routine.targetItemId,
-      routine.category,
-      routine.texture,
-      routine.voicingType,
-      routine.bpm
-    );
-    setSequenceNotes(seq);
+    // 1. Generate concrete note events for the routine
+    const runwayNotes = generateWorkoutRunwayNotes(routine);
 
-    // Auto-trigger playback in Runway!
+    // 2. Set runway sequence directly
+    setSequenceNotes(runwayNotes);
+
+    // 3. Adjust Tone.Transport BPM and reset to 0
+    try {
+      Tone.Transport.bpm.value = targetBpm;
+      Tone.Transport.seconds = 0;
+    } catch (e) {
+      console.warn('Tone.Transport error', e);
+    }
+
+    // 4. Auto-trigger playback in Runway!
     setAutoPlayRunway(true);
     setTimeout(() => setAutoPlayRunway(false), 200);
   };
