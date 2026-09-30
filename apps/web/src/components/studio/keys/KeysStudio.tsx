@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   NoteInfo,
@@ -9,6 +9,7 @@ import {
   VoicingType,
   LabelType,
   AccompanimentTexture,
+  CHROMATIC_NOTES,
   CHORD_CATALOG,
   SCALE_CATALOG,
   PROGRESSION_PRESETS,
@@ -18,10 +19,16 @@ import {
   generateRunwaySequence,
 } from '@/services/theory/keysTheoryEngine';
 import { HARMONIC_VAULT } from '@/data/harmonicVaultData';
+import {
+  WORKOUT_LEVELS,
+  PracticeRoutine,
+} from '@/data/practiceWorkoutsData';
 import { keysAudioEngine, TimbreType } from '@/services/audio/keysAudioEngine';
 import InteractivePianoKeyboard from './InteractivePianoKeyboard';
 import KeysRunwaySequencer from './KeysRunwaySequencer';
 import KeysTheoryBar from './KeysTheoryBar';
+import WorkoutsDashboard from './WorkoutsDashboard';
+import JamStation from './JamStation';
 import CircleOfFifthsModal from './CircleOfFifthsModal';
 import {
   Headphones,
@@ -33,9 +40,18 @@ import {
   VolumeX,
   Zap,
   Disc,
+  Target,
+  Radio,
+  BookOpen,
+  Layers,
 } from 'lucide-react';
 
+export type WorkflowMode = 'workouts' | 'jam' | 'theory';
+
 export default function KeysStudio() {
+  // Master Workflow Mode Selector
+  const [workflowMode, setWorkflowMode] = useState<WorkflowMode>('workouts');
+
   // Audio Engine Controls
   const [timbre, setTimbre] = useState<TimbreType>('grand');
   const [sustainActive, setSustainActive] = useState(false);
@@ -50,11 +66,22 @@ export default function KeysStudio() {
   const [labelType, setLabelType] = useState<LabelType>('notes');
   const [keyboardRange, setKeyboardRange] = useState<KeyboardRange>(61);
 
+  // Active Practice Routine (for Level Training Mode)
+  const [activeRoutine, setActiveRoutine] = useState<PracticeRoutine | null>(
+    WORKOUT_LEVELS[0].routines[0]
+  );
+  const [autoPlayRunway, setAutoPlayRunway] = useState(false);
+
+  // Jam Mode State
+  const [selectedJamScaleId, setSelectedJamScaleId] = useState('dorian');
+  const [smartGuardActive, setSmartGuardActive] = useState(true);
+  const [blockWrongKeys, setBlockWrongKeys] = useState(false);
+
   // Modal State
   const [isCircleModalOpen, setIsCircleModalOpen] = useState(false);
 
   // Sequencer & Active Notes State
-  const [bpm, setBpm] = useState(115);
+  const [bpm, setBpm] = useState(75);
   const [stepRecordActive, setStepRecordActive] = useState(false);
   const [lastKeyboardTriggerNote, setLastKeyboardTriggerNote] = useState<NoteInfo | null>(null);
   const [activeNotesMap, setActiveNotesMap] = useState<Map<number, NoteInfo>>(new Map());
@@ -79,8 +106,53 @@ export default function KeysStudio() {
     keysAudioEngine.setVolume(v);
   };
 
+  // Compute Smart Key Guard sets (Target Notes, Safe Notes, and PC keyboard letters)
+  const { targetNotesSet, safeNotesSet, pcKeyLabelsMap } = useMemo(() => {
+    const targets = new Set<number>();
+    const safes = new Set<number>();
+    const pcMap = new Map<number, string>();
+
+    const rootIdx = CHROMATIC_NOTES.indexOf(rootNote);
+    const validRootIdx = rootIdx >= 0 ? rootIdx : 0;
+    const scale = SCALE_CATALOG.find((s) => s.id === selectedJamScaleId) || SCALE_CATALOG[0];
+
+    // Build for octaves 2 to 7
+    for (let oct = 2; oct <= 7; oct++) {
+      const rootMidi = 12 * (oct + 1) + validRootIdx;
+      const fifthMidi = rootMidi + 7;
+
+      targets.add(rootMidi);
+      targets.add(fifthMidi);
+
+      scale.intervals.forEach((semi) => {
+        const midi = rootMidi + semi;
+        if (midi !== rootMidi && midi !== fifthMidi) {
+          safes.add(midi);
+        }
+      });
+    }
+
+    // Build PC Keyboard letter mapping starting at Octave 4
+    const laptopKeys = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'Ñ'];
+    const scaleMidisOct4: number[] = [];
+    for (let oct = 4; oct <= 5; oct++) {
+      const rootMidi = 12 * (oct + 1) + validRootIdx;
+      scale.intervals.forEach((semi) => {
+        scaleMidisOct4.push(rootMidi + semi);
+      });
+    }
+
+    scaleMidisOct4.slice(0, laptopKeys.length).forEach((midi, idx) => {
+      pcMap.set(midi, laptopKeys[idx]);
+    });
+
+    return { targetNotesSet: targets, safeNotesSet: safes, pcKeyLabelsMap: pcMap };
+  }, [rootNote, selectedJamScaleId]);
+
   // Generate Theory Preview Notes on Keyboard when theory selection changes
   useEffect(() => {
+    if (workflowMode === 'jam') return; // in jam mode, smart guard handles illumination
+
     const map = new Map<number, NoteInfo>();
 
     const vaultFormula = HARMONIC_VAULT.find((f) => f.id === selectedItemId);
@@ -105,7 +177,7 @@ export default function KeysStudio() {
     }
 
     setActiveNotesMap(map);
-  }, [rootNote, category, selectedItemId, voicingType]);
+  }, [rootNote, category, selectedItemId, voicingType, workflowMode]);
 
   // Master Action: Load calculated sequence into Runway
   const handleLoadIntoRunway = useCallback(() => {
@@ -120,9 +192,38 @@ export default function KeysStudio() {
     setSequenceNotes(seq);
   }, [rootNote, selectedItemId, category, texture, voicingType, bpm]);
 
+  // Handler: Select a Routine from Workouts Dashboard
+  const handleSelectRoutine = (routine: PracticeRoutine) => {
+    setActiveRoutine(routine);
+    setRootNote(routine.rootNote);
+    setBpm(routine.bpm);
+    setTexture(routine.texture);
+    setVoicingType(routine.voicingType);
+    setCategory(routine.category);
+    setSelectedItemId(routine.targetItemId);
+
+    const seq = generateRunwaySequence(
+      routine.rootNote,
+      routine.targetItemId,
+      routine.category,
+      routine.texture,
+      routine.voicingType,
+      routine.bpm
+    );
+    setSequenceNotes(seq);
+
+    // Auto-trigger playback in Runway!
+    setAutoPlayRunway(true);
+    setTimeout(() => setAutoPlayRunway(false), 200);
+  };
+
   // Initial load into runway
   useEffect(() => {
-    handleLoadIntoRunway();
+    if (activeRoutine) {
+      handleSelectRoutine(activeRoutine);
+    } else {
+      handleLoadIntoRunway();
+    }
   }, []);
 
   return (
@@ -152,7 +253,7 @@ export default function KeysStudio() {
             Estudio Interactivo de Teclado, Piano &amp; Armonía Moderna
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Módulo aislado para práctica de piano, voicings de Jazz/Neo-Soul, secuenciador continuo Runway y enciclopedia teórica.
+            Sistema pedagógico integral: entrenamientos progresivos por nivel, sala de improvisación guiada y enciclopedia armónica completa.
           </p>
         </div>
 
@@ -168,7 +269,7 @@ export default function KeysStudio() {
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span>🎹 Grand Piano Acústico</span>
+              <span>🎹 Grand Piano</span>
             </button>
             <button
               onClick={() => handleTimbreChange('rhodes')}
@@ -178,7 +279,7 @@ export default function KeysStudio() {
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <span>⚡ Neo-Soul EP (Rhodes)</span>
+              <span>⚡ Neo-Soul Rhodes</span>
             </button>
           </div>
 
@@ -191,7 +292,7 @@ export default function KeysStudio() {
                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
             }`}
           >
-            Pedal Sustain {sustainActive ? '[ON]' : '[OFF]'}
+            Sustain {sustainActive ? '[ON]' : '[OFF]'}
           </button>
 
           {/* Volume Slider */}
@@ -209,36 +310,124 @@ export default function KeysStudio() {
         </div>
       </div>
 
-      {/* 1. Theory Bar & Harmonic Catalog */}
-      <KeysTheoryBar
-        rootNote={rootNote}
-        onRootNoteChange={setRootNote}
-        selectedCategory={category}
-        onCategoryChange={setCategory}
-        selectedItemId={selectedItemId}
-        onItemSelect={setSelectedItemId}
-        voicingType={voicingType}
-        onVoicingChange={setVoicingType}
-        texture={texture}
-        onTextureChange={setTexture}
-        labelType={labelType}
-        onLabelTypeChange={setLabelType}
-        onOpenCircleOfFifths={() => setIsCircleModalOpen(true)}
-        onLoadIntoRunway={handleLoadIntoRunway}
-      />
+      {/* ======================================================= */}
+      {/* 1. SELECTOR MAESTRO DE MODALIDAD (Workstation Header)   */}
+      {/* ======================================================= */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-[#090f21] border border-slate-800 shadow-xl">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setWorkflowMode('workouts')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+              workflowMode === 'workouts'
+                ? 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25 scale-[1.01]'
+                : 'bg-slate-950/70 text-slate-400 hover:text-white border border-slate-800/80'
+            }`}
+          >
+            <Target className="w-4 h-4 fill-current" />
+            <span>🎯 Entrenamientos por Nivel</span>
+          </button>
 
-      {/* 2. Interactive Piano Keyboard */}
+          <button
+            onClick={() => setWorkflowMode('jam')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+              workflowMode === 'jam'
+                ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.01]'
+                : 'bg-slate-950/70 text-slate-400 hover:text-white border border-slate-800/80'
+            }`}
+          >
+            <Radio className="w-4 h-4" />
+            <span>🎷 Modo Jam &amp; Improvisación</span>
+          </button>
+
+          <button
+            onClick={() => setWorkflowMode('theory')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+              workflowMode === 'theory'
+                ? 'bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/25 scale-[1.01]'
+                : 'bg-slate-950/70 text-slate-400 hover:text-white border border-slate-800/80'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>📚 Explorador Teórico Libre</span>
+          </button>
+        </div>
+
+        {/* Status Indicator */}
+        <div className="hidden sm:flex items-center gap-2 pr-3 font-mono text-xs text-slate-400">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span>
+            {workflowMode === 'workouts'
+              ? 'Práctica Dirigida: 4 Niveles'
+              : workflowMode === 'jam'
+              ? 'Sala de Jam: Smart Guard Activo'
+              : 'Enciclopedia: 69 Acordes + 200 Cadencias'}
+          </span>
+        </div>
+      </div>
+
+      {/* ======================================================= */}
+      {/* 2. DYNAMIC WORKSTATION VIEW (Workouts / Jam / Theory)   */}
+      {/* ======================================================= */}
+      {workflowMode === 'workouts' && (
+        <WorkoutsDashboard
+          activeRoutineId={activeRoutine?.id}
+          onSelectRoutine={handleSelectRoutine}
+        />
+      )}
+
+      {workflowMode === 'jam' && (
+        <JamStation
+          rootNote={rootNote}
+          onRootNoteChange={setRootNote}
+          selectedScaleId={selectedJamScaleId}
+          onSelectScaleId={setSelectedJamScaleId}
+          smartGuardActive={smartGuardActive}
+          onSmartGuardToggle={setSmartGuardActive}
+          blockWrongKeys={blockWrongKeys}
+          onBlockWrongKeysToggle={setBlockWrongKeys}
+        />
+      )}
+
+      {workflowMode === 'theory' && (
+        <KeysTheoryBar
+          rootNote={rootNote}
+          onRootNoteChange={setRootNote}
+          selectedCategory={category}
+          onCategoryChange={setCategory}
+          selectedItemId={selectedItemId}
+          onItemSelect={setSelectedItemId}
+          voicingType={voicingType}
+          onVoicingChange={setVoicingType}
+          texture={texture}
+          onTextureChange={setTexture}
+          labelType={labelType}
+          onLabelTypeChange={setLabelType}
+          onOpenCircleOfFifths={() => setIsCircleModalOpen(true)}
+          onLoadIntoRunway={handleLoadIntoRunway}
+        />
+      )}
+
+      {/* ======================================================= */}
+      {/* 3. INTERACTIVE PIANO KEYBOARD (With Smart Guard)        */}
+      {/* ======================================================= */}
       <InteractivePianoKeyboard
         range={keyboardRange}
         onRangeChange={setKeyboardRange}
         activeNotesMap={activeNotesMap}
         activeLabelType={labelType}
+        smartKeyGuardMode={workflowMode === 'jam' && smartGuardActive}
+        targetNotesSet={targetNotesSet}
+        safeNotesSet={safeNotesSet}
+        blockWrongKeys={blockWrongKeys}
+        pcKeyLabelsMap={pcKeyLabelsMap}
         onKeyTrigger={(note, isDown) => {
           if (isDown) setLastKeyboardTriggerNote(note);
         }}
       />
 
-      {/* 3. Runway Sequencer */}
+      {/* ======================================================= */}
+      {/* 4. RUNWAY SEQUENCER (With Lateral Feedback & Wait Mode) */}
+      {/* ======================================================= */}
       <KeysRunwaySequencer
         sequenceNotes={sequenceNotes}
         onSequenceUpdate={setSequenceNotes}
@@ -248,9 +437,11 @@ export default function KeysStudio() {
         stepRecordActive={stepRecordActive}
         onStepRecordToggle={setStepRecordActive}
         lastKeyboardTriggerNote={lastKeyboardTriggerNote}
+        activeRoutine={activeRoutine}
+        autoPlayTrigger={autoPlayRunway}
       />
 
-      {/* 4. Circle of Fifths Modal */}
+      {/* 5. Circle of Fifths Modal */}
       <CircleOfFifthsModal
         isOpen={isCircleModalOpen}
         onClose={() => setIsCircleModalOpen(false)}

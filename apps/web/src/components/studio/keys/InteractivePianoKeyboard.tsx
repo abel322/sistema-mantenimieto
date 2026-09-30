@@ -9,7 +9,7 @@ import {
   midiToNoteInfo,
 } from '@/services/theory/keysTheoryEngine';
 import { keysAudioEngine } from '@/services/audio/keysAudioEngine';
-import { Layers, Zap, Hand, Sliders, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Layers, Zap, Hand, Sliders, ChevronLeft, ChevronRight, Shield, Keyboard } from 'lucide-react';
 
 interface InteractivePianoKeyboardProps {
   range: KeyboardRange;
@@ -17,6 +17,11 @@ interface InteractivePianoKeyboardProps {
   activeNotesMap?: Map<number, NoteInfo>; // Notes triggered by Runway or Theory engine
   activeLabelType?: LabelType;
   splitPointMidi?: number;
+  smartKeyGuardMode?: boolean;
+  targetNotesSet?: Set<number>; // Root and 5th (Golden Keys)
+  safeNotesSet?: Set<number>;   // In-scale notes (Bright Cyan)
+  blockWrongKeys?: boolean;
+  pcKeyLabelsMap?: Map<number, string>; // Maps midi to keyboard letter (e.g. 60 -> 'A')
   onKeyTrigger?: (note: NoteInfo, isDown: boolean) => void;
   className?: string;
 }
@@ -27,6 +32,11 @@ export default function InteractivePianoKeyboard({
   activeNotesMap = new Map(),
   activeLabelType = 'notes',
   splitPointMidi = 60,
+  smartKeyGuardMode = false,
+  targetNotesSet = new Set(),
+  safeNotesSet = new Set(),
+  blockWrongKeys = false,
+  pcKeyLabelsMap = new Map(),
   onKeyTrigger,
   className = '',
 }: InteractivePianoKeyboardProps) {
@@ -48,14 +58,24 @@ export default function InteractivePianoKeyboard({
 
   const whiteKeys = allKeys.filter((k) => !k.isBlack);
 
+  // Check if a note is playable under Smart Guard
+  const isPlayable = useCallback(
+    (midi: number) => {
+      if (!smartKeyGuardMode || !blockWrongKeys) return true;
+      return targetNotesSet.has(midi) || safeNotesSet.has(midi);
+    },
+    [smartKeyGuardMode, blockWrongKeys, targetNotesSet, safeNotesSet]
+  );
+
   // Handle note attack / release
   const handleNoteStart = useCallback(
     (note: NoteInfo) => {
+      if (!isPlayable(note.midi)) return;
       keysAudioEngine.playNote(note.fullNote);
       setPressedMidis((prev) => new Set(prev).add(note.midi));
       onKeyTrigger?.(note, true);
     },
-    [onKeyTrigger]
+    [isPlayable, onKeyTrigger]
   );
 
   const handleNoteEnd = useCallback(
@@ -80,9 +100,15 @@ export default function InteractivePianoKeyboard({
     return () => window.removeEventListener('mouseup', onGlobalMouseUp);
   }, []);
 
-  // Keyboard shortcut mapping (Middle octave playing with QWERTY keys)
+  // Keyboard shortcut mapping (Middle octave or Smart Guard PC keys)
   useEffect(() => {
-    const keyMap: { [key: string]: number } = {
+    // If smart guard has custom PC key mapping, invert it for key listening
+    const invertedPcMap: { [key: string]: number } = {};
+    pcKeyLabelsMap.forEach((letter, midi) => {
+      invertedPcMap[letter.toLowerCase()] = midi;
+    });
+
+    const defaultKeyMap: { [key: string]: number } = {
       a: 60, // C4
       w: 61, // C#4
       s: 62, // D4
@@ -96,6 +122,11 @@ export default function InteractivePianoKeyboard({
       u: 70, // A#4
       j: 71, // B4
       k: 72, // C5
+      o: 73, // C#5
+      l: 74, // D5
+      p: 75, // D#5
+      ñ: 76, // E5
+      ';': 76,
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -108,8 +139,15 @@ export default function InteractivePianoKeyboard({
         return;
       }
 
-      if (keyMap[lower]) {
-        const targetMidi = keyMap[lower] + octaveOffset * 12;
+      if (smartKeyGuardMode && invertedPcMap[lower] !== undefined) {
+        const targetMidi = invertedPcMap[lower];
+        const note = midiToNoteInfo(targetMidi);
+        handleNoteStart(note);
+        return;
+      }
+
+      if (defaultKeyMap[lower]) {
+        const targetMidi = defaultKeyMap[lower] + octaveOffset * 12;
         const note = midiToNoteInfo(targetMidi);
         handleNoteStart(note);
       }
@@ -124,8 +162,15 @@ export default function InteractivePianoKeyboard({
         return;
       }
 
-      if (keyMap[lower]) {
-        const targetMidi = keyMap[lower] + octaveOffset * 12;
+      if (smartKeyGuardMode && invertedPcMap[lower] !== undefined) {
+        const targetMidi = invertedPcMap[lower];
+        const note = midiToNoteInfo(targetMidi);
+        handleNoteEnd(note);
+        return;
+      }
+
+      if (defaultKeyMap[lower]) {
+        const targetMidi = defaultKeyMap[lower] + octaveOffset * 12;
         const note = midiToNoteInfo(targetMidi);
         handleNoteEnd(note);
       }
@@ -137,13 +182,12 @@ export default function InteractivePianoKeyboard({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleNoteStart, handleNoteEnd, octaveOffset]);
+  }, [smartKeyGuardMode, pcKeyLabelsMap, handleNoteStart, handleNoteEnd, octaveOffset]);
 
-  // Determine key positions for overlay of black keys
   const whiteKeyWidthPercent = 100 / whiteKeys.length;
 
   return (
-    <div className={`w-full flex flex-col gap-3 p-4 rounded-2xl bg-[#0b1329]/90 border border-slate-800 shadow-2xl backdrop-blur-md ${className}`}>
+    <div className={`w-full flex flex-col gap-3 p-4 rounded-2xl bg-[#0b1329]/95 border border-slate-800 shadow-2xl backdrop-blur-md ${className}`}>
       {/* Keyboard Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-2 text-xs font-mono">
         <div className="flex items-center gap-3">
@@ -151,6 +195,14 @@ export default function InteractivePianoKeyboard({
             <Zap className="w-4 h-4" />
             <span>Interactive Piano Keyboard</span>
           </div>
+
+          {smartKeyGuardMode && (
+            <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 font-bold animate-pulse">
+              <Shield className="w-3 h-3 text-amber-400" />
+              <span>Smart Key Guard Activo</span>
+            </span>
+          )}
+
           <span className="text-slate-500">|</span>
           {/* 61 vs 88 keys range toggle */}
           <div className="flex items-center bg-slate-900/80 p-1 rounded-lg border border-slate-700/60">
@@ -198,13 +250,22 @@ export default function InteractivePianoKeyboard({
             </button>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
-            <Hand className="w-3.5 h-3.5 text-purple-400" />
-            <span>Mano Izquierda (&lt;C4)</span>
-            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-            <span className="ml-1 text-cyan-400 font-bold">Mano Derecha (&ge;C4)</span>
-            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-          </div>
+          {!smartKeyGuardMode ? (
+            <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
+              <Hand className="w-3.5 h-3.5 text-purple-400" />
+              <span>Mano Izquierda (&lt;C4)</span>
+              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+              <span className="ml-1 text-cyan-400 font-bold">Mano Derecha (&ge;C4)</span>
+              <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,1)]"></span>
+              <span className="text-amber-300 font-bold">Target (1 / 5)</span>
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,1)] ml-2"></span>
+              <span className="text-cyan-300 font-bold">Escala Segura</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -212,11 +273,17 @@ export default function InteractivePianoKeyboard({
       <div className="relative w-full h-44 sm:h-52 select-none overflow-hidden rounded-xl border border-slate-800 bg-[#050914] shadow-inner p-1">
         {/* White Keys Row */}
         <div className="flex w-full h-full">
-          {whiteKeys.map((keyInfo, whiteIdx) => {
+          {whiteKeys.map((keyInfo) => {
             const isManualPressed = pressedMidis.has(keyInfo.midi);
             const activeTheoryNote = activeNotesMap.get(keyInfo.midi);
             const isActive = isManualPressed || !!activeTheoryNote;
             const isLH = keyInfo.midi < splitPointMidi;
+
+            // Smart Guard Status
+            const isTarget = smartKeyGuardMode && targetNotesSet.has(keyInfo.midi);
+            const isSafe = smartKeyGuardMode && safeNotesSet.has(keyInfo.midi);
+            const isOutOfKey = smartKeyGuardMode && !isTarget && !isSafe;
+            const pcKeyLabel = pcKeyLabelsMap.get(keyInfo.midi);
 
             // Display Label Text
             let labelText = '';
@@ -226,6 +293,29 @@ export default function InteractivePianoKeyboard({
               labelText = activeTheoryNote.interval;
             } else if (activeLabelType === 'fingers' && activeTheoryNote?.finger) {
               labelText = `F${activeTheoryNote.finger}`;
+            }
+
+            // Determine styling
+            let keyStyleClass = 'bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-[#e2e8f0] hover:bg-slate-100 text-slate-700';
+
+            if (smartKeyGuardMode) {
+              if (isTarget) {
+                keyStyleClass = isActive
+                  ? 'bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-500 text-slate-950 font-black shadow-[0_0_24px_rgba(245,158,11,1)] scale-[0.99] translate-y-1'
+                  : 'bg-gradient-to-b from-amber-300/90 via-yellow-200 to-amber-400/90 text-slate-900 border-b-4 border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)]';
+              } else if (isSafe) {
+                keyStyleClass = isActive
+                  ? 'bg-gradient-to-b from-cyan-300 via-sky-400 to-blue-500 text-slate-950 font-black shadow-[0_0_20px_rgba(6,182,212,1)] scale-[0.99] translate-y-1'
+                  : 'bg-gradient-to-b from-cyan-100 via-sky-100 to-cyan-200 text-slate-900 border-b-4 border-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]';
+              } else if (isOutOfKey) {
+                keyStyleClass = blockWrongKeys
+                  ? 'bg-[#0f172a]/40 text-slate-600 opacity-20 cursor-not-allowed border-r border-slate-900'
+                  : 'bg-slate-300/40 text-slate-500 opacity-40';
+              }
+            } else if (isActive) {
+              keyStyleClass = isLH
+                ? 'bg-gradient-to-b from-purple-500 via-purple-400 to-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.9)] scale-[0.99] translate-y-1'
+                : 'bg-gradient-to-b from-amber-400 via-amber-300 to-yellow-500 text-slate-950 shadow-[0_0_15px_rgba(234,179,8,0.9)] scale-[0.99] translate-y-1';
             }
 
             return (
@@ -254,30 +344,38 @@ export default function InteractivePianoKeyboard({
                   handleNoteEnd(keyInfo);
                 }}
                 style={{ width: `${whiteKeyWidthPercent}%` }}
-                className={`group relative h-full flex flex-col justify-end items-center pb-2 cursor-pointer border-r border-slate-300/40 rounded-b-md transition-all duration-75 ${
-                  isActive
-                    ? isLH
-                      ? 'bg-gradient-to-b from-purple-500 via-purple-400 to-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.9)] scale-[0.99] translate-y-1'
-                      : 'bg-gradient-to-b from-amber-400 via-amber-300 to-yellow-500 text-slate-950 shadow-[0_0_15px_rgba(234,179,8,0.9)] scale-[0.99] translate-y-1'
-                    : 'bg-gradient-to-b from-[#f8fafc] via-[#f1f5f9] to-[#e2e8f0] hover:bg-slate-100 text-slate-700'
-                }`}
+                className={`group relative h-full flex flex-col justify-between items-center py-2 cursor-pointer border-r border-slate-300/40 rounded-b-md transition-all duration-75 ${keyStyleClass}`}
               >
-                {/* Finger or Hand Split Tag */}
-                {activeTheoryNote && (
-                  <div
-                    className={`absolute top-2 text-[9px] font-bold font-mono px-1.5 py-0.5 rounded-full shadow-sm ${
-                      isLH ? 'bg-purple-900/90 text-purple-200' : 'bg-cyan-950/90 text-cyan-200'
-                    }`}
-                  >
-                    {activeTheoryNote.finger ? `F${activeTheoryNote.finger}` : isLH ? 'LH' : 'RH'}
-                  </div>
-                )}
+                {/* Top Badge: PC Key Mapping or Finger / Hand Split */}
+                <div className="flex flex-col items-center gap-1">
+                  {pcKeyLabel && (
+                    <span className="text-[10px] font-black font-mono px-1.5 py-0.5 rounded bg-slate-950 text-amber-300 border border-amber-400/80 shadow-md">
+                      [{pcKeyLabel}]
+                    </span>
+                  )}
 
-                {/* Key Label */}
+                  {!smartKeyGuardMode && activeTheoryNote && (
+                    <div
+                      className={`text-[9px] font-bold font-mono px-1.5 py-0.5 rounded-full shadow-sm ${
+                        isLH ? 'bg-purple-900/90 text-purple-200' : 'bg-cyan-950/90 text-cyan-200'
+                      }`}
+                    >
+                      {activeTheoryNote.finger ? `F${activeTheoryNote.finger}` : isLH ? 'LH' : 'RH'}
+                    </div>
+                  )}
+
+                  {smartKeyGuardMode && isTarget && !pcKeyLabel && (
+                    <span className="text-[8px] font-black uppercase px-1 py-0.5 rounded bg-amber-950 text-amber-200 border border-amber-600">
+                      Target
+                    </span>
+                  )}
+                </div>
+
+                {/* Bottom Key Label */}
                 {labelText && (
                   <span
                     className={`text-[10px] font-extrabold font-mono tracking-tighter ${
-                      isActive ? 'text-slate-950 font-black' : 'text-slate-600 group-hover:text-slate-900'
+                      isActive || isTarget || isSafe ? 'text-slate-950 font-black' : 'text-slate-600 group-hover:text-slate-900'
                     }`}
                   >
                     {labelText}
@@ -292,7 +390,6 @@ export default function InteractivePianoKeyboard({
         {allKeys.map((keyInfo) => {
           if (!keyInfo.isBlack) return null;
 
-          // Find preceding white key index to position black key exactly over seam
           const precedingWhiteCount = whiteKeys.filter((wk) => wk.midi < keyInfo.midi).length;
           const leftPercent = precedingWhiteCount * whiteKeyWidthPercent - whiteKeyWidthPercent * 0.35;
           const blackWidthPercent = whiteKeyWidthPercent * 0.7;
@@ -302,6 +399,11 @@ export default function InteractivePianoKeyboard({
           const isActive = isManualPressed || !!activeTheoryNote;
           const isLH = keyInfo.midi < splitPointMidi;
 
+          const isTarget = smartKeyGuardMode && targetNotesSet.has(keyInfo.midi);
+          const isSafe = smartKeyGuardMode && safeNotesSet.has(keyInfo.midi);
+          const isOutOfKey = smartKeyGuardMode && !isTarget && !isSafe;
+          const pcKeyLabel = pcKeyLabelsMap.get(keyInfo.midi);
+
           let labelText = '';
           if (activeLabelType === 'notes') {
             labelText = keyInfo.name;
@@ -309,6 +411,28 @@ export default function InteractivePianoKeyboard({
             labelText = activeTheoryNote.interval;
           } else if (activeLabelType === 'fingers' && activeTheoryNote?.finger) {
             labelText = `F${activeTheoryNote.finger}`;
+          }
+
+          let blackStyleClass = 'bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#020617] hover:from-[#334155] hover:to-[#0f172a] text-slate-400 border border-slate-900';
+
+          if (smartKeyGuardMode) {
+            if (isTarget) {
+              blackStyleClass = isActive
+                ? 'bg-gradient-to-b from-amber-400 via-yellow-400 to-amber-600 text-slate-950 font-black shadow-[0_0_24px_rgba(245,158,11,1)] border border-amber-300 translate-y-0.5'
+                : 'bg-gradient-to-b from-amber-600 via-yellow-600 to-amber-700 text-white font-bold border border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.6)]';
+            } else if (isSafe) {
+              blackStyleClass = isActive
+                ? 'bg-gradient-to-b from-cyan-400 via-cyan-500 to-blue-600 text-slate-950 font-black shadow-[0_0_20px_rgba(6,182,212,1)] border border-cyan-300 translate-y-0.5'
+                : 'bg-gradient-to-b from-cyan-700 via-sky-800 to-cyan-900 text-cyan-200 border border-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]';
+            } else if (isOutOfKey) {
+              blackStyleClass = blockWrongKeys
+                ? 'bg-black/60 text-slate-700 opacity-20 cursor-not-allowed border border-slate-950'
+                : 'bg-slate-950/70 text-slate-600 opacity-35 border border-slate-900';
+            }
+          } else if (isActive) {
+            blackStyleClass = isLH
+              ? 'bg-gradient-to-b from-purple-600 via-purple-500 to-purple-700 text-white shadow-[0_0_16px_rgba(168,85,247,0.95)] translate-y-0.5'
+              : 'bg-gradient-to-b from-cyan-400 via-cyan-500 to-cyan-600 text-slate-950 shadow-[0_0_16px_rgba(6,182,212,0.95)] translate-y-0.5';
           }
 
           return (
@@ -344,30 +468,28 @@ export default function InteractivePianoKeyboard({
                 left: `${leftPercent}%`,
                 width: `${blackWidthPercent}%`,
               }}
-              className={`absolute top-0 h-[62%] rounded-b-md cursor-pointer z-10 flex flex-col justify-end items-center pb-2 transition-all duration-75 border border-slate-900 shadow-xl ${
-                isActive
-                  ? isLH
-                    ? 'bg-gradient-to-b from-purple-600 via-purple-500 to-purple-700 text-white shadow-[0_0_16px_rgba(168,85,247,0.95)] translate-y-0.5'
-                    : 'bg-gradient-to-b from-cyan-400 via-cyan-500 to-cyan-600 text-slate-950 shadow-[0_0_16px_rgba(6,182,212,0.95)] translate-y-0.5'
-                  : 'bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#020617] hover:from-[#334155] hover:to-[#0f172a] text-slate-400'
-              }`}
+              className={`absolute top-0 h-[62%] rounded-b-md cursor-pointer z-10 flex flex-col justify-between items-center py-1.5 transition-all duration-75 shadow-xl ${blackStyleClass}`}
             >
-              {/* Black Key Top Bevel Accent Line */}
-              <div className="absolute top-0 inset-x-0 h-1 bg-slate-600/40 rounded-t-sm" />
-
-              {/* Finger tag */}
-              {activeTheoryNote && (
-                <div
-                  className={`absolute top-1 text-[8px] font-bold font-mono px-1 rounded ${
-                    isLH ? 'bg-purple-950 text-purple-200' : 'bg-cyan-950 text-cyan-200'
-                  }`}
-                >
-                  {activeTheoryNote.finger ? `F${activeTheoryNote.finger}` : '•'}
-                </div>
-              )}
+              {/* PC Key Badge or Finger Tag */}
+              <div className="flex flex-col items-center">
+                {pcKeyLabel && (
+                  <span className="text-[9px] font-black font-mono px-1 rounded bg-slate-950 text-amber-300 border border-amber-400/80 shadow">
+                    [{pcKeyLabel}]
+                  </span>
+                )}
+                {!smartKeyGuardMode && activeTheoryNote && (
+                  <div
+                    className={`text-[8px] font-bold font-mono px-1 rounded ${
+                      isLH ? 'bg-purple-950 text-purple-200' : 'bg-cyan-950 text-cyan-200'
+                    }`}
+                  >
+                    {activeTheoryNote.finger ? `F${activeTheoryNote.finger}` : '•'}
+                  </div>
+                )}
+              </div>
 
               {labelText && (
-                <span className="text-[9px] font-bold font-mono tracking-tighter text-slate-200">
+                <span className="text-[9px] font-bold font-mono tracking-tighter">
                   {labelText}
                 </span>
               )}
