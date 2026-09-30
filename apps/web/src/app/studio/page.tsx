@@ -90,6 +90,13 @@ export default function StudioPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             <span>Strings Lab</span>
           </Link>
+          <Link
+            href="/studio/keys"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold text-purple-400 hover:bg-purple-400/10 border border-purple-400/30 transition-all flex items-center gap-1.5 shadow-sm"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            <span>Keys Lab</span>
+          </Link>
         </div>
       </div>
 
