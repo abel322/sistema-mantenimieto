@@ -6,6 +6,7 @@ import {
   PROGRESSION_PRESETS,
   AccompanimentTexture,
   RunwayStepNote,
+  getTransposedFormulaChords,
 } from './keysTheoryEngine';
 import { HARMONIC_VAULT } from '@/data/harmonicVaultData';
 
@@ -719,6 +720,99 @@ export function generateGenericWorkoutNotes(workout: PracticeRoutine): RunwayNot
   const root = workout.rootNote || 'C';
   const handFocus = workout.handFocus || 'both';
   const texture = workout.texture || 'arpeggio_asc';
+
+  // Si pertenece a HARMONIC_VAULT (cadencias o progresiones)
+  if (
+    workout.category === 'cadencia' ||
+    workout.category === 'progression' ||
+    workout.category === 'progresion'
+  ) {
+    const vaultFormula = HARMONIC_VAULT.find((item) => item.id === workout.targetItemId);
+    if (vaultFormula) {
+      const transposedChords = getTransposedFormulaChords(
+        vaultFormula,
+        root,
+        workout.voicingType || 'close'
+      );
+      let currentBeat = 0;
+      transposedChords.forEach((chordData) => {
+        const cNotes = chordData.notes;
+        const bassNote = cNotes[0];
+        const upperNotes = cNotes.length > 1 ? cNotes.slice(1) : cNotes;
+
+        if (texture === 'comping') {
+          [0, 2].forEach((offset) => {
+            cNotes.forEach((n) => {
+              let assignedHand: 'left' | 'right' = 'right';
+              if (handFocus === 'left') assignedHand = 'left';
+              else if (handFocus === 'right') assignedHand = 'right';
+              else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+              events.push(createNote(n.fullNote, currentBeat + offset, '2n', assignedHand, 0.85));
+            });
+          });
+        } else if (texture === 'arpeggio_desc') {
+          [...cNotes].reverse().forEach((n, nIdx) => {
+            let assignedHand: 'left' | 'right' = 'right';
+            if (handFocus === 'left') assignedHand = 'left';
+            else if (handFocus === 'right') assignedHand = 'right';
+            else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+            events.push(createNote(n.fullNote, currentBeat + nIdx * 0.5, '8n', assignedHand, 0.85));
+          });
+        } else if (texture === 'alberti_bass') {
+          const r = cNotes[0];
+          const third = cNotes.length >= 2 ? cNotes[1] : cNotes[0];
+          const fifth = cNotes.length >= 3 ? cNotes[2] : (cNotes.length >= 2 ? cNotes[1] : cNotes[0]);
+          [r, fifth, third, fifth, r, fifth, third, fifth].forEach((n, nIdx) => {
+            let assignedHand: 'left' | 'right' = 'right';
+            if (handFocus === 'left') assignedHand = 'left';
+            else if (handFocus === 'right') assignedHand = 'right';
+            else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+            events.push(createNote(n.fullNote, currentBeat + nIdx * 0.5, '8n', assignedHand, 0.85));
+          });
+        } else if (texture === 'lh_bass_rh_chord') {
+          [0, 2].forEach((offset) => {
+            events.push(
+              createNote(
+                bassNote.fullNote,
+                currentBeat + offset,
+                '2n',
+                handFocus === 'right' ? 'right' : 'left',
+                0.9
+              )
+            );
+          });
+          [0.5, 2.5].forEach((offset) => {
+            upperNotes.forEach((un) => {
+              events.push(
+                createNote(
+                  un.fullNote,
+                  currentBeat + offset,
+                  '1.5n',
+                  handFocus === 'left' ? 'left' : 'right',
+                  0.82
+                )
+              );
+            });
+          });
+        } else {
+          // arpeggio_asc default
+          cNotes.forEach((n, nIdx) => {
+            let assignedHand: 'left' | 'right' = 'right';
+            if (handFocus === 'left') assignedHand = 'left';
+            else if (handFocus === 'right') assignedHand = 'right';
+            else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+            events.push(createNote(n.fullNote, currentBeat + nIdx * 0.5, '8n', assignedHand, 0.85));
+          });
+        }
+        currentBeat += 4;
+      });
+      return events;
+    }
+  }
 
   // 1. Determine base scale or chord notes
   let pitchMidis: number[] = [];
