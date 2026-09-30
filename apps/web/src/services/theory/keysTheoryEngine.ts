@@ -14,7 +14,7 @@ export interface NoteInfo {
 export type VoicingType = 'close' | 'open' | 'drop2' | 'drop3' | 'rootless' | 'quartal';
 export type LabelType = 'notes' | 'intervals' | 'fingers' | 'none';
 export type KeyboardRange = 61 | 88;
-export type AccompanimentTexture = 'comping' | 'arpeggio_asc' | 'arpeggio_desc' | 'lh_bass_rh_chord' | 'walking_bass';
+export type AccompanimentTexture = 'comping' | 'arpeggio_asc' | 'arpeggio_desc' | 'lh_bass_rh_chord' | 'walking_bass' | 'alberti_bass';
 
 export interface ScaleDefinition {
   id: string;
@@ -1190,6 +1190,13 @@ export function generateRunwaySequence(
         sequence.push({ timeBeats: currentBeat + 0.5, durationBeats: 1.5, notes: chord });
         sequence.push({ timeBeats: currentBeat + 2, durationBeats: 2, notes: [bass] });
         sequence.push({ timeBeats: currentBeat + 2.5, durationBeats: 1.5, notes: chord });
+      } else if (texture === 'alberti_bass') {
+        const root = cNotes[0];
+        const fifth = cNotes.length >= 3 ? cNotes[2] : (cNotes.length >= 2 ? cNotes[1] : cNotes[0]);
+        const third = cNotes.length >= 2 ? cNotes[1] : cNotes[0];
+        [root, fifth, third, fifth, root, fifth, third, fifth].forEach((n, idx) => {
+          sequence.push({ timeBeats: currentBeat + idx * 0.5, durationBeats: 0.5, notes: [n] });
+        });
       } else {
         // Walking bass
         const bass = cNotes[0];
@@ -1227,6 +1234,13 @@ export function generateRunwaySequence(
       sequence.push({ timeBeats: 0.5, durationBeats: 1.5, notes: rhNotes });
       sequence.push({ timeBeats: 2, durationBeats: 2, notes: [bassNote] });
       sequence.push({ timeBeats: 2.5, durationBeats: 1.5, notes: rhNotes });
+    } else if (texture === 'alberti_bass') {
+      const root = chordNotes[0];
+      const fifth = chordNotes.length >= 3 ? chordNotes[2] : (chordNotes.length >= 2 ? chordNotes[1] : chordNotes[0]);
+      const third = chordNotes.length >= 2 ? chordNotes[1] : chordNotes[0];
+      [root, fifth, third, fifth, root, fifth, third, fifth].forEach((n, i) => {
+        sequence.push({ timeBeats: i * 0.5, durationBeats: 0.5, notes: [n] });
+      });
     } else {
       // Walking bass + extensions
       const bassMidi = noteToMidi(`${rootNote}3`);
@@ -1240,7 +1254,14 @@ export function generateRunwaySequence(
     }
   } else if (itemType === 'scale') {
     const scaleNotes = getScaleNotes(rootNote, itemId, 4);
-    if (texture === 'arpeggio_desc') {
+    if (texture === 'alberti_bass') {
+      const root = scaleNotes[0];
+      const third = scaleNotes.length >= 3 ? scaleNotes[2] : scaleNotes[0];
+      const fifth = scaleNotes.length >= 5 ? scaleNotes[4] : (scaleNotes.length >= 3 ? scaleNotes[2] : scaleNotes[0]);
+      [root, fifth, third, fifth, root, fifth, third, fifth].forEach((n, i) => {
+        sequence.push({ timeBeats: i * 0.5, durationBeats: 0.5, notes: [n] });
+      });
+    } else if (texture === 'arpeggio_desc') {
       [...scaleNotes].reverse().forEach((n, i) => {
         sequence.push({ timeBeats: i * 0.5, durationBeats: 0.5, notes: [n] });
       });
@@ -1269,6 +1290,16 @@ export function generateRunwaySequence(
         cNotes.forEach((n, idx) => {
           sequence.push({ timeBeats: currentBeat + idx * 0.5, durationBeats: 0.5, notes: [n] });
         });
+      } else if (texture === 'alberti_bass') {
+        const root = cNotes[0];
+        const fifth = cNotes.length >= 3 ? cNotes[2] : (cNotes.length >= 2 ? cNotes[1] : cNotes[0]);
+        const third = cNotes.length >= 2 ? cNotes[1] : cNotes[0];
+        const count = Math.max(1, Math.floor(c.durationBeats / 2));
+        for (let rep = 0; rep < count; rep++) {
+          [root, fifth, third, fifth].forEach((n, idx) => {
+            sequence.push({ timeBeats: currentBeat + rep * 2 + idx * 0.5, durationBeats: 0.5, notes: [n] });
+          });
+        }
       } else {
         const bass = cNotes[0];
         const chord = cNotes.slice(1);

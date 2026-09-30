@@ -774,6 +774,7 @@ export default function KeysTheoryBar({
               <option value="comping" className="bg-slate-900 text-slate-100">Bloques de Acordes / Comping</option>
               <option value="arpeggio_asc" className="bg-slate-900 text-slate-100">Arpegio Ascendente</option>
               <option value="arpeggio_desc" className="bg-slate-900 text-slate-100">Arpegio Descendente</option>
+              <option value="alberti_bass" className="bg-slate-900 text-slate-100">Alberti Bass (1-5-3-5)</option>
               <option value="lh_bass_rh_chord" className="bg-slate-900 text-slate-100">Bajo Izquierda + Acorde Derecha</option>
               <option value="walking_bass" className="bg-slate-900 text-slate-100">Walking Bassline + Extensiones</option>
             </select>

@@ -8,6 +8,7 @@ import {
   CHROMATIC_NOTES,
   midiToNoteInfo,
 } from '@/services/theory/keysTheoryEngine';
+import { HandFocus } from '@/data/practiceWorkoutsData';
 import { keysAudioEngine } from '@/services/audio/keysAudioEngine';
 import { Layers, Zap, Hand, Sliders, ChevronLeft, ChevronRight, Shield, Keyboard } from 'lucide-react';
 
@@ -23,6 +24,7 @@ interface InteractivePianoKeyboardProps {
   blockWrongKeys?: boolean;
   pcKeyLabelsMap?: Map<number, string>; // Maps midi to keyboard letter (e.g. 60 -> 'A')
   onKeyTrigger?: (note: NoteInfo, isDown: boolean) => void;
+  handFocus?: HandFocus;
   className?: string;
 }
 
@@ -38,6 +40,7 @@ export default function InteractivePianoKeyboard({
   blockWrongKeys = false,
   pcKeyLabelsMap = new Map(),
   onKeyTrigger,
+  handFocus = 'both',
   className = '',
 }: InteractivePianoKeyboardProps) {
   const [octaveOffset, setOctaveOffset] = useState(0);
@@ -249,14 +252,34 @@ export default function InteractivePianoKeyboard({
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
-
-          {!smartKeyGuardMode ? (
-            <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
-              <Hand className="w-3.5 h-3.5 text-purple-400" />
-              <span>Mano Izquierda (&lt;C4)</span>
-              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              <span className="ml-1 text-cyan-400 font-bold">Mano Derecha (&ge;C4)</span>
-              <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+          {!smartKeyGuardMode ? (
+            <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60 font-mono">
+              {handFocus === 'left' && (
+                <>
+                  <Hand className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="text-purple-300 font-bold">Mano Izquierda (&lt; C4)</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,1)]"></span>
+                  <span className="text-purple-400/80 text-[10px] ml-0.5">(Violeta/Índigo)</span>
+                </>
+              )}
+              {handFocus === 'right' && (
+                <>
+                  <Hand className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-cyan-300 font-bold">Mano Derecha (&ge; C4)</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,1)]"></span>
+                  <span className="text-cyan-400/80 text-[10px] ml-0.5">(Cyan Brillante)</span>
+                </>
+              )}
+              {handFocus === 'both' && (
+                <>
+                  <Hand className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="text-purple-300 font-bold">LH (&lt; C4)</span>
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                  <span className="text-slate-500">|</span>
+                  <span className="text-cyan-300 font-bold">RH (&ge; C4)</span>
+                  <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                </>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700/60">
@@ -276,8 +299,9 @@ export default function InteractivePianoKeyboard({
           {whiteKeys.map((keyInfo) => {
             const isManualPressed = pressedMidis.has(keyInfo.midi);
             const activeTheoryNote = activeNotesMap.get(keyInfo.midi);
-            const isActive = isManualPressed || !!activeTheoryNote;
             const isLH = keyInfo.midi < splitPointMidi;
+            const isHandAllowed = handFocus === 'both' || (handFocus === 'left' ? isLH : !isLH);
+            const isActive = (isManualPressed || !!activeTheoryNote) && isHandAllowed;
 
             // Smart Guard Status
             const isTarget = smartKeyGuardMode && targetNotesSet.has(keyInfo.midi);
@@ -314,8 +338,8 @@ export default function InteractivePianoKeyboard({
               }
             } else if (isActive) {
               keyStyleClass = isLH
-                ? 'bg-gradient-to-b from-purple-500 via-purple-400 to-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.9)] scale-[0.99] translate-y-1'
-                : 'bg-gradient-to-b from-amber-400 via-amber-300 to-yellow-500 text-slate-950 shadow-[0_0_15px_rgba(234,179,8,0.9)] scale-[0.99] translate-y-1';
+                ? 'bg-gradient-to-b from-indigo-500 via-purple-500 to-indigo-700 text-white shadow-[0_0_18px_rgba(147,51,234,0.9)] scale-[0.99] translate-y-1 font-black'
+                : 'bg-gradient-to-b from-cyan-300 via-cyan-400 to-sky-400 text-slate-950 shadow-[0_0_18px_rgba(6,182,212,0.95)] scale-[0.99] translate-y-1 font-black';
             }
 
             return (
@@ -354,7 +378,7 @@ export default function InteractivePianoKeyboard({
                     </span>
                   )}
 
-                  {!smartKeyGuardMode && activeTheoryNote && (
+                  {!smartKeyGuardMode && activeTheoryNote && isHandAllowed && (
                     <div
                       className={`text-[9px] font-bold font-mono px-1.5 py-0.5 rounded-full shadow-sm ${
                         isLH ? 'bg-purple-900/90 text-purple-200' : 'bg-cyan-950/90 text-cyan-200'
@@ -396,8 +420,9 @@ export default function InteractivePianoKeyboard({
 
           const isManualPressed = pressedMidis.has(keyInfo.midi);
           const activeTheoryNote = activeNotesMap.get(keyInfo.midi);
-          const isActive = isManualPressed || !!activeTheoryNote;
           const isLH = keyInfo.midi < splitPointMidi;
+          const isHandAllowed = handFocus === 'both' || (handFocus === 'left' ? isLH : !isLH);
+          const isActive = (isManualPressed || !!activeTheoryNote) && isHandAllowed;
 
           const isTarget = smartKeyGuardMode && targetNotesSet.has(keyInfo.midi);
           const isSafe = smartKeyGuardMode && safeNotesSet.has(keyInfo.midi);
@@ -431,8 +456,8 @@ export default function InteractivePianoKeyboard({
             }
           } else if (isActive) {
             blackStyleClass = isLH
-              ? 'bg-gradient-to-b from-purple-600 via-purple-500 to-purple-700 text-white shadow-[0_0_16px_rgba(168,85,247,0.95)] translate-y-0.5'
-              : 'bg-gradient-to-b from-cyan-400 via-cyan-500 to-cyan-600 text-slate-950 shadow-[0_0_16px_rgba(6,182,212,0.95)] translate-y-0.5';
+              ? 'bg-gradient-to-b from-indigo-600 via-purple-600 to-indigo-800 text-white shadow-[0_0_18px_rgba(147,51,234,0.95)] translate-y-0.5'
+              : 'bg-gradient-to-b from-cyan-400 via-cyan-500 to-sky-600 text-slate-950 font-black shadow-[0_0_18px_rgba(6,182,212,0.95)] translate-y-0.5';
           }
 
           return (
@@ -477,7 +502,7 @@ export default function InteractivePianoKeyboard({
                     [{pcKeyLabel}]
                   </span>
                 )}
-                {!smartKeyGuardMode && activeTheoryNote && (
+                {!smartKeyGuardMode && activeTheoryNote && isHandAllowed && (
                   <div
                     className={`text-[8px] font-bold font-mono px-1 rounded ${
                       isLH ? 'bg-purple-950 text-purple-200' : 'bg-cyan-950 text-cyan-200'

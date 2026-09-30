@@ -8,7 +8,7 @@ import {
   CHROMATIC_NOTES,
   midiToNoteInfo,
 } from '@/services/theory/keysTheoryEngine';
-import { PracticeRoutine } from '@/data/practiceWorkoutsData';
+import { PracticeRoutine, HandFocus } from '@/data/practiceWorkoutsData';
 import { keysAudioEngine } from '@/services/audio/keysAudioEngine';
 import {
   Play,
@@ -53,6 +53,7 @@ interface KeysRunwaySequencerProps {
   lastKeyboardTriggerNote?: NoteInfo | null;
   activeRoutine?: PracticeRoutine | null;
   autoPlayTrigger?: boolean;
+  handFocus?: HandFocus;
   className?: string;
 }
 
@@ -67,6 +68,7 @@ export default function KeysRunwaySequencer({
   lastKeyboardTriggerNote,
   activeRoutine,
   autoPlayTrigger,
+  handFocus = 'both',
   className = '',
 }: KeysRunwaySequencerProps) {
   const [viewMode, setViewMode] = useState<SequencerViewMode>('runway');
@@ -222,20 +224,28 @@ export default function KeysRunwaySequencer({
         const end = start + stepNote.durationBeats;
 
         if (beat >= start && beat < end) {
-          stepNote.notes.forEach((n) => activeMap.set(n.midi, n));
+          const notesToTrigger = stepNote.notes.filter((n) => {
+            if (handFocus === 'left') return n.midi < 60;
+            if (handFocus === 'right') return n.midi >= 60;
+            return true;
+          });
 
-          // If Wait For Note mode is active, pause when reaching start of step!
-          if (waitForNoteMode && idx !== lastTriggeredStepRef.current) {
-            lastTriggeredStepRef.current = idx;
-            setIsWaitingOnStep(true);
-            setWaitingTargetStepIdx(idx);
-            return;
-          }
+          if (notesToTrigger.length > 0) {
+            notesToTrigger.forEach((n) => activeMap.set(n.midi, n));
 
-          if (lastTriggeredStepRef.current !== idx && beat - start < 0.1) {
-            lastTriggeredStepRef.current = idx;
-            const fullNotes = stepNote.notes.map((n) => n.fullNote);
-            keysAudioEngine.playChord(fullNotes, `${stepNote.durationBeats * secPerBeat}s`);
+            // If Wait For Note mode is active, pause when reaching start of step!
+            if (waitForNoteMode && idx !== lastTriggeredStepRef.current) {
+              lastTriggeredStepRef.current = idx;
+              setIsWaitingOnStep(true);
+              setWaitingTargetStepIdx(idx);
+              return;
+            }
+
+            if (lastTriggeredStepRef.current !== idx && beat - start < 0.1) {
+              lastTriggeredStepRef.current = idx;
+              const fullNotes = notesToTrigger.map((n) => n.fullNote);
+              keysAudioEngine.playChord(fullNotes, `${stepNote.durationBeats * secPerBeat}s`);
+            }
           }
         }
       });
@@ -249,7 +259,7 @@ export default function KeysRunwaySequencer({
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [isPlaying, bpm, isLooping, totalBeats, sequenceNotes, onActiveNotesChange, isWaitingOnStep, waitForNoteMode]);
+  }, [isPlaying, bpm, isLooping, totalBeats, sequenceNotes, onActiveNotesChange, isWaitingOnStep, waitForNoteMode, handFocus]);
 
   // Canvas Continuous Runway / Pianoroll Renderer
   useEffect(() => {
@@ -308,6 +318,9 @@ export default function KeysRunwaySequencer({
         const isStepWaiting = isWaitingOnStep && waitingTargetStepIdx === sIdx;
 
         stepNote.notes.forEach((note) => {
+          if (handFocus === 'left' && note.midi >= 60) return;
+          if (handFocus === 'right' && note.midi < 60) return;
+
           const midiOffset = maxMidi - note.midi;
           const y = midiOffset * laneHeight;
 
@@ -321,7 +334,7 @@ export default function KeysRunwaySequencer({
             ctx.fillStyle = '#facc15';
           } else if (isHit) {
             ctx.shadowColor = isLH ? '#a855f7' : '#06b6d4';
-            ctx.shadowBlur = 12;
+            ctx.shadowBlur = 14;
             ctx.fillStyle = isLH ? '#c084fc' : '#22d3ee';
           } else {
             ctx.fillStyle = isLH ? '#7e22ce' : '#0284c7';
@@ -379,10 +392,13 @@ export default function KeysRunwaySequencer({
         const noteWidth = stepNote.durationBeats * pixelsPerBeat - 1;
 
         stepNote.notes.forEach((note) => {
+          if (handFocus === 'left' && note.midi >= 60) return;
+          if (handFocus === 'right' && note.midi < 60) return;
+
           const y = (maxMidi - note.midi) * laneHeight;
           const isLH = note.midi < 60;
 
-          ctx.fillStyle = isLH ? '#a855f7' : '#eab308';
+          ctx.fillStyle = isLH ? '#a855f7' : '#06b6d4';
           ctx.beginPath();
           ctx.roundRect(startX, y + 1, Math.max(6, noteWidth), Math.max(5, laneHeight - 2), 3);
           ctx.fill();
@@ -397,7 +413,7 @@ export default function KeysRunwaySequencer({
       ctx.lineTo(playheadX, height);
       ctx.stroke();
     }
-  }, [viewMode, sequenceNotes, currentBeat, totalBeats, isWaitingOnStep, waitingTargetStepIdx]);
+  }, [viewMode, sequenceNotes, currentBeat, totalBeats, isWaitingOnStep, waitingTargetStepIdx, handFocus]);
 
   // Compute current and next step notes for lateral feedback
   const currentStepNote = sequenceNotes.find(
@@ -417,13 +433,28 @@ export default function KeysRunwaySequencer({
             <Activity className="w-5 h-5" />
           </span>
           <div>
-            <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-sm font-extrabold text-slate-100 uppercase tracking-wide flex flex-wrap items-center gap-2">
               <span>Secuenciador Polifónico Sonora</span>
               {activeRoutine && (
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
                   {activeRoutine.title.split(':')[0]}
                 </span>
               )}
+              <span
+                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                  handFocus === 'left'
+                    ? 'bg-purple-950 text-purple-300 border-purple-700/80'
+                    : handFocus === 'right'
+                    ? 'bg-cyan-950 text-cyan-300 border-cyan-700/80'
+                    : 'bg-emerald-950 text-emerald-300 border-emerald-700/80'
+                }`}
+              >
+                {handFocus === 'left'
+                  ? '🤚 Mano Izquierda (< C4)'
+                  : handFocus === 'right'
+                  ? '✋ Mano Derecha (≥ C4)'
+                  : '👐 Ambas Manos'}
+              </span>
             </h3>
             <p className="text-[11px] text-slate-400 font-mono">
               Modo Runway Continuo &amp; DAW Piano Roll
@@ -626,25 +657,63 @@ export default function KeysRunwaySequencer({
 
             {/* Hand Directions */}
             <div className="space-y-2">
-              <div className="bg-purple-950/40 p-2.5 rounded-lg border border-purple-900/50">
-                <div className="flex items-center gap-1.5 text-purple-300 font-bold mb-1">
-                  <Hand className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Mano Izquierda (LH):</span>
+              <div
+                className={`p-2.5 rounded-lg border transition-all ${
+                  handFocus === 'left'
+                    ? 'bg-purple-900/50 border-purple-500 shadow-lg shadow-purple-950/60 ring-1 ring-purple-400'
+                    : handFocus === 'right'
+                    ? 'bg-slate-950/40 border-slate-800/80 opacity-50'
+                    : 'bg-purple-950/40 border-purple-900/50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 text-purple-300 font-bold">
+                    <Hand className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Mano Izquierda (LH &lt; C4):</span>
+                  </div>
+                  {handFocus === 'left' && (
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-600">
+                      Enfoque Activo
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-purple-200/90 font-sans">
-                  {activeRoutine ? activeRoutine.leftHandInstruction : 'Bajo en tónica o fundamentales.'}
+                  {handFocus === 'right'
+                    ? 'Mano izquierda en reposo sobre el regazo.'
+                    : activeRoutine
+                    ? activeRoutine.leftHandInstruction
+                    : 'Bajo en tónica o fundamentales en registro grave.'}
                 </p>
               </div>
 
-              <div className="bg-cyan-950/40 p-2.5 rounded-lg border border-cyan-900/50">
-                <div className="flex items-center gap-1.5 text-cyan-300 font-bold mb-1">
-                  <Hand className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Mano Derecha (RH):</span>
+              <div
+                className={`p-2.5 rounded-lg border transition-all ${
+                  handFocus === 'right'
+                    ? 'bg-cyan-900/50 border-cyan-500 shadow-lg shadow-cyan-950/60 ring-1 ring-cyan-400'
+                    : handFocus === 'left'
+                    ? 'bg-slate-950/40 border-slate-800/80 opacity-50'
+                    : 'bg-cyan-950/40 border-cyan-900/50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 text-cyan-300 font-bold">
+                    <Hand className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Mano Derecha (RH &ge; C4):</span>
+                  </div>
+                  {handFocus === 'right' && (
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-600">
+                      Enfoque Activo
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-cyan-200/90 font-sans">
-                  {activeRoutine ? activeRoutine.rightHandInstruction : (
-                    currentStepNote ? `Toca notas: ${currentStepNote.notes.map((n) => n.name).join(' - ')}` : 'Sigue la trayectoria del Runway.'
-                  )}
+                  {handFocus === 'left'
+                    ? 'Mano derecha en reposo sobre el regazo.'
+                    : activeRoutine
+                    ? activeRoutine.rightHandInstruction
+                    : currentStepNote
+                    ? `Toca notas: ${currentStepNote.notes.filter((n) => n.midi >= 60).map((n) => n.name).join(' - ') || 'Melodía / Acordes'}`
+                    : 'Sigue la trayectoria del Runway.'}
                 </p>
               </div>
             </div>
@@ -654,7 +723,14 @@ export default function KeysRunwaySequencer({
               <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 flex items-center justify-between text-[11px]">
                 <span className="text-slate-400">Postura Activa:</span>
                 <span className="text-amber-300 font-black">
-                  {currentStepNote.notes.map((n) => n.name).join(' + ')}
+                  {currentStepNote.notes
+                    .filter((n) => {
+                      if (handFocus === 'left') return n.midi < 60;
+                      if (handFocus === 'right') return n.midi >= 60;
+                      return true;
+                    })
+                    .map((n) => n.name)
+                    .join(' + ') || '(Mano en reposo)'}
                 </span>
               </div>
             )}

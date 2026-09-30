@@ -22,6 +22,7 @@ import { HARMONIC_VAULT } from '@/data/harmonicVaultData';
 import {
   WORKOUT_LEVELS,
   PracticeRoutine,
+  HandFocus,
 } from '@/data/practiceWorkoutsData';
 import { keysAudioEngine, TimbreType } from '@/services/audio/keysAudioEngine';
 import InteractivePianoKeyboard from './InteractivePianoKeyboard';
@@ -70,6 +71,7 @@ export default function KeysStudio() {
   const [activeRoutine, setActiveRoutine] = useState<PracticeRoutine | null>(
     WORKOUT_LEVELS[0].routines[0]
   );
+  const [handFocus, setHandFocus] = useState<HandFocus>('both');
   const [autoPlayRunway, setAutoPlayRunway] = useState(false);
 
   // Jam Mode State
@@ -195,6 +197,9 @@ export default function KeysStudio() {
   // Handler: Select a Routine from Workouts Dashboard
   const handleSelectRoutine = (routine: PracticeRoutine) => {
     setActiveRoutine(routine);
+    if (routine.handFocus) {
+      setHandFocus(routine.handFocus);
+    }
     setRootNote(routine.rootNote);
     setBpm(routine.bpm);
     setTexture(routine.texture);
@@ -372,6 +377,8 @@ export default function KeysStudio() {
         <WorkoutsDashboard
           activeRoutineId={activeRoutine?.id}
           onSelectRoutine={handleSelectRoutine}
+          handFocus={handFocus}
+          onHandFocusChange={setHandFocus}
         />
       )}
 
@@ -420,6 +427,7 @@ export default function KeysStudio() {
         safeNotesSet={safeNotesSet}
         blockWrongKeys={blockWrongKeys}
         pcKeyLabelsMap={pcKeyLabelsMap}
+        handFocus={handFocus}
         onKeyTrigger={(note, isDown) => {
           if (isDown) setLastKeyboardTriggerNote(note);
         }}
@@ -439,6 +447,7 @@ export default function KeysStudio() {
         lastKeyboardTriggerNote={lastKeyboardTriggerNote}
         activeRoutine={activeRoutine}
         autoPlayTrigger={autoPlayRunway}
+        handFocus={handFocus}
       />
 
       {/* 5. Circle of Fifths Modal */}
