@@ -31,9 +31,13 @@ export interface PracticeRoutine {
   handFocus: HandFocus;
   subdivision?: string;
   notes?: RunwayNoteEvent[];
+  executionMode?: 'block' | 'arpeggio';
+  arpeggioOctaveSpan?: number | 'full';
+  arpeggioPattern?: string;
 }
 
 export type PracticeWorkout = PracticeRoutine;
+export type CustomWorkout = PracticeRoutine;
 
 export interface WorkoutLevel {
   levelNumber: 1 | 2 | 3 | 4;

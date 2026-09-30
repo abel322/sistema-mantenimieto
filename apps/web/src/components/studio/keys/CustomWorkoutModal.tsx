@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   CHROMATIC_NOTES,
   SCALE_CATALOG,
@@ -13,7 +13,7 @@ import {
   buildUnifiedExecutionEvents,
 } from '@/services/theory/keysTheoryEngine';
 import { HARMONIC_VAULT, HarmonicFormula } from '@/data/harmonicVaultData';
-import { PracticeRoutine, HandFocus } from '@/data/practiceWorkoutsData';
+import { PracticeRoutine, HandFocus, CustomWorkout } from '@/data/practiceWorkoutsData';
 import {
   X,
   Sparkles,
@@ -27,22 +27,28 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ArrowLeftRight,
+  Pencil,
+  Save,
 } from 'lucide-react';
 
 export interface CustomWorkoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveAndLoad: (routine: PracticeRoutine) => void;
+  workoutToEdit?: PracticeRoutine | CustomWorkout | null;
 }
 
 export default function CustomWorkoutModal({
   isOpen,
   onClose,
   onSaveAndLoad,
+  workoutToEdit,
 }: CustomWorkoutModalProps) {
   // =========================================================================
   // HOOKS SIEMPRE DECLARADOS EN EL NIVEL SUPERIOR (SIN CONDICIÓN PREVIA)
   // =========================================================================
+
+  const isEditing = Boolean(workoutToEdit);
 
   // 1. Título Opcional
   const [title, setTitle] = useState('');
@@ -70,6 +76,85 @@ export default function CustomWorkoutModal({
 
   // Voicing Type
   const [voicingType, setVoicingType] = useState<VoicingType>('close');
+
+  // Sincronización cuando entra una rutina a editar o se abre en modo creación
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (workoutToEdit) {
+      setTitle(workoutToEdit.title || '');
+      setHandFocus(workoutToEdit.handFocus || 'both');
+      setRootNote(workoutToEdit.rootNote || 'C');
+      setBpm(workoutToEdit.bpm || 85);
+      setVoicingType(workoutToEdit.voicingType || 'close');
+
+      // Categoría
+      const cat = workoutToEdit.category;
+      const normalizedCat: 'progression' | 'cadence' | 'chord' | 'scale' =
+        cat === 'cadencia' ? 'cadence' : cat === 'progresion' ? 'progression' : (cat as any) || 'progression';
+      setSelectedCategory(normalizedCat);
+      setSelectedItemId(workoutToEdit.targetItemId);
+
+      // Modo & Parámetros de Arpegio
+      const isArp =
+        workoutToEdit.executionMode === 'arpeggio' ||
+        workoutToEdit.texture?.startsWith('arpeggio') ||
+        workoutToEdit.texture === 'alberti_bass' ||
+        workoutToEdit.objective?.toLowerCase().includes('arpegio');
+      setExecutionMode(isArp ? 'arpeggio' : 'block');
+
+      if (workoutToEdit.arpeggioOctaveSpan) {
+        setArpeggioOctaveSpan(workoutToEdit.arpeggioOctaveSpan as ArpeggioOctaveSpan);
+      } else {
+        const obj = workoutToEdit.objective || '';
+        if (obj.includes('1 Oct')) setArpeggioOctaveSpan(1);
+        else if (obj.includes('3 Oct')) setArpeggioOctaveSpan(3);
+        else if (obj.includes('Full')) setArpeggioOctaveSpan('full');
+        else setArpeggioOctaveSpan(2);
+      }
+
+      if (workoutToEdit.arpeggioPattern) {
+        setArpeggioPattern(workoutToEdit.arpeggioPattern as ArpeggioMotionPattern);
+      } else if (workoutToEdit.texture === 'arpeggio_desc') {
+        setArpeggioPattern('down');
+      } else if (workoutToEdit.texture === 'arpeggio_updown') {
+        setArpeggioPattern('upDown');
+      } else if (workoutToEdit.texture === 'alberti_bass') {
+        setArpeggioPattern('broken_alberti');
+      } else if (workoutToEdit.texture === 'arpeggio_broken') {
+        setArpeggioPattern('broken_neosoul');
+      } else if (workoutToEdit.texture === 'arpeggio_sweep') {
+        setArpeggioPattern('handCross');
+      } else {
+        setArpeggioPattern('up');
+      }
+
+      if (workoutToEdit.subdivision) {
+        const sub = workoutToEdit.subdivision;
+        if (sub === '8n' || sub === '1/8') setArpeggioSubdivision('8n');
+        else if (sub === '3T' || sub === '3:2_eighth' || sub.includes('trip')) setArpeggioSubdivision('3T');
+        else if (sub === '6T') setArpeggioSubdivision('6T');
+        else setArpeggioSubdivision('16n');
+      } else {
+        setArpeggioSubdivision('16n');
+      }
+    } else {
+      // Valores por defecto al crear nueva rutina
+      setTitle('');
+      setSelectedCategory('progression');
+      setSelectedItemId('prog_251_major_classic');
+      setSearchQuery('');
+      setIsDropdownOpen(false);
+      setRootNote('C');
+      setExecutionMode('arpeggio');
+      setArpeggioOctaveSpan(2);
+      setArpeggioPattern('up');
+      setArpeggioSubdivision('16n');
+      setHandFocus('both');
+      setBpm(85);
+      setVoicingType('close');
+    }
+  }, [isOpen, workoutToEdit]);
 
   // Separación estricta por Fuente Teórica
   const progressionItems = useMemo(
@@ -228,8 +313,9 @@ export default function CustomWorkoutModal({
 
   // Save & Load handler con inyección inmediata en Runway
   const handleSaveAndLoad = () => {
-    const finalTitle = title.trim() || `Rutina: ${rootNote} ${getItemName()} (${executionMode === 'arpeggio' ? 'Arpegio' : 'Bloques'})`;
+    const finalId = workoutToEdit ? workoutToEdit.id : `custom_${Date.now()}`;
     const itemName = getItemName();
+    const finalTitle = title.trim() || `Rutina: ${rootNote} ${itemName} (${executionMode === 'arpeggio' ? 'Arpegio' : 'Bloques'})`;
 
     let leftInstruction = '';
     let rightInstruction = '';
@@ -248,8 +334,8 @@ export default function CustomWorkoutModal({
     const generatedNotes = generateNotesForRoutine();
     const routineCategory = selectedCategory === 'cadence' ? 'cadencia' : selectedCategory;
 
-    const newRoutine: PracticeRoutine = {
-      id: `custom_${Date.now()}`,
+    const savedRoutine: PracticeRoutine = {
+      id: finalId,
       title: finalTitle,
       objective: `Entrenamiento personalizado creado por el estudiante. Modo: ${
         executionMode === 'arpeggio' ? `Arpegio Extendido (${arpeggioOctaveSpan} Oct, ${arpeggioPattern})` : 'Bloques de Acordes'
@@ -259,7 +345,7 @@ export default function CustomWorkoutModal({
       bpm,
       bpmRange: `${Math.max(40, bpm - 10)} - ${Math.min(200, bpm + 10)} BPM`,
       rootNote,
-      texture: executionMode === 'arpeggio' ? 'arpeggio_asc' : 'comping',
+      texture: executionMode === 'arpeggio' ? (arpeggioPattern === 'down' ? 'arpeggio_desc' : arpeggioPattern === 'upDown' ? 'arpeggio_updown' : 'arpeggio_asc') : 'comping',
       voicingType,
       category: routineCategory,
       targetItemId: selectedItemId,
@@ -271,19 +357,31 @@ export default function CustomWorkoutModal({
       handFocus,
       subdivision: arpeggioSubdivision,
       notes: generatedNotes,
+      executionMode,
+      arpeggioOctaveSpan,
+      arpeggioPattern,
     };
 
     // Save to localStorage
     try {
       const stored = localStorage.getItem('sonora_keys_custom_workouts');
       const list: PracticeRoutine[] = stored ? JSON.parse(stored) : [];
-      list.unshift(newRoutine);
+      if (workoutToEdit) {
+        const idx = list.findIndex((r) => r.id === workoutToEdit.id);
+        if (idx >= 0) {
+          list[idx] = savedRoutine;
+        } else {
+          list.unshift(savedRoutine);
+        }
+      } else {
+        list.unshift(savedRoutine);
+      }
       localStorage.setItem('sonora_keys_custom_workouts', JSON.stringify(list));
     } catch (e) {
       console.error('Error saving custom workout to localStorage', e);
     }
 
-    onSaveAndLoad(newRoutine);
+    onSaveAndLoad(savedRoutine);
     onClose();
   };
 
@@ -295,17 +393,23 @@ export default function CustomWorkoutModal({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                <Sparkles className="w-5 h-5 text-cyan-300" />
+                {isEditing ? (
+                  <Pencil className="w-5 h-5 text-cyan-300" />
+                ) : (
+                  <Sparkles className="w-5 h-5 text-cyan-300" />
+                )}
               </span>
               <span className="text-[11px] font-mono font-bold tracking-widest text-cyan-400 uppercase">
                 Sonora Academy • Laboratorio Pedagógico
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Crear Entrenamiento Personalizado
+              {isEditing ? '✏️ Editar Entrenamiento Personalizado' : 'Crear Entrenamiento Personalizado'}
             </h2>
             <p className="text-xs text-slate-300">
-              Diseña una rutina a la medida de tus metas técnicas: cualquier acorde, escala o cadencia en bloques armónicos o arpegio extendido.
+              {isEditing
+                ? 'Actualiza los parámetros de tu rutina: acorde, escala, arpegio, tempo y asignación técnica de mano.'
+                : 'Diseña una rutina a la medida de tus metas técnicas: cualquier acorde, escala o cadencia en bloques armónicos o arpegio extendido.'}
             </p>
           </div>
 
@@ -820,8 +924,17 @@ export default function CustomWorkoutModal({
             onClick={handleSaveAndLoad}
             className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 via-teal-400 to-cyan-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-xl shadow-cyan-500/25 hover:brightness-110 flex items-center justify-center gap-2"
           >
-            <Rocket className="w-4 h-4 fill-current" />
-            <span>🚀 Guardar y Cargar en Runway</span>
+            {isEditing ? (
+              <>
+                <Save className="w-4 h-4 fill-current" />
+                <span>💾 Actualizar y Guardar Cambios</span>
+              </>
+            ) : (
+              <>
+                <Rocket className="w-4 h-4 fill-current" />
+                <span>🚀 Guardar y Cargar en Runway</span>
+              </>
+            )}
           </button>
         </div>
       </div>

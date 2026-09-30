@@ -21,6 +21,7 @@ import {
   Layers,
   CheckCircle2,
   Flame,
+  Pencil,
 } from 'lucide-react';
 
 interface WorkoutsDashboardProps {
@@ -41,11 +42,30 @@ export default function WorkoutsDashboard({
   const [internalHandFocus, setInternalHandFocus] = useState<HandFocus>(handFocus);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [customRoutines, setCustomRoutines] = useState<PracticeRoutine[]>([]);
+  const [routineToEdit, setRoutineToEdit] = useState<PracticeRoutine | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Sync internal with prop if controlled
   useEffect(() => {
     setInternalHandFocus(handFocus);
   }, [handFocus]);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage((current) => (current === message ? null : current));
+    }, 3500);
+  };
+
+  const handleOpenNewBuilder = () => {
+    setRoutineToEdit(null);
+    setIsBuilderOpen(true);
+  };
+
+  const handleEditWorkout = (routine: PracticeRoutine) => {
+    setRoutineToEdit(routine);
+    setIsBuilderOpen(true);
+  };
 
   const handleHandFocusSelect = (focus: HandFocus) => {
     setInternalHandFocus(focus);
@@ -71,18 +91,53 @@ export default function WorkoutsDashboard({
       const updated = customRoutines.filter((r) => r.id !== id);
       setCustomRoutines(updated);
       localStorage.setItem('sonora_keys_custom_workouts', JSON.stringify(updated));
+      showToast('🗑️ Rutina eliminada.');
     } catch (err) {
       console.error('Error deleting custom routine', err);
     }
   };
 
-  // When custom routine is saved from modal
-  const handleSaveAndLoadRoutine = (newRoutine: PracticeRoutine) => {
-    setCustomRoutines((prev) => [newRoutine, ...prev]);
-    if (newRoutine.handFocus) {
-      handleHandFocusSelect(newRoutine.handFocus);
+  // When custom routine is saved or updated from modal
+  const handleSaveAndLoadRoutine = (savedRoutine: PracticeRoutine) => {
+    const isEdit = customRoutines.some((r) => r.id === savedRoutine.id);
+    const wasActive = activeRoutineId === savedRoutine.id;
+
+    setCustomRoutines((prev) => {
+      const idx = prev.findIndex((r) => r.id === savedRoutine.id);
+      let updated: PracticeRoutine[];
+      if (idx >= 0) {
+        updated = [...prev];
+        updated[idx] = savedRoutine;
+      } else {
+        updated = [savedRoutine, ...prev];
+      }
+      try {
+        localStorage.setItem('sonora_keys_custom_workouts', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error saving custom routines to localStorage', e);
+      }
+      return updated;
+    });
+
+    if (savedRoutine.handFocus) {
+      handleHandFocusSelect(savedRoutine.handFocus);
     }
-    onSelectRoutine(newRoutine);
+
+    // Si la rutina editada está actualmente activa en el Runway (o es nueva creación):
+    // regenera inmediatamente sus notas y recarga el secuenciador con los nuevos parámetros
+    if (!isEdit || wasActive) {
+      onSelectRoutine(savedRoutine);
+    }
+
+    // Feedback visual / Toast de confirmación
+    showToast(
+      isEdit
+        ? `✏️ Rutina "${savedRoutine.title}" actualizada exitosamente${wasActive ? ' y recargada en Runway' : ''}`
+        : `🚀 Rutina "${savedRoutine.title}" creada y cargada en Runway`
+    );
+
+    setIsBuilderOpen(false);
+    setRoutineToEdit(null);
   };
 
   // Filter custom routines by active hand focus
@@ -115,7 +170,7 @@ export default function WorkoutsDashboard({
         {/* Action Button: Crear Entrenamiento Personalizado */}
         <div className="flex flex-wrap items-center gap-3 z-10 w-full sm:w-auto">
           <button
-            onClick={() => setIsBuilderOpen(true)}
+            onClick={handleOpenNewBuilder}
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/25 hover:brightness-110 flex items-center justify-center gap-2 group"
           >
             <Settings className="w-4 h-4 transition-transform group-hover:rotate-45" />
@@ -250,13 +305,23 @@ export default function WorkoutsDashboard({
                   </div>
 
                   <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
-                    <button
-                      onClick={(e) => handleDeleteCustomRoutine(routine.id, e)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
-                      title="Eliminar rutina"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => handleDeleteCustomRoutine(routine.id, e)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+                        title="Eliminar rutina"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => handleEditWorkout(routine)}
+                        className="p-2 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300 border border-white/10 transition-all"
+                        title="Editar Rutina"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
 
                     <button
                       onClick={() => onSelectRoutine(routine)}
@@ -420,12 +485,28 @@ export default function WorkoutsDashboard({
         })}
       </div>
 
-      {/* Modal: Custom Workout Builder */}
+      {/* Modal: Custom Workout Builder / Editor */}
       <CustomWorkoutModal
         isOpen={isBuilderOpen}
-        onClose={() => setIsBuilderOpen(false)}
+        onClose={() => {
+          setIsBuilderOpen(false);
+          setRoutineToEdit(null);
+        }}
         onSaveAndLoad={handleSaveAndLoadRoutine}
+        workoutToEdit={routineToEdit}
       />
+
+      {/* Floating Confirmation Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#091124]/95 border border-cyan-500/50 text-cyan-200 shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-3 duration-200 max-w-md">
+          <div className="p-1 rounded-lg bg-cyan-500/20 text-cyan-300 flex-shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <span className="text-xs font-sans font-semibold text-slate-100 leading-snug">
+            {toastMessage}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
