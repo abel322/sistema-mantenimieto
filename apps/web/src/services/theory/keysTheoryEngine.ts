@@ -1,3 +1,5 @@
+import { HARMONIC_VAULT, HarmonicFormula } from '@/data/harmonicVaultData';
+
 export interface NoteInfo {
   name: string;
   octave: number;
@@ -350,6 +352,62 @@ export function assignFingering(notes: NoteInfo[], splitPointMidi = 60) {
 }
 
 /**
+ * Transposes any HarmonicFormula from HARMONIC_VAULT to a specified root key (e.g., C, Eb, F#)
+ */
+export function getTransposedFormulaChords(
+  formula: HarmonicFormula,
+  rootNote: string,
+  voicing: VoicingType = 'close'
+): { roman: string; chordName: string; notes: NoteInfo[] }[] {
+  const rootMidi = noteToMidi(`${rootNote}4`);
+
+  return formula.intervalsFromRoot.map((intervals, idx) => {
+    const chordRootMidi = rootMidi + (intervals[0] || 0);
+    const chordRootName = CHROMATIC_NOTES[((chordRootMidi % 12) + 12) % 12];
+    const typeLabel = formula.chordTypes[idx] || '';
+    const chordName = `${chordRootName}${typeLabel}`;
+    const roman = formula.romanNumerals[idx] || '';
+
+    let rawMidis = intervals.map((st) => rootMidi + st);
+
+    if (voicing === 'open' && rawMidis.length >= 3) {
+      rawMidis[1] += 12;
+    } else if (voicing === 'drop2' && rawMidis.length >= 4) {
+      const sorted = [...rawMidis].sort((a, b) => a - b);
+      sorted[sorted.length - 2] -= 12;
+      rawMidis = sorted;
+    } else if (voicing === 'drop3' && rawMidis.length >= 4) {
+      const sorted = [...rawMidis].sort((a, b) => a - b);
+      sorted[sorted.length - 3] -= 12;
+      rawMidis = sorted;
+    } else if (voicing === 'rootless' && rawMidis.length >= 4) {
+      rawMidis = rawMidis.slice(1);
+      rawMidis.push(rootMidi + (intervals[0] || 0) + 14);
+    } else if (voicing === 'quartal') {
+      const base = rawMidis[0] || rootMidi;
+      rawMidis = [base, base + 5, base + 10, base + 15];
+    }
+
+    rawMidis.sort((a, b) => a - b);
+
+    const notes: NoteInfo[] = rawMidis.map((midi) => {
+      const note = midiToNoteInfo(midi);
+      const stFromKey = (midi - rootMidi + 120) % 12;
+      note.interval = INTERVAL_LABELS[stFromKey] || `${stFromKey}st`;
+      return note;
+    });
+
+    assignFingering(notes, 60);
+
+    return {
+      roman,
+      chordName,
+      notes,
+    };
+  });
+}
+
+/**
  * Generates Runway timeline sequence from active selection and texture
  */
 export interface RunwayStepNote {
@@ -360,13 +418,56 @@ export interface RunwayStepNote {
 
 export function generateRunwaySequence(
   rootNote: string,
-  itemId: string, // Scale ID or Chord ID or Progression ID
-  itemType: 'scale' | 'chord' | 'progression',
+  itemId: string, // Scale ID, Chord ID, Progression ID or HarmonicFormula ID
+  itemType: 'scale' | 'chord' | 'progression' | 'cadencia',
   texture: AccompanimentTexture,
   voicing: VoicingType = 'close',
   bpm = 120
 ): RunwayStepNote[] {
   const sequence: RunwayStepNote[] = [];
+
+  // Check if itemId exists in HARMONIC_VAULT first
+  const vaultFormula = HARMONIC_VAULT.find((f) => f.id === itemId);
+  if (vaultFormula) {
+    const transposedChords = getTransposedFormulaChords(vaultFormula, rootNote, voicing);
+    let currentBeat = 0;
+    const durationPerChord = 4;
+
+    transposedChords.forEach((c) => {
+      const cNotes = c.notes;
+      if (texture === 'comping') {
+        sequence.push({ timeBeats: currentBeat, durationBeats: 2, notes: cNotes });
+        sequence.push({ timeBeats: currentBeat + 2, durationBeats: 2, notes: cNotes });
+      } else if (texture === 'arpeggio_asc') {
+        cNotes.forEach((n, idx) => {
+          sequence.push({ timeBeats: currentBeat + idx * 0.5, durationBeats: 0.5, notes: [n] });
+        });
+      } else if (texture === 'arpeggio_desc') {
+        [...cNotes].reverse().forEach((n, idx) => {
+          sequence.push({ timeBeats: currentBeat + idx * 0.5, durationBeats: 0.5, notes: [n] });
+        });
+      } else if (texture === 'lh_bass_rh_chord') {
+        const bass = cNotes[0];
+        const chord = cNotes.slice(1);
+        sequence.push({ timeBeats: currentBeat, durationBeats: 2, notes: [bass] });
+        sequence.push({ timeBeats: currentBeat + 0.5, durationBeats: 1.5, notes: chord });
+        sequence.push({ timeBeats: currentBeat + 2, durationBeats: 2, notes: [bass] });
+        sequence.push({ timeBeats: currentBeat + 2.5, durationBeats: 1.5, notes: chord });
+      } else {
+        // Walking bass
+        const bass = cNotes[0];
+        const chord = cNotes.slice(1);
+        sequence.push({ timeBeats: currentBeat, durationBeats: 1, notes: [bass] });
+        sequence.push({ timeBeats: currentBeat + 1, durationBeats: 1, notes: chord });
+        sequence.push({ timeBeats: currentBeat + 2, durationBeats: 1, notes: [bass] });
+        sequence.push({ timeBeats: currentBeat + 3, durationBeats: 1, notes: chord });
+      }
+
+      currentBeat += durationPerChord;
+    });
+
+    return sequence;
+  }
 
   if (itemType === 'chord') {
     const chordNotes = getChordNotes(rootNote, itemId, voicing, 4);

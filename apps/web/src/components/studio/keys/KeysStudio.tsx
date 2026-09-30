@@ -14,8 +14,10 @@ import {
   PROGRESSION_PRESETS,
   getChordNotes,
   getScaleNotes,
+  getTransposedFormulaChords,
   generateRunwaySequence,
 } from '@/services/theory/keysTheoryEngine';
+import { HARMONIC_VAULT } from '@/data/harmonicVaultData';
 import { keysAudioEngine, TimbreType } from '@/services/audio/keysAudioEngine';
 import InteractivePianoKeyboard from './InteractivePianoKeyboard';
 import KeysRunwaySequencer from './KeysRunwaySequencer';
@@ -41,8 +43,8 @@ export default function KeysStudio() {
 
   // Theory & Keyboard State
   const [rootNote, setRootNote] = useState('C');
-  const [category, setCategory] = useState<'scale' | 'chord' | 'progression'>('chord');
-  const [selectedItemId, setSelectedItemId] = useState('maj7');
+  const [category, setCategory] = useState<'scale' | 'chord' | 'progression' | 'cadencia'>('cadencia');
+  const [selectedItemId, setSelectedItemId] = useState('cad_pac');
   const [voicingType, setVoicingType] = useState<VoicingType>('close');
   const [texture, setTexture] = useState<AccompanimentTexture>('comping');
   const [labelType, setLabelType] = useState<LabelType>('notes');
@@ -81,7 +83,13 @@ export default function KeysStudio() {
   useEffect(() => {
     const map = new Map<number, NoteInfo>();
 
-    if (category === 'chord') {
+    const vaultFormula = HARMONIC_VAULT.find((f) => f.id === selectedItemId);
+    if (vaultFormula) {
+      const transposed = getTransposedFormulaChords(vaultFormula, rootNote, voicingType);
+      if (transposed.length > 0) {
+        transposed[0].notes.forEach((n) => map.set(n.midi, n));
+      }
+    } else if (category === 'chord') {
       const notes = getChordNotes(rootNote, selectedItemId, voicingType, 4);
       notes.forEach((n) => map.set(n.midi, n));
     } else if (category === 'scale') {
