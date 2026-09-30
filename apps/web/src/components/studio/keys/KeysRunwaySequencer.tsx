@@ -43,13 +43,14 @@ export type TupletSubdivision =
   | '7:4';
 
 interface KeysRunwaySequencerProps {
-  sequenceNotes: RunwayNoteEvent[];
-  onSequenceUpdate: (seq: RunwayNoteEvent[]) => void;
+  notes?: RunwayNoteEvent[];
+  sequenceNotes?: RunwayNoteEvent[];
+  onSequenceUpdate?: (seq: RunwayNoteEvent[]) => void;
   onActiveNotesChange: (notesMap: Map<number, NoteInfo>) => void;
   bpm: number;
   onBpmChange: (bpm: number) => void;
-  stepRecordActive: boolean;
-  onStepRecordToggle: (active: boolean) => void;
+  stepRecordActive?: boolean;
+  onStepRecordToggle?: (active: boolean) => void;
   lastKeyboardTriggerNote?: NoteInfo | null;
   activeRoutine?: PracticeRoutine | null;
   autoPlayTrigger?: boolean;
@@ -58,12 +59,13 @@ interface KeysRunwaySequencerProps {
 }
 
 export default function KeysRunwaySequencer({
+  notes,
   sequenceNotes,
   onSequenceUpdate,
   onActiveNotesChange,
   bpm,
   onBpmChange,
-  stepRecordActive,
+  stepRecordActive = false,
   onStepRecordToggle,
   lastKeyboardTriggerNote,
   activeRoutine,
@@ -77,6 +79,23 @@ export default function KeysRunwaySequencer({
   const [isLooping, setIsLooping] = useState(true);
   const [currentBeat, setCurrentBeat] = useState(0);
   const [stepPointer, setStepPointer] = useState(0);
+
+  // Sincronización de notas entrantes con un useEffect
+  const [internalNotes, setInternalNotes] = useState<RunwayNoteEvent[]>(
+    () => notes || sequenceNotes || []
+  );
+
+  useEffect(() => {
+    const incoming = notes || sequenceNotes;
+    if (incoming && incoming.length > 0) {
+      setInternalNotes(incoming);
+      setCurrentBeat(0);
+      startTimeRef.current = 0;
+      triggeredNoteIdsRef.current.clear();
+      setIsWaitingOnStep(false);
+      setWaitingTargetStepIdx(-1);
+    }
+  }, [notes, sequenceNotes]);
 
   // Mode: Wait for Note (Pausa y Espera)
   const [waitForNoteMode, setWaitForNoteMode] = useState(false);
@@ -109,7 +128,7 @@ export default function KeysRunwaySequencer({
   // Calculate total beats duration of current sequence
   const totalBeats = Math.max(
     16,
-    sequenceNotes.reduce((max, s) => {
+    internalNotes.reduce((max, s) => {
       const d = durationToBeats(s.duration);
       return Math.max(max, s.time + d);
     }, 16)
@@ -154,20 +173,23 @@ export default function KeysRunwaySequencer({
       note: lastKeyboardTriggerNote.fullNote,
       midi: lastKeyboardTriggerNote.midi,
       time: timeBeats,
+      step: Math.floor((timeBeats % 4) / stepBeats),
       duration: durStr,
       hand: lastKeyboardTriggerNote.midi < 60 ? 'left' : 'right',
       velocity: 0.85,
     };
 
-    onSequenceUpdate([...sequenceNotes, newNote]);
+    const updated = [...internalNotes, newNote];
+    setInternalNotes(updated);
+    onSequenceUpdate?.(updated);
     setStepPointer((prev) => prev + 1);
-  }, [lastKeyboardTriggerNote, stepRecordActive, subdivision, getSubdivisionStepBeats]);
+  }, [lastKeyboardTriggerNote, stepRecordActive, subdivision, getSubdivisionStepBeats, internalNotes, onSequenceUpdate]);
 
   // Wait For Note Check: When user plays a note, check if it matches waiting step
   useEffect(() => {
     if (!waitForNoteMode || !isWaitingOnStep || waitingTargetStepIdx < 0 || !lastKeyboardTriggerNote) return;
 
-    const targetNote = sequenceNotes[waitingTargetStepIdx];
+    const targetNote = internalNotes[waitingTargetStepIdx];
     if (!targetNote) return;
 
     const matchesNote =
@@ -182,13 +204,193 @@ export default function KeysRunwaySequencer({
       setWaitingTargetStepIdx(-1);
       startTimeRef.current = performance.now() - (targetNote.time + 0.1) * (60 / bpm) * 1000;
     }
-  }, [lastKeyboardTriggerNote, waitForNoteMode, isWaitingOnStep, waitingTargetStepIdx, sequenceNotes, bpm]);
+  }, [lastKeyboardTriggerNote, waitForNoteMode, isWaitingOnStep, waitingTargetStepIdx, internalNotes, bpm]);
+
+  // Canvas Continuous Runway / Pianoroll Renderer function
+  const drawFrame = useCallback(
+    (currentTransportTime: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const containerWidth = canvas.width;
+      const containerHeight = canvas.height;
+
+      ctx.clearRect(0, 0, containerWidth, containerHeight);
+
+      // Background gradient
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, containerHeight);
+      bgGrad.addColorStop(0, '#040814');
+      bgGrad.addColorStop(1, '#091124');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, containerWidth, containerHeight);
+
+      if (viewMode === 'runway') {
+        // --- MODO RUNWAY ---
+        const hitLineX = containerWidth * 0.18; // Fixed vertical hit line at 18% left
+        const pixelsPerSecond = 120; // 120 px per beat
+
+        // Draw grid lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 1;
+        for (let b = 0; b <= totalBeats; b++) {
+          const x = hitLineX + (b - currentTransportTime) * pixelsPerSecond;
+          if (x >= 0 && x <= containerWidth) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, containerHeight);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
+            ctx.font = '10px monospace';
+            ctx.fillText(`C${b + 1}`, x + 4, 14);
+          }
+        }
+
+        // Draw Pitch Lanes
+        // Cover full pitch range: minMidi = 21 (A0, bottom), maxMidi = 96 (C7, top)
+        const minMidi = 21;
+        const maxMidi = 96;
+        const totalMidis = maxMidi - minMidi + 1;
+        const laneHeight = containerHeight / totalMidis;
+
+        // Draw each note visible on screen
+        internalNotes.forEach((note, idx) => {
+          // Hand focus filter check: only filter if explicitly focusing on opposite hand
+          if (handFocus === 'left' && note.hand === 'right') return;
+          if (handFocus === 'right' && note.hand === 'left') return;
+
+          const durBeats = durationToBeats(note.duration);
+          const noteX = hitLineX + (note.time - currentTransportTime) * pixelsPerSecond;
+          const noteWidth = Math.max(18, durBeats * pixelsPerSecond - 2);
+
+          if (noteX + noteWidth < 0 || noteX > containerWidth) return;
+
+          const isStepWaiting = isWaitingOnStep && waitingTargetStepIdx === idx;
+          const isHit =
+            currentTransportTime >= note.time && currentTransportTime < note.time + durBeats;
+          const isLH = note.hand === 'left';
+
+          // Calculate Y: grave ABAJO (higher Y), agudo ARRIBA (lower Y)
+          const clampedMidi = Math.max(minMidi, Math.min(maxMidi, note.midi));
+          const midiOffset = maxMidi - clampedMidi;
+          const blockHeight = Math.max(12, laneHeight * 2.8);
+          const noteY = Math.max(
+            0,
+            Math.min(
+              containerHeight - blockHeight,
+              midiOffset * laneHeight - blockHeight / 2 + laneHeight / 2
+            )
+          );
+
+          ctx.save();
+          if (isStepWaiting) {
+            ctx.shadowColor = '#eab308';
+            ctx.shadowBlur = 18;
+            ctx.fillStyle = '#facc15';
+          } else if (isHit) {
+            // Neon glow when crossing hitline
+            ctx.shadowColor = isLH ? '#818cf8' : '#22d3ee';
+            ctx.shadowBlur = 16;
+            ctx.fillStyle = isLH ? '#a5b4fc' : '#67e8f9';
+          } else {
+            // Left hand: Bloque violeta/índigo neón (#818cf8 / bg-indigo-500) con el nombre de la nota
+            // Right hand: Bloque cyan neón (#22d3ee / bg-cyan-400)
+            ctx.fillStyle = isLH ? '#818cf8' : '#22d3ee';
+          }
+
+          ctx.beginPath();
+          ctx.roundRect(noteX, noteY, noteWidth, blockHeight, 4);
+          ctx.fill();
+
+          // Crisp border stroke
+          ctx.strokeStyle = isStepWaiting ? '#ca8a04' : isLH ? '#6366f1' : '#0891b2';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Note label text (e.g. C3, G3, C4, E4)
+          ctx.fillStyle = isStepWaiting ? '#000000' : isLH ? '#1e1b4b' : '#083344';
+          ctx.font = 'bold 9px monospace';
+          ctx.fillText(note.note, noteX + 4, noteY + blockHeight - 2.5);
+
+          ctx.restore();
+        });
+
+        // Draw Cyan Neon Hitline at 18%
+        ctx.save();
+        ctx.shadowColor = isWaitingOnStep ? '#eab308' : '#22d3ee';
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = isWaitingOnStep ? '#facc15' : '#22d3ee';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(hitLineX, 0);
+        ctx.lineTo(hitLineX, containerHeight);
+        ctx.stroke();
+
+        ctx.fillStyle = isWaitingOnStep ? '#eab308' : '#22d3ee';
+        ctx.beginPath();
+        ctx.arc(hitLineX, 10, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else {
+        // --- MODO PIANO ROLL DAW ---
+        const pixelsPerBeat = containerWidth / totalBeats;
+        const minMidi = 21;
+        const maxMidi = 96;
+        const laneHeight = containerHeight / (maxMidi - minMidi + 1);
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        for (let b = 0; b <= totalBeats; b++) {
+          const x = b * pixelsPerBeat;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, containerHeight);
+          ctx.stroke();
+        }
+
+        internalNotes.forEach((n) => {
+          if (handFocus === 'left' && n.hand === 'right') return;
+          if (handFocus === 'right' && n.hand === 'left') return;
+
+          const durBeats = durationToBeats(n.duration);
+          const startX = n.time * pixelsPerBeat;
+          const noteWidth = durBeats * pixelsPerBeat - 1;
+
+          const clampedMidi = Math.max(minMidi, Math.min(maxMidi, n.midi));
+          const y = (maxMidi - clampedMidi) * laneHeight;
+          const isLH = n.hand === 'left';
+
+          ctx.fillStyle = isLH ? '#818cf8' : '#22d3ee';
+          ctx.beginPath();
+          ctx.roundRect(startX, y, Math.max(6, noteWidth), Math.max(5, laneHeight * 2), 3);
+          ctx.fill();
+        });
+
+        const playheadX = currentTransportTime * pixelsPerBeat;
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playheadX, 0);
+        ctx.lineTo(playheadX, containerHeight);
+        ctx.stroke();
+      }
+    },
+    [internalNotes, totalBeats, viewMode, handFocus, isWaitingOnStep, waitingTargetStepIdx]
+  );
+
+  // Redraw canvas whenever notes change or transport moves
+  useEffect(() => {
+    drawFrame(currentBeat);
+  }, [internalNotes, drawFrame, currentBeat]);
 
   // Main Audio & Visual Loop Animation
   useEffect(() => {
     if (!isPlaying) {
       onActiveNotesChange(new Map());
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      drawFrame(currentBeat);
       return;
     }
 
@@ -199,7 +401,6 @@ export default function KeysRunwaySequencer({
 
     const loop = () => {
       if (isWaitingOnStep) {
-        // Paused waiting for user note
         animationFrameRef.current = requestAnimationFrame(loop);
         return;
       }
@@ -218,29 +419,31 @@ export default function KeysRunwaySequencer({
         } else {
           setIsPlaying(false);
           onActiveNotesChange(new Map());
+          drawFrame(0);
           return;
         }
       }
 
       setCurrentBeat(beat);
+      drawFrame(beat);
 
       // Check hitline triggers
       const activeMap = new Map<number, NoteInfo>();
       const notesToTriggerNow: string[] = [];
 
-      sequenceNotes.forEach((n, idx) => {
+      internalNotes.forEach((n, idx) => {
         const dBeats = durationToBeats(n.duration);
         const start = n.time;
         const end = start + dBeats;
 
-        // Hand focus filter
-        if (handFocus === 'left' && n.hand !== 'left' && n.midi >= 60) return;
-        if (handFocus === 'right' && n.hand !== 'right' && n.midi < 60) return;
+        if (handFocus === 'left' && n.hand === 'right') return;
+        if (handFocus === 'right' && n.hand === 'left') return;
 
         if (beat >= start && beat < end) {
-          activeMap.set(n.midi, midiToNoteInfo(n.midi));
+          const info = midiToNoteInfo(n.midi);
+          info.hand = n.hand === 'left' ? 'LH' : 'RH';
+          activeMap.set(n.midi, info);
 
-          // If Wait For Note mode is active, pause when reaching start of step!
           if (waitForNoteMode && !triggeredNoteIdsRef.current.has(n.id)) {
             triggeredNoteIdsRef.current.add(n.id);
             setIsWaitingOnStep(true);
@@ -248,7 +451,7 @@ export default function KeysRunwaySequencer({
             return;
           }
 
-          if (!triggeredNoteIdsRef.current.has(n.id) && beat - start < 0.15) {
+          if (!triggeredNoteIdsRef.current.has(n.id)) {
             triggeredNoteIdsRef.current.add(n.id);
             notesToTriggerNow.push(n.note);
           }
@@ -273,192 +476,16 @@ export default function KeysRunwaySequencer({
     bpm,
     isLooping,
     totalBeats,
-    sequenceNotes,
+    internalNotes,
     onActiveNotesChange,
     isWaitingOnStep,
     waitForNoteMode,
     handFocus,
-    currentBeat,
+    drawFrame,
   ]);
 
-  // Canvas Continuous Runway / Pianoroll Renderer
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const width = canvas.width;
-    const height = canvas.height;
-
-    ctx.clearRect(0, 0, width, height);
-
-    // Background gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
-    bgGrad.addColorStop(0, '#040814');
-    bgGrad.addColorStop(1, '#091124');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, width, height);
-
-    if (viewMode === 'runway') {
-      // --- MODO RUNWAY ---
-      const hitlineX = width * 0.18; // Fixed vertical hit line at 18% left
-      const pixelsPerBeat = 120;
-
-      // Draw grid lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.lineWidth = 1;
-      for (let b = 0; b <= totalBeats; b++) {
-        const x = hitlineX + (b - currentBeat) * pixelsPerBeat;
-        if (x >= 0 && x <= width) {
-          ctx.beginPath();
-          ctx.moveTo(x, 0);
-          ctx.lineTo(x, height);
-          ctx.stroke();
-
-          ctx.fillStyle = 'rgba(148, 163, 184, 0.4)';
-          ctx.font = '10px monospace';
-          ctx.fillText(`C${b + 1}`, x + 4, 14);
-        }
-      }
-
-      // Draw Pitch Lanes
-      // Cover full pitch range: minMidi = 21 (A0, bottom), maxMidi = 96 (C7, top)
-      // So all LH notes (e.g. F1=29, G1=31, C2=36) fit comfortably inside the canvas!
-      const minMidi = 21;
-      const maxMidi = 96;
-      const totalMidis = maxMidi - minMidi + 1;
-      const laneHeight = height / totalMidis;
-
-      // Draw Note Blocks
-      sequenceNotes.forEach((n, idx) => {
-        // Hand focus filter check
-        if (handFocus === 'left' && n.hand !== 'left' && n.midi >= 60) return;
-        if (handFocus === 'right' && n.hand !== 'right' && n.midi < 60) return;
-
-        const dBeats = durationToBeats(n.duration);
-        const startX = hitlineX + (n.time - currentBeat) * pixelsPerBeat;
-        const noteWidth = Math.max(16, dBeats * pixelsPerBeat - 2);
-
-        if (startX + noteWidth < 0 || startX > width) return;
-
-        const isStepWaiting = isWaitingOnStep && waitingTargetStepIdx === idx;
-        const isHit = currentBeat >= n.time && currentBeat < n.time + dBeats;
-        const isLH = n.hand === 'left' || n.midi < 60;
-
-        // Calculate Y: grave ABAJO (higher Y), agudo ARRIBA (lower Y)
-        const clampedMidi = Math.max(minMidi, Math.min(maxMidi, n.midi));
-        const midiOffset = maxMidi - clampedMidi;
-        const blockHeight = Math.max(10, laneHeight * 2.8);
-        const y = Math.max(
-          0,
-          Math.min(height - blockHeight, midiOffset * laneHeight - blockHeight / 2 + laneHeight / 2)
-        );
-
-        ctx.save();
-        if (isStepWaiting) {
-          ctx.shadowColor = '#eab308';
-          ctx.shadowBlur = 18;
-          ctx.fillStyle = '#facc15';
-        } else if (isHit) {
-          // Neon glow when crossing hitline
-          ctx.shadowColor = isLH ? '#818cf8' : '#22d3ee';
-          ctx.shadowBlur = 16;
-          ctx.fillStyle = isLH ? '#a5b4fc' : '#67e8f9';
-        } else {
-          // Left hand: Bloque color Índigo/Púrpura neón (bg-indigo-500 / #818cf8) con etiqueta de la nota.
-          // Right hand: Bloque color Cyan neón (bg-cyan-400 / #22d3ee).
-          ctx.fillStyle = isLH ? '#818cf8' : '#22d3ee';
-        }
-
-        ctx.beginPath();
-        ctx.roundRect(startX, y, noteWidth, blockHeight, 4);
-        ctx.fill();
-
-        // Crisp border stroke
-        ctx.strokeStyle = isStepWaiting ? '#ca8a04' : isLH ? '#6366f1' : '#0891b2';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Note label text
-        ctx.fillStyle = isStepWaiting ? '#000000' : isLH ? '#1e1b4b' : '#083344';
-        ctx.font = 'bold 9px monospace';
-        ctx.fillText(n.note, startX + 4, y + blockHeight - 2.5);
-
-        ctx.restore();
-      });
-
-      // Draw Cyan Neon Hitline at 18%
-      ctx.save();
-      ctx.shadowColor = isWaitingOnStep ? '#eab308' : '#22d3ee';
-      ctx.shadowBlur = 16;
-      ctx.strokeStyle = isWaitingOnStep ? '#facc15' : '#22d3ee';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(hitlineX, 0);
-      ctx.lineTo(hitlineX, height);
-      ctx.stroke();
-
-      ctx.fillStyle = isWaitingOnStep ? '#eab308' : '#22d3ee';
-      ctx.beginPath();
-      ctx.arc(hitlineX, 10, 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    } else {
-      // --- MODO PIANO ROLL DAW ---
-      const pixelsPerBeat = width / totalBeats;
-      const minMidi = 21;
-      const maxMidi = 96;
-      const laneHeight = height / (maxMidi - minMidi + 1);
-
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.lineWidth = 1;
-      for (let b = 0; b <= totalBeats; b++) {
-        const x = b * pixelsPerBeat;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-
-      sequenceNotes.forEach((n) => {
-        if (handFocus === 'left' && n.hand !== 'left' && n.midi >= 60) return;
-        if (handFocus === 'right' && n.hand !== 'right' && n.midi < 60) return;
-
-        const dBeats = durationToBeats(n.duration);
-        const startX = n.time * pixelsPerBeat;
-        const noteWidth = dBeats * pixelsPerBeat - 1;
-
-        const clampedMidi = Math.max(minMidi, Math.min(maxMidi, n.midi));
-        const y = (maxMidi - clampedMidi) * laneHeight;
-        const isLH = n.hand === 'left' || n.midi < 60;
-
-        ctx.fillStyle = isLH ? '#818cf8' : '#22d3ee';
-        ctx.beginPath();
-        ctx.roundRect(startX, y, Math.max(6, noteWidth), Math.max(5, laneHeight * 2), 3);
-        ctx.fill();
-      });
-
-      const playheadX = currentBeat * pixelsPerBeat;
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(playheadX, 0);
-      ctx.lineTo(playheadX, height);
-      ctx.stroke();
-    }
-  }, [
-    viewMode,
-    sequenceNotes,
-    currentBeat,
-    totalBeats,
-    isWaitingOnStep,
-    waitingTargetStepIdx,
-    handFocus,
-  ]);
-
-  // Compute current and next step notes for lateral feedback
-  const currentActiveNotes = sequenceNotes.filter((s) => {
+  // Compute current active notes for lateral feedback
+  const currentActiveNotes = internalNotes.filter((s) => {
     const d = durationToBeats(s.duration);
     return currentBeat >= s.time && currentBeat < s.time + d;
   });
@@ -590,6 +617,7 @@ export default function KeysRunwaySequencer({
               setIsWaitingOnStep(false);
               setWaitingTargetStepIdx(-1);
               onActiveNotesChange(new Map());
+              drawFrame(0);
               try {
                 Tone.Transport.stop();
                 Tone.Transport.seconds = 0;
@@ -614,7 +642,11 @@ export default function KeysRunwaySequencer({
           </button>
 
           <button
-            onClick={() => onSequenceUpdate([])}
+            onClick={() => {
+              setInternalNotes([]);
+              onSequenceUpdate?.([]);
+              drawFrame(0);
+            }}
             className="p-2 rounded-xl bg-rose-950/60 text-rose-400 hover:bg-rose-900 border border-rose-800/60 transition-colors"
             title="Limpiar secuencia"
           >
@@ -645,7 +677,7 @@ export default function KeysRunwaySequencer({
 
           {/* Step Record Button */}
           <button
-            onClick={() => onStepRecordToggle(!stepRecordActive)}
+            onClick={() => onStepRecordToggle?.(!stepRecordActive)}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
               stepRecordActive
                 ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30 animate-pulse'

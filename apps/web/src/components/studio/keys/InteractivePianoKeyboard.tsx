@@ -299,8 +299,10 @@ export default function InteractivePianoKeyboard({
           {whiteKeys.map((keyInfo) => {
             const isManualPressed = pressedMidis.has(keyInfo.midi);
             const activeTheoryNote = activeNotesMap.get(keyInfo.midi);
-            const isLH = keyInfo.midi < splitPointMidi;
-            const isHandAllowed = handFocus === 'both' || (handFocus === 'left' ? isLH : !isLH);
+            const isLH = activeTheoryNote
+              ? (activeTheoryNote.hand === 'LH' || (activeTheoryNote.midi < splitPointMidi && activeTheoryNote.hand !== 'RH'))
+              : (handFocus === 'left' ? true : (handFocus === 'right' ? false : keyInfo.midi < splitPointMidi));
+            const isHandAllowed = handFocus === 'both' || !!activeTheoryNote || (handFocus === 'left' ? isLH : !isLH);
             const isActive = (isManualPressed || !!activeTheoryNote) && isHandAllowed;
 
             // Smart Guard Status
@@ -420,8 +422,10 @@ export default function InteractivePianoKeyboard({
 
           const isManualPressed = pressedMidis.has(keyInfo.midi);
           const activeTheoryNote = activeNotesMap.get(keyInfo.midi);
-          const isLH = keyInfo.midi < splitPointMidi;
-          const isHandAllowed = handFocus === 'both' || (handFocus === 'left' ? isLH : !isLH);
+          const isLH = activeTheoryNote
+            ? (activeTheoryNote.hand === 'LH' || (activeTheoryNote.midi < splitPointMidi && activeTheoryNote.hand !== 'RH'))
+            : (handFocus === 'left' ? true : (handFocus === 'right' ? false : keyInfo.midi < splitPointMidi));
+          const isHandAllowed = handFocus === 'both' || !!activeTheoryNote || (handFocus === 'left' ? isLH : !isLH);
           const isActive = (isManualPressed || !!activeTheoryNote) && isHandAllowed;
 
           const isTarget = smartKeyGuardMode && targetNotesSet.has(keyInfo.midi);

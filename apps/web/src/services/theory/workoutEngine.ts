@@ -11,10 +11,11 @@ import { HARMONIC_VAULT } from '@/data/harmonicVaultData';
 
 export interface RunwayNoteEvent {
   id: string;
-  note: string;       // Ej: 'C2', 'E3', 'G3', 'B3'
+  note: string;       // Ej: 'C3', 'G3', 'C4', 'E4'
   midi: number;
-  time: number;       // Posición en compases/pasos en beats (ej: 0, 0.5, 1.0, 1.5...)
-  duration: string;   // '4n', '8n', '16n', '2n', '1n'
+  time: number;       // Tiempo en segundos o compases (0, 0.5, 1.0, 1.5...)
+  step: number;       // Paso dentro del compás (0, 1, 2, 3...)
+  duration: string;   // '4n', '8n', '16n'
   hand: 'left' | 'right';
   velocity?: number;
 }
@@ -33,6 +34,8 @@ export function stepNotesToRunwayNoteEvents(stepNotes: RunwayStepNote[]): Runway
         : step.durationBeats >= 0.5
         ? '8n'
         : '16n';
+    const durBeats = durationToBeats(durStr);
+    const stepInBar = Math.floor((step.timeBeats % 4) / durBeats);
     step.notes.forEach((n) => {
       counter++;
       events.push({
@@ -40,6 +43,7 @@ export function stepNotesToRunwayNoteEvents(stepNotes: RunwayStepNote[]): Runway
         note: n.fullNote,
         midi: n.midi,
         time: step.timeBeats,
+        step: stepInBar,
         duration: durStr,
         hand: n.midi < 60 ? 'left' : 'right',
         velocity: 0.85,
@@ -114,19 +118,23 @@ export function midiToNoteName(midi: number): string {
 }
 
 let eventCounter = 0;
-function createNote(
+export function createNote(
   note: string,
   time: number,
   duration = '4n',
   hand: 'left' | 'right' = 'left',
-  velocity = 0.85
+  velocity = 0.85,
+  step?: number
 ): RunwayNoteEvent {
   eventCounter++;
+  const durBeats = durationToBeats(duration);
+  const calculatedStep = step !== undefined ? step : Math.floor((time % 4) / Math.max(0.125, durBeats));
   return {
     id: `ev_${eventCounter}_${note}_${time}`,
     note,
     midi: parseNoteToMidi(note),
     time,
+    step: calculatedStep,
     duration,
     hand,
     velocity,
@@ -136,14 +144,17 @@ function createNote(
 /**
  * Builds concrete, musically authentic Runway note events for all dedicated routines
  */
-export function generateWorkoutRunwayNotes(workout: PracticeRoutine): RunwayNoteEvent[] {
+export function generateWorkoutRunwayNotes(
+  workout: PracticeRoutine,
+  rootNote?: string
+): RunwayNoteEvent[] {
   // If workout already carries custom concrete notes, return them
   if (workout.notes && workout.notes.length > 0) {
     return workout.notes;
   }
 
   const id = workout.id;
-  const root = workout.rootNote || 'C';
+  const root = rootNote || workout.rootNote || 'C';
 
   // =========================================================================
   // NIVEL 1: PRINCIPIANTE
@@ -254,19 +265,16 @@ export function generateWorkoutRunwayNotes(workout: PracticeRoutine): RunwayNote
   // 6. LH: Arpegios Fluidos 1-5-8-10 (Balada Pop)
   if (id === 'routine_l2_lh_arpeggios_15810') {
     const events: RunwayNoteEvent[] = [];
-    const chords = [
-      { n1: 'C2', n5: 'G2', n8: 'C3', n10: 'E3' }, // C
-      { n1: 'G1', n5: 'D2', n8: 'G2', n10: 'B2' }, // G/B
-      { n1: 'A1', n5: 'E2', n8: 'A2', n10: 'C3' }, // Am
-      { n1: 'F1', n5: 'C2', n8: 'F2', n10: 'A2' }, // F
+    const bars = [
+      { base: 0, notes: ['C3', 'G3', 'C4', 'E4', 'G3', 'C4', 'E4', 'G3'] },
+      { base: 4, notes: ['G2', 'D3', 'G3', 'B3', 'D3', 'G3', 'B3', 'D3'] },
+      { base: 8, notes: ['A2', 'E3', 'A3', 'C4', 'E3', 'A3', 'C4', 'E3'] },
+      { base: 12, notes: ['F2', 'C3', 'F3', 'A3', 'C3', 'F3', 'A3', 'C3'] },
     ];
 
-    chords.forEach((c, cIdx) => {
-      const b = cIdx * 4;
-      // Arpegio continuo en corcheas (8 corcheas por compás)
-      const pattern = [c.n1, c.n5, c.n8, c.n10, c.n8, c.n10, c.n8, c.n5];
-      pattern.forEach((n, pIdx) => {
-        events.push(createNote(n, b + pIdx * 0.5, '8n', 'left'));
+    bars.forEach((bar) => {
+      bar.notes.forEach((note, step) => {
+        events.push(createNote(note, bar.base + step * 0.5, '8n', 'left', 0.85, step));
       });
     });
     return events;

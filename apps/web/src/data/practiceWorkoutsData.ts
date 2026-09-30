@@ -4,9 +4,10 @@ export type HandFocus = 'left' | 'right' | 'both';
 
 export interface RunwayNoteEvent {
   id: string;
-  note: string;       // Ej: 'C2', 'E3', 'G3', 'B3'
+  note: string;       // Ej: 'C3', 'G3', 'C4', 'E4'
   midi: number;
-  time: number;       // Posición en compases/pasos en beats (ej: 0, 0.5, 1.0, 1.5...)
+  time: number;       // Tiempo en segundos o compases (0, 0.5, 1.0, 1.5...)
+  step: number;       // Paso dentro del compás
   duration: string;   // '4n', '8n', '16n'
   hand: 'left' | 'right';
   velocity?: number;

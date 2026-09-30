@@ -207,38 +207,39 @@ export default function KeysStudio() {
     }
   }, [rootNote, selectedItemId, category, texture, voicingType, bpm]);
 
-  // Handler: Select a Routine from Workouts Dashboard
-  const handleSelectRoutine = (routine: PracticeRoutine) => {
-    setActiveRoutine(routine);
-    if (routine.handFocus) {
-      setHandFocus(routine.handFocus);
+  // Handler: Load Workout from Workouts Dashboard
+  const handleLoadWorkout = (workout: PracticeRoutine) => {
+    setActiveRoutine(workout);
+    if (workout.handFocus) {
+      setHandFocus(workout.handFocus);
     }
-    setRootNote(routine.rootNote);
-    const targetBpm = routine.bpm || (routine as any).targetBpm || 120;
+    const currentRootNote = workout.rootNote || rootNote || 'C';
+    setRootNote(currentRootNote);
+    const targetBpm = (workout as any).targetBpm || workout.bpm || 120;
     setBpm(targetBpm);
-    setTexture(routine.texture);
-    setVoicingType(routine.voicingType);
-    setCategory(routine.category);
-    setSelectedItemId(routine.targetItemId);
+    setTexture(workout.texture);
+    setVoicingType(workout.voicingType);
+    setCategory(workout.category);
+    setSelectedItemId(workout.targetItemId);
 
-    // 1. Generate concrete note events for the routine
-    const runwayNotes = generateWorkoutRunwayNotes(routine);
+    // 1. Generate concrete note events for the routine with current root
+    const notesToLoad = generateWorkoutRunwayNotes(workout, currentRootNote);
 
     // 2. Set runway sequence directly
-    setSequenceNotes(runwayNotes);
+    setSequenceNotes(notesToLoad);
 
     // 3. Adjust Tone.Transport BPM and reset to 0
-    try {
-      Tone.Transport.bpm.value = targetBpm;
-      Tone.Transport.seconds = 0;
-    } catch (e) {
-      console.warn('Tone.Transport error', e);
+    if (targetBpm && Tone.Transport) {
+      try {
+        if (Tone.Transport.bpm) Tone.Transport.bpm.value = targetBpm;
+        Tone.Transport.seconds = 0;
+      } catch (e) {
+        console.warn('Tone.Transport error', e);
+      }
     }
-
-    // 4. Auto-trigger playback in Runway!
-    setAutoPlayRunway(true);
-    setTimeout(() => setAutoPlayRunway(false), 200);
   };
+
+  const handleSelectRoutine = handleLoadWorkout;
 
   // Initial load into runway
   useEffect(() => {
@@ -455,6 +456,7 @@ export default function KeysStudio() {
       {/* 4. RUNWAY SEQUENCER (With Lateral Feedback & Wait Mode) */}
       {/* ======================================================= */}
       <KeysRunwaySequencer
+        notes={sequenceNotes}
         sequenceNotes={sequenceNotes}
         onSequenceUpdate={setSequenceNotes}
         onActiveNotesChange={setActiveNotesMap}
