@@ -5,9 +5,13 @@ import {
   CHROMATIC_NOTES,
   SCALE_CATALOG,
   CHORD_CATALOG,
+  ChordDefinition,
+  ChordFamily,
+  DominantAcousticType,
   VoicingType,
   LabelType,
   AccompanimentTexture,
+  getChordNotes,
   getTransposedFormulaChords,
 } from '@/services/theory/keysTheoryEngine';
 import {
@@ -17,6 +21,7 @@ import {
   HarmonicLevel,
   HarmonicGenre,
 } from '@/data/harmonicVaultData';
+import { keysAudioEngine } from '@/services/audio/keysAudioEngine';
 import {
   BookOpen,
   Globe,
@@ -29,6 +34,7 @@ import {
   Layers,
   Zap,
   Music,
+  Volume2,
 } from 'lucide-react';
 
 export type MasterTab = 'acordes' | 'escalas' | 'armonia';
@@ -69,7 +75,13 @@ export default function KeysTheoryBar({
   className = '',
 }: KeysTheoryBarProps) {
   // Master Navigation Tab State
-  const [activeMainTab, setActiveMainTab] = useState<MasterTab>('armonia');
+  const [activeMainTab, setActiveMainTab] = useState<MasterTab>(
+    selectedCategory === 'scale' ? 'escalas' : selectedCategory === 'chord' ? 'acordes' : 'armonia'
+  );
+
+  // Sub-filter for Chord Families
+  const [chordFamilyFilter, setChordFamilyFilter] = useState<'all' | ChordFamily>('all');
+  const [dominantSubFilter, setDominantSubFilter] = useState<'all' | DominantAcousticType>('all');
 
   // Search & Filter State for Mega-Librería
   const [searchTerm, setSearchTerm] = useState('');
@@ -97,6 +109,21 @@ export default function KeysTheoryBar({
     'Cinematico & BSO',
     'Modal & Experimental',
   ];
+
+  // Filtered Chords Catalog
+  const filteredChords = useMemo(() => {
+    return CHORD_CATALOG.filter((chord) => {
+      if (chordFamilyFilter !== 'all') {
+        if (chordFamilyFilter === 'dominant') {
+          if (chord.family !== 'dominant') return false;
+          if (dominantSubFilter !== 'all' && chord.dominantType !== dominantSubFilter) return false;
+        } else if (chord.family !== chordFamilyFilter) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [chordFamilyFilter, dominantSubFilter]);
 
   // Filtered Vault Formulas
   const filteredVaultFormulas = useMemo(() => {
@@ -144,6 +171,19 @@ export default function KeysTheoryBar({
     }
   };
 
+  // Chord Click Audition & Selection Handler
+  const handleChordClick = (chord: ChordDefinition) => {
+    onCategoryChange('chord');
+    onItemSelect(chord.id);
+
+    // Instant polyphonic audition with selected voicing
+    const chordNotes = getChordNotes(rootNote, chord.id, voicingType, 4);
+    keysAudioEngine.playChord(
+      chordNotes.map((n) => n.fullNote),
+      '2n'
+    );
+  };
+
   return (
     <div className={`w-full flex flex-col gap-4 p-5 rounded-2xl bg-[#080d1e]/95 border border-slate-800 shadow-2xl backdrop-blur-md ${className}`}>
       {/* 1. MASTER NAVIGATION TABS BAR */}
@@ -158,6 +198,9 @@ export default function KeysTheoryBar({
             }`}
           >
             <span>🎹 Acordes &amp; Voicings</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-950 text-cyan-300 font-mono font-bold">
+              {CHORD_CATALOG.length}
+            </span>
           </button>
 
           <button
@@ -169,6 +212,9 @@ export default function KeysTheoryBar({
             }`}
           >
             <span>🎼 Escalas &amp; Modos</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-950 text-cyan-300 font-mono font-bold">
+              {SCALE_CATALOG.length}
+            </span>
           </button>
 
           <button
@@ -231,16 +277,93 @@ export default function KeysTheoryBar({
 
       {/* 2. TAB CONTENT VIEW SWITCHER */}
 
-      {/* TAB 1: ACORDES & VOICINGS */}
+      {/* TAB 1: ACORDES & VOICINGS CON SUB-FILTROS DE FAMILIAS */}
       {activeMainTab === 'acordes' && (
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h4 className="text-xs font-extrabold text-cyan-400 uppercase tracking-wider font-mono flex items-center gap-2">
-              <span>Catálogo de Tríadas, Tétradas y Acordes Extendidos en {rootNote}</span>
-            </h4>
-            {/* Voicing Selector */}
-            <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono">
-              <span className="text-slate-400">Tipo de Voicing:</span>
+        <div className="flex flex-col gap-3">
+          {/* Sub-Filters Navigation Bar for Chord Families */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+              <button
+                onClick={() => setChordFamilyFilter('all')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  chordFamilyFilter === 'all'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
+                    : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                }`}
+              >
+                Todos ({CHORD_CATALOG.length})
+              </button>
+
+              <button
+                onClick={() => setChordFamilyFilter('triad')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  chordFamilyFilter === 'triad'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                    : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                }`}
+              >
+                🟢 Tríadas Básicas
+              </button>
+
+              <button
+                onClick={() => setChordFamilyFilter('seventh')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  chordFamilyFilter === 'seventh'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                    : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                }`}
+              >
+                🔵 Séptimas / Tétradas
+              </button>
+
+              <button
+                onClick={() => setChordFamilyFilter('dominant')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  chordFamilyFilter === 'dominant'
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 shadow-md shadow-amber-500/30'
+                    : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                }`}
+              >
+                ⚡ Acordes Dominantes (26)
+              </button>
+
+              <button
+                onClick={() => setChordFamilyFilter('extended')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  chordFamilyFilter === 'extended'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+                    : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                }`}
+              >
+                🟣 Extensiones (9, 11, 13)
+              </button>
+
+              <button
+                onClick={() => setChordFamilyFilter('suspended_add')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  chordFamilyFilter === 'suspended_add'
+                    ? 'bg-yellow-600 text-white shadow-md shadow-yellow-600/20'
+                    : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                }`}
+              >
+                🟡 Suspendidos &amp; Add
+              </button>
+
+              <button
+                onClick={() => setChordFamilyFilter('altered_dim')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition-all ${
+                  chordFamilyFilter === 'altered_dim'
+                    ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
+                    : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                }`}
+              >
+                🔴 Disminuidos &amp; Alterados
+              </button>
+            </div>
+
+            {/* Voicing Style Selector */}
+            <div className="flex items-center gap-2 bg-slate-900 px-3 py-1 rounded-xl border border-slate-800 text-xs font-mono">
+              <span className="text-slate-400 text-[11px]">Voicing:</span>
               <select
                 value={voicingType}
                 onChange={(e) => onVoicingChange(e.target.value as VoicingType)}
@@ -256,25 +379,126 @@ export default function KeysTheoryBar({
             </div>
           </div>
 
-          <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
-            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
-              {CHORD_CATALOG.map((chord) => {
+          {/* Specialized Dominant Sub-Classification Filter Bar */}
+          {chordFamilyFilter === 'dominant' && (
+            <div className="flex items-center gap-2 bg-slate-900/60 p-2 rounded-xl border border-slate-800/80 font-mono text-xs">
+              <span className="text-amber-400 font-bold flex items-center gap-1.5 pl-1">
+                <Zap className="w-3.5 h-3.5" />
+                <span>Naturaleza Acústica:</span>
+              </span>
+              <button
+                onClick={() => setDominantSubFilter('all')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  dominantSubFilter === 'all'
+                    ? 'bg-amber-400 text-slate-950 font-black'
+                    : 'bg-slate-950 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Todos los Dominantes
+              </button>
+              <button
+                onClick={() => setDominantSubFilter('primary')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  dominantSubFilter === 'primary'
+                    ? 'bg-indigo-500 text-white font-black shadow-md shadow-indigo-500/20'
+                    : 'bg-slate-950 text-indigo-300 hover:text-white'
+                }`}
+              >
+                🔵 Primarios &amp; Naturales
+              </button>
+              <button
+                onClick={() => setDominantSubFilter('suspended')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  dominantSubFilter === 'suspended'
+                    ? 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/20'
+                    : 'bg-slate-950 text-cyan-300 hover:text-white'
+                }`}
+              >
+                🔷 Suspendidos / Modales
+              </button>
+              <button
+                onClick={() => setDominantSubFilter('altered')}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                  dominantSubFilter === 'altered'
+                    ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white font-black shadow-md'
+                    : 'bg-slate-950 text-amber-300 hover:text-white'
+                }`}
+              >
+                🔥 Alterados / Jazz &amp; V7
+              </button>
+            </div>
+          )}
+
+          {/* Redesigned Chords Grid (grid-cols-2 to 6, max-h-[440px]) */}
+          <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 max-h-[440px] overflow-y-auto pr-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
+              {filteredChords.map((chord) => {
                 const isSelected = selectedItemId === chord.id;
+
+                // Color badge based on family and dominant acoustic type
+                let badgeClass = 'bg-slate-900 text-slate-400 border-slate-800';
+                let familyTag = 'Acorde';
+
+                if (chord.family === 'triad') {
+                  badgeClass = 'bg-emerald-950/90 text-emerald-300 border-emerald-800/80';
+                  familyTag = 'Tríada';
+                } else if (chord.family === 'seventh') {
+                  badgeClass = 'bg-blue-950/90 text-blue-300 border-blue-800/80';
+                  familyTag = 'Séptima';
+                } else if (chord.family === 'dominant') {
+                  if (chord.dominantType === 'primary') {
+                    badgeClass = 'bg-indigo-950/90 text-indigo-300 border-indigo-700/80';
+                    familyTag = 'Dom Natural';
+                  } else if (chord.dominantType === 'suspended') {
+                    badgeClass = 'bg-cyan-950/90 text-cyan-300 border-cyan-800/80';
+                    familyTag = 'Dom Sus';
+                  } else {
+                    badgeClass = 'bg-gradient-to-r from-amber-950/90 to-rose-950/90 text-amber-200 border-amber-700/80';
+                    familyTag = 'Dom Alterado';
+                  }
+                } else if (chord.family === 'extended') {
+                  badgeClass = 'bg-purple-950/90 text-purple-300 border-purple-800/80';
+                  familyTag = 'Extensión';
+                } else if (chord.family === 'suspended_add') {
+                  badgeClass = 'bg-yellow-950/90 text-yellow-300 border-yellow-800/80';
+                  familyTag = 'Sus / Add';
+                } else if (chord.family === 'altered_dim') {
+                  badgeClass = 'bg-rose-950/90 text-rose-300 border-rose-800/80';
+                  familyTag = 'Disminuido';
+                }
+
                 return (
                   <button
                     key={chord.id}
-                    onClick={() => {
-                      onCategoryChange('chord');
-                      onItemSelect(chord.id);
-                    }}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-all border flex items-center gap-1.5 ${
+                    onClick={() => handleChordClick(chord)}
+                    className={`group relative p-3 rounded-xl border text-left font-mono transition-all flex flex-col justify-between gap-2.5 cursor-pointer ${
                       isSelected
-                        ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-500/20'
-                        : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'
+                        ? 'bg-slate-900 border-cyan-500 shadow-lg shadow-cyan-500/20 scale-[0.99] ring-1 ring-cyan-500'
+                        : 'bg-slate-900/60 border-slate-800/90 hover:border-slate-700 hover:bg-slate-900/90'
                     }`}
                   >
-                    <span>{rootNote}{chord.symbol}</span>
-                    <span className="text-[10px] opacity-75 font-normal">({chord.name})</span>
+                    {/* Header with Family Badge & Audio Icon */}
+                    <div className="flex items-center justify-between gap-1 w-full">
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${badgeClass}`}>
+                        {familyTag}
+                      </span>
+                      <Volume2 className="w-3.5 h-3.5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+                    </div>
+
+                    {/* Main Chord Symbol (Prominent White Display) */}
+                    <div>
+                      <div className="text-base sm:text-lg font-black text-white group-hover:text-cyan-300 transition-colors tracking-tight">
+                        {rootNote}{chord.symbol}
+                      </div>
+                      <div className="text-[11px] text-slate-300 font-bold truncate">
+                        {chord.name}
+                      </div>
+                    </div>
+
+                    {/* Formula Pill */}
+                    <div className="text-[10px] text-cyan-400 bg-slate-950/90 px-2 py-0.5 rounded border border-slate-800/90 font-mono font-bold tracking-tight truncate">
+                      {chord.formula}
+                    </div>
                   </button>
                 );
               })}
@@ -528,7 +752,7 @@ export default function KeysTheoryBar({
           <div className="font-extrabold text-cyan-400 font-mono flex items-center gap-2">
             <span>
               {activeVaultFormula ? `${activeVaultFormula.name} (${rootNote})` : ''}
-              {activeChord ? `${rootNote} ${activeChord.name}` : ''}
+              {activeChord ? `${rootNote}${activeChord.symbol} - ${activeChord.name}` : ''}
               {activeScale ? `${rootNote} ${activeScale.name}` : ''}
             </span>
           </div>
