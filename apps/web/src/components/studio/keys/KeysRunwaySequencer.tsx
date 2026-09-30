@@ -40,7 +40,9 @@ export type TupletSubdivision =
   | '3:2_eighth'
   | '6:4'
   | '5:4'
-  | '7:4';
+  | '7:4'
+  | '3T'
+  | '6T';
 
 interface KeysRunwaySequencerProps {
   notes?: RunwayNoteEvent[];
@@ -147,7 +149,10 @@ export default function KeysRunwaySequencer({
       case '3:2_quarter':
         return 2 / 3;
       case '3:2_eighth':
+      case '3T':
         return 1 / 3;
+      case '6T':
+        return 1 / 6;
       case '6:4':
         return 4 / 6;
       case '5:4':
@@ -249,9 +254,10 @@ export default function KeysRunwaySequencer({
         }
 
         // Draw Pitch Lanes
-        // Cover full pitch range: minMidi = 21 (A0, bottom), maxMidi = 96 (C7, top)
+        // Cover full pitch range: minMidi = 21 (A0, bottom), maxMidi up to 108 (C8, top)
         const minMidi = 21;
-        const maxMidi = 96;
+        const highestNoteMidi = internalNotes.reduce((max, n) => Math.max(max, n.midi), 96);
+        const maxMidi = Math.max(96, highestNoteMidi);
         const totalMidis = maxMidi - minMidi + 1;
         const laneHeight = containerHeight / totalMidis;
 
@@ -337,7 +343,8 @@ export default function KeysRunwaySequencer({
         // --- MODO PIANO ROLL DAW ---
         const pixelsPerBeat = containerWidth / totalBeats;
         const minMidi = 21;
-        const maxMidi = 96;
+        const highestNoteMidi = internalNotes.reduce((max, n) => Math.max(max, n.midi), 96);
+        const maxMidi = Math.max(96, highestNoteMidi);
         const laneHeight = containerHeight / (maxMidi - minMidi + 1);
 
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
@@ -459,7 +466,10 @@ export default function KeysRunwaySequencer({
       });
 
       if (notesToTriggerNow.length > 0) {
-        keysAudioEngine.playChord(notesToTriggerNow, '8n');
+        const matchingNote = internalNotes.find((n) => notesToTriggerNow.includes(n.note));
+        const sampleDur = matchingNote?.duration || '8n';
+        const toneDur = sampleDur === '3T' ? '8t' : sampleDur === '6T' ? '16t' : sampleDur;
+        keysAudioEngine.playChord(notesToTriggerNow, toneDur);
       }
 
       onActiveNotesChange(activeMap);

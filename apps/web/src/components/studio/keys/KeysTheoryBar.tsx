@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   CHROMATIC_NOTES,
   SCALE_CATALOG,
@@ -11,8 +11,16 @@ import {
   VoicingType,
   LabelType,
   AccompanimentTexture,
+  KeyboardRange,
+  RunwayNoteEvent,
+  ArpeggioOctaveSpan,
+  ArpeggioMotionPattern,
+  ArpeggioSubdivision,
+  ArpeggioHandMode,
+  buildExtendedArpeggioNotes,
   getChordNotes,
   getTransposedFormulaChords,
+  noteToMidi,
 } from '@/services/theory/keysTheoryEngine';
 import {
   HARMONIC_VAULT,
@@ -35,9 +43,18 @@ import {
   Zap,
   Music,
   Volume2,
+  ArrowUpRight,
+  ArrowDownRight,
+  ArrowLeftRight,
+  Shuffle,
+  Hand,
+  Sliders,
+  ChevronRight,
+  Play,
+  RotateCcw,
 } from 'lucide-react';
 
-export type MasterTab = 'acordes' | 'escalas' | 'armonia';
+export type MasterTab = 'acordes' | 'escalas' | 'armonia' | 'arpegios';
 
 interface KeysTheoryBarProps {
   rootNote: string;
@@ -53,7 +70,8 @@ interface KeysTheoryBarProps {
   labelType: LabelType;
   onLabelTypeChange: (label: LabelType) => void;
   onOpenCircleOfFifths: () => void;
-  onLoadIntoRunway: () => void;
+  onLoadIntoRunway: (customNotes?: RunwayNoteEvent[]) => void;
+  keyboardRange?: KeyboardRange;
   className?: string;
 }
 
@@ -72,6 +90,7 @@ export default function KeysTheoryBar({
   onLabelTypeChange,
   onOpenCircleOfFifths,
   onLoadIntoRunway,
+  keyboardRange = 88,
   className = '',
 }: KeysTheoryBarProps) {
   // Master Navigation Tab State
@@ -82,6 +101,15 @@ export default function KeysTheoryBar({
   // Sub-filter for Chord Families
   const [chordFamilyFilter, setChordFamilyFilter] = useState<'all' | ChordFamily>('all');
   const [dominantSubFilter, setDominantSubFilter] = useState<'all' | DominantAcousticType>('all');
+
+  // Arpeggio Extended Engine State
+  const [arpeggioOctaveSpan, setArpeggioOctaveSpan] = useState<ArpeggioOctaveSpan>(2);
+  const [arpeggioStartOctave, setArpeggioStartOctave] = useState<number>(2);
+  const [arpeggioPattern, setArpeggioPattern] = useState<ArpeggioMotionPattern>('up');
+  const [arpeggioSubdivision, setArpeggioSubdivision] = useState<ArpeggioSubdivision>('16n');
+  const [arpeggioHandMode, setArpeggioHandMode] = useState<ArpeggioHandMode>('both');
+  const [isAuditioningArp, setIsAuditioningArp] = useState(false);
+  const [showArpSettingsInline, setShowArpSettingsInline] = useState(false);
 
   // Search & Filter State for Mega-Librería
   const [searchTerm, setSearchTerm] = useState('');
@@ -163,12 +191,88 @@ export default function KeysTheoryBar({
       if (!SCALE_CATALOG.some((s) => s.id === selectedItemId)) {
         onItemSelect(SCALE_CATALOG[0].id);
       }
+    } else if (tab === 'arpegios') {
+      onCategoryChange('chord');
+      if (!CHORD_CATALOG.some((c) => c.id === selectedItemId)) {
+        onItemSelect(CHORD_CATALOG[0].id);
+      }
     } else {
       onCategoryChange('cadencia');
       if (!HARMONIC_VAULT.some((f) => f.id === selectedItemId)) {
         onItemSelect(HARMONIC_VAULT[0].id);
       }
     }
+  };
+
+  // Generate Extended Arpeggio Notes Events
+  const handleGenerateExtendedArpeggio = useCallback((): RunwayNoteEvent[] => {
+    let formula: string | number[] | ChordDefinition | undefined;
+    if (activeChord) {
+      formula = activeChord;
+    } else if (activeScale) {
+      formula = activeScale.intervals;
+    } else if (activeVaultFormula) {
+      const transposed = getTransposedFormulaChords(activeVaultFormula, rootNote, voicingType);
+      if (transposed.length > 0) {
+        formula = transposed[0].notes.map((n) => n.midi % 12);
+      }
+    }
+
+    return buildExtendedArpeggioNotes({
+      rootNote,
+      chordFormula: formula || '1 - 3 - 5',
+      chordId: activeChord?.id || selectedItemId,
+      octaveSpan: arpeggioOctaveSpan,
+      startOctave: arpeggioStartOctave,
+      pattern: arpeggioPattern,
+      subdivision: arpeggioSubdivision,
+      handMode: arpeggioHandMode,
+      keyboardRange: (keyboardRange as 61 | 88) || 88,
+      totalBars: 4,
+    });
+  }, [
+    activeChord,
+    activeScale,
+    activeVaultFormula,
+    rootNote,
+    voicingType,
+    selectedItemId,
+    arpeggioOctaveSpan,
+    arpeggioStartOctave,
+    arpeggioPattern,
+    arpeggioSubdivision,
+    arpeggioHandMode,
+    keyboardRange,
+  ]);
+
+  // Load Arpeggio directly into Runway
+  const handleLoadArpeggioToRunway = () => {
+    const events = handleGenerateExtendedArpeggio();
+    onLoadIntoRunway(events);
+  };
+
+  // Quick Audition Audio Cascade
+  const handleAuditionArpeggio = async () => {
+    if (isAuditioningArp) return;
+    setIsAuditioningArp(true);
+    const events = handleGenerateExtendedArpeggio();
+    const sample = events.slice(0, 16);
+    const speedMs =
+      arpeggioSubdivision === '6T'
+        ? 80
+        : arpeggioSubdivision === '3T'
+        ? 120
+        : arpeggioSubdivision === '16n'
+        ? 110
+        : 180;
+    for (let i = 0; i < sample.length; i++) {
+      const ev = sample[i];
+      const toneDur =
+        ev.duration === '6T' ? '16t' : ev.duration === '3T' ? '8t' : ev.duration;
+      keysAudioEngine.playNoteDuration(ev.note, toneDur, 0.85);
+      await new Promise((resolve) => setTimeout(resolve, speedMs));
+    }
+    setIsAuditioningArp(false);
   };
 
   // Chord Click Audition & Selection Handler
@@ -218,6 +322,21 @@ export default function KeysTheoryBar({
           </button>
 
           <button
+            onClick={() => handleSelectMasterTab('arpegios')}
+            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
+              activeMainTab === 'arpegios'
+                ? 'bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-500 text-slate-950 font-black shadow-lg shadow-cyan-500/30 scale-[1.01]'
+                : 'bg-[#131b2e] text-slate-400 hover:text-white border border-slate-800'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-cyan-300" />
+            <span>🌊 Arpegios Extendidos</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-950 text-cyan-300 font-mono font-bold">
+              Multi-Octava
+            </span>
+          </button>
+
+          <button
             onClick={() => handleSelectMasterTab('armonia')}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${
               activeMainTab === 'armonia'
@@ -226,7 +345,7 @@ export default function KeysTheoryBar({
             }`}
           >
             <BookOpen className="w-4 h-4 text-purple-300" />
-            <span>📚 Mega-Librería Armónica (Cadencias &amp; Progresiones 200+)</span>
+            <span>📚 Mega-Librería Armónica (Cadencias 200+)</span>
           </button>
         </div>
 
@@ -548,6 +667,448 @@ export default function KeysTheoryBar({
         </div>
       )}
 
+      {/* TAB: SUITE DE ARPEGIOS EXTENDIDOS & VIRTUOSISMO MULTI-OCTAVA */}
+      {activeMainTab === 'arpegios' && (
+        <div className="flex flex-col gap-4">
+          {/* Header de la Suite con Acorde Activo & Quick-Select Chords */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950/40 p-3.5 rounded-xl border border-cyan-800/40 shadow-lg">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-mono text-[10px] font-black uppercase tracking-wider border border-cyan-400/30">
+                  Modo Arpegio Virtuoso
+                </span>
+                <span className="text-white font-mono font-black text-sm sm:text-base">
+                  {rootNote}{activeChord?.symbol || 'Maj'} — {activeChord?.name || 'Acorde Base'}
+                </span>
+                <span className="text-xs text-cyan-400 font-mono font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                  {activeChord?.formula || '1 - 3 - 5'}
+                </span>
+              </div>
+              <p className="text-slate-400 text-xs font-mono">
+                Genera cascadas multi-octava a lo largo de todo el teclado ({keyboardRange} teclas) con asignación de manos y tempo dinámico.
+              </p>
+            </div>
+
+            {/* Selector de Acorde Base para el Arpegio */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-mono text-slate-400 mr-1">Cambiar Tríada/Tétrada:</span>
+              {['maj', 'min', '7', 'maj7', 'm7', '9', 'm9', 'add9', 'sus4', 'dim7'].map((cId) => {
+                const cDef = CHORD_CATALOG.find((c) => c.id === cId);
+                if (!cDef) return null;
+                const isSelected = selectedItemId === cDef.id;
+                return (
+                  <button
+                    key={cDef.id}
+                    onClick={() => {
+                      onCategoryChange('chord');
+                      onItemSelect(cDef.id);
+                    }}
+                    className={`px-2.5 py-1 rounded-lg font-mono text-xs font-bold transition-all ${
+                      isSelected
+                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-black'
+                        : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    {rootNote}{cDef.symbol}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 1. SELECTOR DE RANGO Y OCTAVAS (Octave Span) & Octava de Inicio */}
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,1)]"></span>
+                <span className="text-xs font-mono font-black uppercase tracking-wider text-cyan-300">
+                  A) Selector de Rango y Extensión de Octavas (Octave Span)
+                </span>
+              </div>
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <span className="text-slate-400">Octava de inicio:</span>
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                  {[1, 2, 3, 4].map((oct) => (
+                    <button
+                      key={oct}
+                      onClick={() => setArpeggioStartOctave(oct)}
+                      className={`px-2 py-0.5 rounded font-bold transition-all text-xs ${
+                        arpeggioStartOctave === oct
+                          ? 'bg-cyan-400 text-slate-950'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {rootNote}{oct}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Pills de Rango de Octavas */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 font-mono text-xs">
+              <button
+                onClick={() => setArpeggioOctaveSpan(1)}
+                className={`p-2.5 rounded-xl border text-center font-bold transition-all flex flex-col items-center gap-1 ${
+                  arpeggioOctaveSpan === 1
+                    ? 'bg-cyan-950/90 text-cyan-200 border-cyan-500 shadow-md ring-1 ring-cyan-500'
+                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <span className="text-white font-extrabold">1 Octava</span>
+                <span className="text-[10px] text-slate-400">Registro Local</span>
+              </button>
+
+              <button
+                onClick={() => setArpeggioOctaveSpan(2)}
+                className={`p-2.5 rounded-xl border text-center font-bold transition-all flex flex-col items-center gap-1 ${
+                  arpeggioOctaveSpan === 2
+                    ? 'bg-cyan-950/90 text-cyan-200 border-cyan-500 shadow-md ring-1 ring-cyan-500'
+                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <span className="text-white font-extrabold">2 Octavas</span>
+                <span className="text-[10px] text-slate-400">Estándar Clásico/Pop</span>
+              </button>
+
+              <button
+                onClick={() => setArpeggioOctaveSpan(3)}
+                className={`p-2.5 rounded-xl border text-center font-bold transition-all flex flex-col items-center gap-1 ${
+                  arpeggioOctaveSpan === 3
+                    ? 'bg-cyan-950/90 text-cyan-200 border-cyan-500 shadow-md ring-1 ring-cyan-500'
+                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <span className="text-white font-extrabold">3 Octavas</span>
+                <span className="text-[10px] text-slate-400">Barrido Extendido</span>
+              </button>
+
+              <button
+                onClick={() => setArpeggioOctaveSpan(4)}
+                className={`p-2.5 rounded-xl border text-center font-bold transition-all flex flex-col items-center gap-1 ${
+                  arpeggioOctaveSpan === 4
+                    ? 'bg-cyan-950/90 text-cyan-200 border-cyan-500 shadow-md ring-1 ring-cyan-500'
+                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <span className="text-white font-extrabold">4 Octavas</span>
+                <span className="text-[10px] text-slate-400">Virtuosismo Chopin</span>
+              </button>
+
+              <button
+                onClick={() => setArpeggioOctaveSpan('full')}
+                className={`p-2.5 rounded-xl border text-center font-bold transition-all flex flex-col items-center gap-1 col-span-2 sm:col-span-1 ${
+                  arpeggioOctaveSpan === 'full'
+                    ? 'bg-gradient-to-br from-indigo-950 via-purple-950 to-cyan-950 text-cyan-200 border-cyan-400 shadow-lg ring-1 ring-cyan-400'
+                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <span className="text-amber-300 font-black">🎹 Teclado Completo</span>
+                <span className="text-[10px] text-slate-400">Full ({keyboardRange} Teclas)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. DIRECCIONES Y PATRONES EXTENDIDOS (Motion Patterns) */}
+          <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex flex-col gap-3">
+            <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+              <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,1)]"></span>
+              <span className="text-xs font-mono font-black uppercase tracking-wider text-purple-300">
+                B) Direcciones y Patrones Extendidos (Motion Patterns)
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 font-mono text-xs">
+              {/* Pattern 1: Up */}
+              <button
+                onClick={() => setArpeggioPattern('up')}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                  arpeggioPattern === 'up'
+                    ? 'bg-slate-900 border-cyan-500 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <ArrowUpRight className="w-4 h-4 text-cyan-400" />
+                    <span>Ascendente continuo (↗)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Recorre todas las notas del arpegio hacia el agudo a lo largo de las octavas seleccionadas.
+                </p>
+              </button>
+
+              {/* Pattern 2: Down */}
+              <button
+                onClick={() => setArpeggioPattern('down')}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                  arpeggioPattern === 'down'
+                    ? 'bg-slate-900 border-cyan-500 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <ArrowDownRight className="w-4 h-4 text-cyan-400" />
+                    <span>Descendente continuo (↘)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Desciende desde el registro más agudo hasta el grave de forma fluida.
+                </p>
+              </button>
+
+              {/* Pattern 3: UpDown Ping-Pong */}
+              <button
+                onClick={() => setArpeggioPattern('upDown')}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                  arpeggioPattern === 'upDown'
+                    ? 'bg-slate-900 border-cyan-500 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-500'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <ArrowLeftRight className="w-4 h-4 text-cyan-400" />
+                    <span>Ida y Vuelta (↗↘)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Sube hasta la cima y baja fluidamente sin repetir la nota cumbre.
+                </p>
+              </button>
+
+              {/* Pattern 4: Alberti */}
+              <button
+                onClick={() => setArpeggioPattern('broken_alberti')}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                  arpeggioPattern === 'broken_alberti'
+                    ? 'bg-slate-900 border-amber-500 shadow-lg shadow-amber-500/20 ring-1 ring-amber-500'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <Music className="w-4 h-4 text-amber-400" />
+                    <span>Alberti Clásico (1-5-3-5)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Patrón quebrado clásico de piano en acompañamiento y agilidad técnica.
+                </p>
+              </button>
+
+              {/* Pattern 5: Neo-Soul */}
+              <button
+                onClick={() => setArpeggioPattern('broken_neosoul')}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                  arpeggioPattern === 'broken_neosoul'
+                    ? 'bg-slate-900 border-purple-500 shadow-lg shadow-purple-500/20 ring-1 ring-purple-500'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <span>Neo-Soul / Addict</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Ondulación melódica 1 - 3 - 5 - 7 - 9 - 7 - 5 - 3 para textura jazzística moderna.
+                </p>
+              </button>
+
+              {/* Pattern 6: Salto de Octavas */}
+              <button
+                onClick={() => setArpeggioPattern('broken_octave')}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 ${
+                  arpeggioPattern === 'broken_octave'
+                    ? 'bg-slate-900 border-emerald-500 shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-500'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <Shuffle className="w-4 h-4 text-emerald-400" />
+                    <span>Salto de Octavas (Displacement)</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Salta entre octava grave y media/aguda alternadamente (entrenamiento de saltos).
+                </p>
+              </button>
+
+              {/* Pattern 7: Hand-to-Hand Sweep */}
+              <button
+                onClick={() => setArpeggioPattern('handCross')}
+                className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-1.5 col-span-1 sm:col-span-2 ${
+                  arpeggioPattern === 'handCross'
+                    ? 'bg-gradient-to-r from-purple-950/80 to-cyan-950/80 border-cyan-400 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white">
+                    <Hand className="w-4 h-4 text-cyan-400" />
+                    <span>Manos Cruzadas / Hand Sweep</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-cyan-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                    LH + RH Turnados
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  Distribución automática: Mano izquierda ejecuta bajo y fundamental, mano derecha toma tercera y quinta, turnándose en cascada ascendente.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* 3. SUBDIVISIÓN RÍTMICA & MODO DE MANOS (Dual Column Controls) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* C) Subdivisión */}
+            <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,1)]"></span>
+                <span className="text-xs font-mono font-black uppercase tracking-wider text-amber-300">
+                  C) Subdivisión Rítmica
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 font-mono text-xs">
+                <button
+                  onClick={() => setArpeggioSubdivision('8n')}
+                  className={`p-2.5 rounded-lg border text-center font-bold transition-all ${
+                    arpeggioSubdivision === '8n'
+                      ? 'bg-amber-400 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <div className="font-extrabold">8n (Corcheas)</div>
+                  <div className="text-[10px] opacity-80">2 notas / beat</div>
+                </button>
+
+                <button
+                  onClick={() => setArpeggioSubdivision('16n')}
+                  className={`p-2.5 rounded-lg border text-center font-bold transition-all ${
+                    arpeggioSubdivision === '16n'
+                      ? 'bg-amber-400 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <div className="font-extrabold">16n (Semicorcheas)</div>
+                  <div className="text-[10px] opacity-80">4 notas / beat</div>
+                </button>
+
+                <button
+                  onClick={() => setArpeggioSubdivision('3T')}
+                  className={`p-2.5 rounded-lg border text-center font-bold transition-all ${
+                    arpeggioSubdivision === '3T'
+                      ? 'bg-cyan-400 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <div className="font-extrabold">3T (Tresillos)</div>
+                  <div className="text-[10px] opacity-80">3 notas / beat</div>
+                </button>
+
+                <button
+                  onClick={() => setArpeggioSubdivision('6T')}
+                  className={`p-2.5 rounded-lg border text-center font-bold transition-all ${
+                    arpeggioSubdivision === '6T'
+                      ? 'bg-gradient-to-r from-cyan-400 to-sky-300 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <div className="font-extrabold">6T (Seiscillos)</div>
+                  <div className="text-[10px] opacity-80">Cascada rápida</div>
+                </button>
+              </div>
+            </div>
+
+            {/* D) Modo de Manos */}
+            <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 flex flex-col gap-2.5">
+              <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,1)]"></span>
+                <span className="text-xs font-mono font-black uppercase tracking-wider text-cyan-300">
+                  D) Modo de Manos &amp; Digitación
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 font-mono text-xs">
+                <button
+                  onClick={() => setArpeggioHandMode('both')}
+                  className={`p-2.5 rounded-lg border text-center font-bold transition-all flex flex-col items-center justify-between gap-1 ${
+                    arpeggioHandMode === 'both'
+                      ? 'bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-black shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span className="font-extrabold">Ambas Manos</span>
+                  <span className="text-[9px] opacity-90">LH &lt; C4 / RH &ge; C4</span>
+                </button>
+
+                <button
+                  onClick={() => setArpeggioHandMode('left')}
+                  className={`p-2.5 rounded-lg border text-center font-bold transition-all flex flex-col items-center justify-between gap-1 ${
+                    arpeggioHandMode === 'left'
+                      ? 'bg-purple-600 text-white font-black shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span className="font-extrabold">Solo Izquierda</span>
+                  <span className="text-[9px] opacity-90">Todo Violeta (LH)</span>
+                </button>
+
+                <button
+                  onClick={() => setArpeggioHandMode('right')}
+                  className={`p-2.5 rounded-lg border text-center font-bold transition-all flex flex-col items-center justify-between gap-1 ${
+                    arpeggioHandMode === 'right'
+                      ? 'bg-cyan-500 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                  }`}
+                >
+                  <span className="font-extrabold">Solo Derecha</span>
+                  <span className="text-[9px] opacity-90">Todo Cyan (RH)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* E) BARRA DE ACCIÓN Y EJECUCIÓN DIRECTA */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-cyan-800/60 shadow-xl">
+            <div className="flex items-center gap-3 font-mono text-xs text-slate-300">
+              <span className="text-cyan-400 font-extrabold flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4" />
+                <span>Arpegio Configurado:</span>
+              </span>
+              <span className="text-white font-bold bg-slate-900 px-2 py-1 rounded border border-slate-800">
+                {rootNote}{activeChord?.symbol || 'Maj'} • {arpeggioOctaveSpan === 'full' ? 'Full Keyboard' : `${arpeggioOctaveSpan} Octavas`} • {arpeggioSubdivision}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <button
+                onClick={handleAuditionArpeggio}
+                disabled={isAuditioningArp}
+                className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-slate-800 text-cyan-300 hover:bg-slate-700 font-bold font-mono text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all"
+              >
+                <Volume2 className={`w-4 h-4 ${isAuditioningArp ? 'animate-bounce text-amber-400' : ''}`} />
+                <span>{isAuditioningArp ? 'Escuchando...' : 'Audición Rápida'}</span>
+              </button>
+
+              <button
+                onClick={handleLoadArpeggioToRunway}
+                className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/25 hover:brightness-110 flex items-center justify-center gap-2"
+              >
+                <Rocket className="w-4 h-4 fill-current" />
+                <span>🚀 CARGAR EN RUNWAY</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 3: MEGA-LIBRERÍA ARMÓNICA (CADENCIAS & PROGRESIONES 200+) */}
       {activeMainTab === 'armonia' && (
         <div className="flex flex-col gap-4">
@@ -761,32 +1322,74 @@ export default function KeysTheoryBar({
           </p>
         </div>
 
-        {/* Accompaniment Texture Selector & Master Button */}
+        {/* Accompaniment Texture Selector, Arp Drawer Toggle & Master Button */}
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
           {/* Texture Selector */}
           <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono">
             <span className="text-slate-400 text-[11px]">Textura:</span>
             <select
               value={texture}
-              onChange={(e) => onTextureChange(e.target.value as AccompanimentTexture)}
+              onChange={(e) => {
+                const val = e.target.value as AccompanimentTexture;
+                onTextureChange(val);
+                if (val.startsWith('arpeggio') || val === 'alberti_bass') {
+                  if (val === 'arpeggio_asc') setArpeggioPattern('up');
+                  else if (val === 'arpeggio_desc') setArpeggioPattern('down');
+                  else if (val === 'arpeggio_updown') setArpeggioPattern('upDown');
+                  else if (val === 'alberti_bass') setArpeggioPattern('broken_alberti');
+                  else if (val === 'arpeggio_broken') setArpeggioPattern('broken_neosoul');
+                  else if (val === 'arpeggio_sweep') setArpeggioPattern('handCross');
+                }
+              }}
               className="bg-transparent text-cyan-300 font-extrabold focus:outline-none cursor-pointer"
             >
               <option value="comping" className="bg-slate-900 text-slate-100">Bloques de Acordes / Comping</option>
-              <option value="arpeggio_asc" className="bg-slate-900 text-slate-100">Arpegio Ascendente</option>
-              <option value="arpeggio_desc" className="bg-slate-900 text-slate-100">Arpegio Descendente</option>
+              <option value="arpeggio_asc" className="bg-slate-900 text-slate-100">Arpegio Ascendente (↗)</option>
+              <option value="arpeggio_desc" className="bg-slate-900 text-slate-100">Arpegio Descendente (↘)</option>
+              <option value="arpeggio_updown" className="bg-slate-900 text-slate-100">Arpegio Ida y Vuelta (↗↘)</option>
               <option value="alberti_bass" className="bg-slate-900 text-slate-100">Alberti Bass (1-5-3-5)</option>
+              <option value="arpeggio_broken" className="bg-slate-900 text-slate-100">Arpegio Neo-Soul / Addict</option>
+              <option value="arpeggio_sweep" className="bg-slate-900 text-slate-100">Manos Cruzadas / Sweep</option>
               <option value="lh_bass_rh_chord" className="bg-slate-900 text-slate-100">Bajo Izquierda + Acorde Derecha</option>
               <option value="walking_bass" className="bg-slate-900 text-slate-100">Walking Bassline + Extensiones</option>
             </select>
           </div>
 
+          {/* Quick Arpeggio Suite Shortcut */}
+          {(texture.startsWith('arpeggio') || texture === 'alberti_bass' || activeMainTab === 'arpegios') && (
+            <button
+              onClick={() => {
+                if (activeMainTab !== 'arpegios') {
+                  handleSelectMasterTab('arpegios');
+                } else {
+                  setShowArpSettingsInline((prev) => !prev);
+                }
+              }}
+              className="px-3 py-1.5 rounded-xl bg-cyan-950/80 text-cyan-300 border border-cyan-800 text-xs font-mono font-bold hover:bg-cyan-900/80 flex items-center gap-1.5 transition-all shadow-sm"
+              title="Abrir Suite Completa de Arpegios"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Ajustar Rango ({arpeggioOctaveSpan === 'full' ? 'Full' : `${arpeggioOctaveSpan} Oct`})</span>
+            </button>
+          )}
+
           {/* MASTER BUTTON "CARGAR EN RUNWAY" */}
           <button
-            onClick={onLoadIntoRunway}
+            onClick={() => {
+              if (
+                activeMainTab === 'arpegios' ||
+                texture.startsWith('arpeggio') ||
+                texture === 'alberti_bass'
+              ) {
+                handleLoadArpeggioToRunway();
+              } else {
+                onLoadIntoRunway();
+              }
+            }}
             className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-amber-500/25 hover:brightness-110 flex items-center justify-center gap-2"
           >
             <Rocket className="w-4 h-4 fill-current" />
-            <span>🚀 Cargar Ejercicio en Runway</span>
+            <span>🚀 Cargar en Runway</span>
           </button>
         </div>
       </div>

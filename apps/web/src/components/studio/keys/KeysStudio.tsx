@@ -188,7 +188,18 @@ export default function KeysStudio() {
   }, [rootNote, category, selectedItemId, voicingType, workflowMode]);
 
   // Master Action: Load calculated sequence into Runway
-  const handleLoadIntoRunway = useCallback(() => {
+  const handleLoadIntoRunway = useCallback((customEvents?: RunwayNoteEvent[]) => {
+    if (customEvents && customEvents.length > 0) {
+      setSequenceNotes(customEvents);
+      try {
+        Tone.Transport.bpm.value = bpm;
+        Tone.Transport.seconds = 0;
+      } catch (e) {
+        console.warn('Tone.Transport error', e);
+      }
+      return;
+    }
+
     const seq = generateRunwaySequence(
       rootNote,
       selectedItemId,
@@ -430,6 +441,7 @@ export default function KeysStudio() {
           onLabelTypeChange={setLabelType}
           onOpenCircleOfFifths={() => setIsCircleModalOpen(true)}
           onLoadIntoRunway={handleLoadIntoRunway}
+          keyboardRange={keyboardRange}
         />
       )}
 

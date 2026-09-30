@@ -14,7 +14,55 @@ export interface NoteInfo {
 export type VoicingType = 'close' | 'open' | 'drop2' | 'drop3' | 'rootless' | 'quartal';
 export type LabelType = 'notes' | 'intervals' | 'fingers' | 'none';
 export type KeyboardRange = 61 | 88;
-export type AccompanimentTexture = 'comping' | 'arpeggio_asc' | 'arpeggio_desc' | 'lh_bass_rh_chord' | 'walking_bass' | 'alberti_bass';
+export type AccompanimentTexture =
+  | 'comping'
+  | 'arpeggio_asc'
+  | 'arpeggio_desc'
+  | 'arpeggio_updown'
+  | 'arpeggio_broken'
+  | 'arpeggio_sweep'
+  | 'lh_bass_rh_chord'
+  | 'walking_bass'
+  | 'alberti_bass';
+
+export interface RunwayNoteEvent {
+  id: string;
+  note: string;       // Ej: 'C3', 'G3', 'C4', 'E4'
+  midi: number;
+  time: number;       // Tiempo en beats (0, 0.5, 1.0, 1.5...)
+  step: number;       // Paso dentro del compás (0, 1, 2, 3...)
+  duration: string;   // '4n', '8n', '16n', '3T', '6T'
+  hand: 'left' | 'right';
+  velocity?: number;
+}
+
+export type ArpeggioOctaveSpan = 1 | 2 | 3 | 4 | 'full';
+
+export type ArpeggioMotionPattern =
+  | 'up'                // Ascendente continuo (↗)
+  | 'down'              // Descendente continuo (↘)
+  | 'upDown'            // Ida y Vuelta / Ping-Pong (↗↘)
+  | 'broken'            // Arpegio Quebrado (general)
+  | 'broken_alberti'    // Patrón Alberti clásico (1 - 5 - 3 - 5)
+  | 'broken_neosoul'    // Patrón Neo-Soul / Addict (1 - 3 - 5 - 7 - 9 - 7 - 5 - 3)
+  | 'broken_octave'     // Salto de Octavas (Octave Displacement)
+  | 'handCross';        // Manos Cruzadas / Hand-to-Hand Sweep
+
+export type ArpeggioSubdivision = '8n' | '16n' | '3T' | '6T';
+export type ArpeggioHandMode = 'left' | 'right' | 'both';
+
+export interface BuildExtendedArpeggioNotesParams {
+  rootNote: string;
+  chordFormula?: string | number[] | ChordDefinition;
+  chordId?: string;
+  octaveSpan: ArpeggioOctaveSpan;      // 1, 2, 3, 4 o 'full'
+  startOctave?: number;                // 1, 2, 3, 4...
+  pattern: ArpeggioMotionPattern;      // 'up' | 'down' | 'upDown' | 'broken' | 'broken_alberti' | 'broken_neosoul' | 'broken_octave' | 'handCross'
+  subdivision: ArpeggioSubdivision;    // '8n' | '16n' | '3T' | '6T'
+  handMode: ArpeggioHandMode;          // 'left' | 'right' | 'both'
+  keyboardRange?: KeyboardRange;       // 61 | 88
+  totalBars?: number;                  // default 4 compases
+}
 
 export interface ScaleDefinition {
   id: string;
@@ -1142,6 +1190,291 @@ export function getTransposedFormulaChords(
       notes,
     };
   });
+}
+
+/**
+ * Genera la secuencia completa de notas extendidas para el sistema de Arpegios
+ * con recorrido dinámico en todo el teclado (61 y 88 teclas), soporte multi-octava,
+ * subdivisiones rítmicas (8n, 16n, 3T, 6T), patrones expresivos y asignación de manos inteligente.
+ */
+export function buildExtendedArpeggioNotes({
+  rootNote,
+  chordFormula,
+  chordId,
+  octaveSpan,
+  startOctave,
+  pattern,
+  subdivision,
+  handMode,
+  keyboardRange = 88,
+  totalBars = 4,
+}: BuildExtendedArpeggioNotesParams): RunwayNoteEvent[] {
+  // 1. Normalizar tónica
+  let cleanRoot = (rootNote || 'C').trim().toUpperCase();
+  if (cleanRoot === 'DB') cleanRoot = 'C#';
+  else if (cleanRoot === 'EB') cleanRoot = 'D#';
+  else if (cleanRoot === 'GB') cleanRoot = 'F#';
+  else if (cleanRoot === 'AB') cleanRoot = 'G#';
+  else if (cleanRoot === 'BB') cleanRoot = 'A#';
+  const rootIdx = CHROMATIC_NOTES.indexOf(cleanRoot);
+  const validRoot = rootIdx !== -1 ? CHROMATIC_NOTES[rootIdx] : 'C';
+
+  // 2. Extraer intervalos del acorde o fórmula
+  let intervals: number[] = [0, 4, 7]; // default tríada mayor
+  if (Array.isArray(chordFormula)) {
+    intervals = chordFormula.map((n) => Number(n));
+  } else if (chordFormula && typeof chordFormula === 'object' && 'intervals' in chordFormula) {
+    intervals = [...(chordFormula as ChordDefinition).intervals];
+  } else {
+    const searchId = chordId || (typeof chordFormula === 'string' ? chordFormula : '');
+    const foundChord = CHORD_CATALOG.find((c) => c.id === searchId || c.symbol === searchId);
+    if (foundChord) {
+      intervals = [...foundChord.intervals];
+    } else {
+      const foundScale = SCALE_CATALOG.find((s) => s.id === searchId);
+      if (foundScale) {
+        intervals = [...foundScale.intervals];
+      } else if (typeof chordFormula === 'string' && chordFormula.includes('-')) {
+        const DEGREE_MAP: { [k: string]: number } = {
+          '1': 0, 'b2': 1, '2': 2, 'b3': 3, '3': 4, '4': 5, '#4': 6, 'b5': 6,
+          '5': 7, '#5': 8, 'b6': 8, '6': 9, 'bb7': 9, 'b7': 10, '7': 11, '8': 12,
+          'b9': 13, '9': 14, '#9': 15, '11': 17, '#11': 18, 'b13': 20, '13': 21,
+        };
+        const tokens = chordFormula.split('-').map((t) => t.trim());
+        const parsed = tokens.map((t) => DEGREE_MAP[t]).filter((n) => n !== undefined);
+        if (parsed.length > 0) intervals = parsed;
+      }
+    }
+  }
+
+  // 3. Rango del teclado
+  const is88 = keyboardRange === 88;
+  const minMidi = is88 ? 21 : 36; // A0 (21) o C2 (36)
+  const maxMidi = is88 ? 108 : 96; // C8 (108) o C7 (96)
+
+  // 4. Calcular octava de inicio efectiva
+  let effStartOct = startOctave !== undefined ? startOctave : 2;
+  if (startOctave === undefined) {
+    if (octaveSpan === 'full') {
+      effStartOct = is88 ? (['A', 'A#', 'B'].includes(validRoot) ? 0 : 1) : 2;
+    } else if (octaveSpan === 1) {
+      effStartOct = 3;
+    } else if (octaveSpan === 2) {
+      effStartOct = 2;
+    } else if (octaveSpan === 3) {
+      effStartOct = 2;
+    } else if (octaveSpan === 4) {
+      effStartOct = 2;
+    }
+  }
+
+  // Clampear effStartOct para que la nota inicial no sea menor que minMidi
+  while (noteToMidi(`${validRoot}${effStartOct}`) < minMidi && effStartOct < 7) {
+    effStartOct++;
+  }
+
+  // 5. Determinar número de octavas del recorrido
+  let numOctaves = 1;
+  const startMidi = noteToMidi(`${validRoot}${effStartOct}`);
+  if (octaveSpan === 'full') {
+    numOctaves = Math.max(1, Math.floor((maxMidi - startMidi) / 12));
+  } else {
+    numOctaves = typeof octaveSpan === 'number' ? octaveSpan : 2;
+  }
+
+  // 6. Construir el banco de notas ascendente a lo largo de las octavas (Linear Ascending Pool)
+  const allMidis: number[] = [];
+  for (let o = 0; o < numOctaves; o++) {
+    const oct = effStartOct + o;
+    intervals.forEach((semi) => {
+      const midi = noteToMidi(`${validRoot}${oct}`) + semi;
+      if (midi >= minMidi && midi <= maxMidi) {
+        allMidis.push(midi);
+      }
+    });
+  }
+
+  // Añadir la tónica superior cumbre de cierre de octava
+  const topMidi = noteToMidi(`${validRoot}${effStartOct + numOctaves}`);
+  if (topMidi >= minMidi && topMidi <= maxMidi) {
+    allMidis.push(topMidi);
+  }
+
+  // Eliminar duplicados y ordenar de grave a agudo
+  const ascendingPool = Array.from(new Set(allMidis)).sort((a, b) => a - b);
+  if (ascendingPool.length === 0) {
+    ascendingPool.push(60); // C4 fallback
+  }
+
+  // 7. Generar secuencia de notas según patrón (Motion Pattern)
+  interface RawArpNote {
+    midi: number;
+    handHint?: 'left' | 'right';
+  }
+  let rawSequence: RawArpNote[] = [];
+
+  switch (pattern) {
+    case 'up': {
+      // Ascendente continuo (↗)
+      rawSequence = ascendingPool.map((m) => ({ midi: m }));
+      break;
+    }
+
+    case 'down': {
+      // Descendente continuo (↘)
+      rawSequence = [...ascendingPool].reverse().map((m) => ({ midi: m }));
+      break;
+    }
+
+    case 'upDown': {
+      // Ida y Vuelta / Ping-Pong (↗↘) sin repetir nota cumbre
+      const upNotes = ascendingPool.map((m) => ({ midi: m }));
+      const downNotes = ascendingPool.slice(0, -1).reverse().map((m) => ({ midi: m }));
+      const smoothDown = downNotes.length > 1 ? downNotes.slice(0, -1) : downNotes;
+      rawSequence = [...upNotes, ...smoothDown];
+      break;
+    }
+
+    case 'broken_alberti':
+    case 'broken': {
+      // Patrón Alberti clásico (1 - 5 - 3 - 5) a lo largo de las octavas
+      for (let o = 0; o < numOctaves; o++) {
+        const oct = effStartOct + o;
+        const rootM = noteToMidi(`${validRoot}${oct}`);
+        const thirdM = intervals.length >= 2 ? rootM + intervals[1] : rootM + 4;
+        const fifthM = intervals.length >= 3 ? rootM + intervals[2] : rootM + 7;
+
+        [rootM, fifthM, thirdM, fifthM].forEach((m) => {
+          if (m >= minMidi && m <= maxMidi) {
+            rawSequence.push({ midi: m });
+          }
+        });
+      }
+      break;
+    }
+
+    case 'broken_neosoul': {
+      // Patrón Neo-Soul / Addict (1 - 3 - 5 - 7 - 9 - 7 - 5 - 3)
+      for (let o = 0; o < numOctaves; o++) {
+        const oct = effStartOct + o;
+        const rootM = noteToMidi(`${validRoot}${oct}`);
+        const thirdM = intervals.length >= 2 ? rootM + intervals[1] : rootM + 4;
+        const fifthM = intervals.length >= 3 ? rootM + intervals[2] : rootM + 7;
+        const seventhM = intervals.length >= 4 ? rootM + intervals[3] : rootM + 10;
+        const ninthM = intervals.length >= 5 ? rootM + intervals[4] : rootM + 14;
+
+        [rootM, thirdM, fifthM, seventhM, ninthM, seventhM, fifthM, thirdM].forEach((m) => {
+          if (m >= minMidi && m <= maxMidi) {
+            rawSequence.push({ midi: m });
+          }
+        });
+      }
+      break;
+    }
+
+    case 'broken_octave': {
+      // Salto de Octavas (Octave Displacement): Salta entre octava grave y media/aguda alternadamente
+      ascendingPool.forEach((m) => {
+        rawSequence.push({ midi: m });
+        const jumped = m + 12 <= maxMidi ? m + 12 : m - 12 >= minMidi ? m - 12 : m;
+        if (jumped !== m) {
+          rawSequence.push({ midi: jumped });
+        }
+      });
+      break;
+    }
+
+    case 'handCross': {
+      // Manos Cruzadas / Hand-to-Hand Sweep:
+      // Distribución automática: Mano izquierda ejecuta el bajo y fundamental,
+      // mano derecha toma tercera y quinta, y se van turnando en cascada ascendente.
+      for (let o = 0; o < numOctaves; o++) {
+        const oct = effStartOct + o;
+        const rootM = noteToMidi(`${validRoot}${oct}`);
+        const thirdM = intervals.length >= 2 ? rootM + intervals[1] : rootM + 4;
+        const fifthM = intervals.length >= 3 ? rootM + intervals[2] : rootM + 7;
+        const upperRootM = rootM + 12;
+
+        // LH: Bajo y fundamental
+        if (rootM >= minMidi && rootM <= maxMidi) {
+          rawSequence.push({ midi: rootM, handHint: 'left' });
+        }
+        // RH: Tercera y quinta
+        if (thirdM >= minMidi && thirdM <= maxMidi) {
+          rawSequence.push({ midi: thirdM, handHint: 'right' });
+        }
+        if (fifthM >= minMidi && fifthM <= maxMidi) {
+          rawSequence.push({ midi: fifthM, handHint: 'right' });
+        }
+        // LH: Cruza por encima de RH tomando la fundamental superior
+        if (upperRootM >= minMidi && upperRootM <= maxMidi) {
+          rawSequence.push({ midi: upperRootM, handHint: 'left' });
+        }
+      }
+      break;
+    }
+
+    default: {
+      rawSequence = ascendingPool.map((m) => ({ midi: m }));
+    }
+  }
+
+  if (rawSequence.length === 0) {
+    rawSequence = [{ midi: 60 }];
+  }
+
+  // 8. Subdivisión rítmica y espaciado temporal en beats
+  let stepBeats = 0.5; // '8n'
+  if (subdivision === '16n') stepBeats = 0.25;
+  else if (subdivision === '3T') stepBeats = 1 / 3;
+  else if (subdivision === '6T') stepBeats = 1 / 6;
+
+  // 9. Completar el tiempo deseado en compases (totalBars)
+  const targetTotalBeats = Math.max(8, (totalBars || 4) * 4);
+  const beatsPerLoop = rawSequence.length * stepBeats;
+  const numLoops = Math.max(1, Math.ceil(targetTotalBeats / beatsPerLoop));
+
+  const events: RunwayNoteEvent[] = [];
+  let noteCounter = 0;
+
+  for (let l = 0; l < numLoops; l++) {
+    for (let i = 0; i < rawSequence.length; i++) {
+      const item = rawSequence[i];
+      const time = noteCounter * stepBeats;
+      if (time >= targetTotalBeats) break;
+
+      // Asignación pedagógica de mano:
+      let assignedHand: 'left' | 'right' = 'right';
+      if (handMode === 'left') {
+        assignedHand = 'left';
+      } else if (handMode === 'right') {
+        assignedHand = 'right';
+      } else {
+        // handMode === 'both': notas < C4 (MIDI 60) a LH (violeta/índigo), >= C4 a RH (cyan)
+        if (item.handHint) {
+          assignedHand = item.handHint;
+        } else {
+          assignedHand = item.midi < 60 ? 'left' : 'right';
+        }
+      }
+
+      const info = midiToNoteInfo(item.midi);
+      events.push({
+        id: `arp_${pattern}_${l}_${i}_${item.midi}_${time.toFixed(4)}`,
+        note: info.fullNote,
+        midi: item.midi,
+        time: Number(time.toFixed(4)),
+        step: Math.floor((time % 4) / stepBeats),
+        duration: subdivision,
+        hand: assignedHand,
+        velocity: 0.85,
+      });
+
+      noteCounter++;
+    }
+  }
+
+  return events;
 }
 
 /**

@@ -72,7 +72,12 @@ export function durationToBeats(duration: string | number): number {
       return 2 / 3;
     case '3:2_eighth':
     case '8t':
+    case '3T':
       return 1 / 3;
+    case '6T':
+    case '16t':
+    case '6:4':
+      return 1 / 6;
     default:
       const parsed = parseFloat(duration);
       return !isNaN(parsed) ? parsed : 1;
