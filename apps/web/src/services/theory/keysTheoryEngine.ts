@@ -1477,6 +1477,251 @@ export function buildExtendedArpeggioNotes({
   return events;
 }
 
+export interface UnifiedExecutionConfig {
+  mode: 'block' | 'arpeggio';
+  voicingType?: VoicingType;
+  octaveSpan?: ArpeggioOctaveSpan;
+  pattern?: ArpeggioMotionPattern;
+  subdivision?: ArpeggioSubdivision;
+  handMode?: ArpeggioHandMode;
+  startOctave?: number;
+  keyboardRange?: KeyboardRange;
+  totalBars?: number;
+}
+
+export function buildUnifiedExecutionEvents({
+  rootNote,
+  category,
+  targetItemId,
+  config,
+}: {
+  rootNote: string;
+  category: 'scale' | 'chord' | 'progression' | 'cadencia' | 'progresion';
+  targetItemId: string;
+  config: UnifiedExecutionConfig;
+}): RunwayNoteEvent[] {
+  const isArpeggio = config.mode === 'arpeggio';
+  const octaveSpan = config.octaveSpan || 2;
+  const pattern = config.pattern || 'up';
+  const subdivision = config.subdivision || '16n';
+  const handMode = config.handMode || 'both';
+  const keyboardRange = config.keyboardRange || 88;
+  const totalBars = config.totalBars || 4;
+  const voicingType = config.voicingType || 'close';
+
+  // 1. CHORD
+  if (category === 'chord') {
+    if (isArpeggio) {
+      return buildExtendedArpeggioNotes({
+        rootNote,
+        chordId: targetItemId,
+        octaveSpan,
+        startOctave: config.startOctave,
+        pattern,
+        subdivision,
+        handMode,
+        keyboardRange,
+        totalBars,
+      });
+    }
+
+    // Block comping
+    const chordNotes = getChordNotes(rootNote, targetItemId, voicingType, 4);
+    const events: RunwayNoteEvent[] = [];
+    const totalBeats = totalBars * 4;
+    for (let beat = 0; beat < totalBeats; beat += 4) {
+      [0, 2].forEach((offset) => {
+        chordNotes.forEach((n) => {
+          let assignedHand: 'left' | 'right' = 'right';
+          if (handMode === 'left') assignedHand = 'left';
+          else if (handMode === 'right') assignedHand = 'right';
+          else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+          events.push({
+            id: `blk_c_${beat}_${offset}_${n.midi}`,
+            note: n.fullNote,
+            midi: n.midi,
+            time: beat + offset,
+            step: Math.floor(((beat + offset) % 4) / 0.5),
+            duration: '2n',
+            hand: assignedHand,
+            velocity: 0.85,
+          });
+        });
+      });
+    }
+    return events;
+  }
+
+  // 2. SCALE
+  if (category === 'scale') {
+    const scale = SCALE_CATALOG.find((s) => s.id === targetItemId) || SCALE_CATALOG[0];
+    if (isArpeggio) {
+      return buildExtendedArpeggioNotes({
+        rootNote,
+        chordFormula: scale.intervals,
+        octaveSpan,
+        startOctave: config.startOctave,
+        pattern,
+        subdivision,
+        handMode,
+        keyboardRange,
+        totalBars,
+      });
+    }
+
+    // Block: scale chord degrees
+    const scaleNotes = getScaleNotes(rootNote, targetItemId, 4);
+    const events: RunwayNoteEvent[] = [];
+    const totalBeats = totalBars * 4;
+    for (let beat = 0; beat < totalBeats; beat += 4) {
+      [0, 2].forEach((offset) => {
+        scaleNotes.slice(0, 5).forEach((n) => {
+          let assignedHand: 'left' | 'right' = 'right';
+          if (handMode === 'left') assignedHand = 'left';
+          else if (handMode === 'right') assignedHand = 'right';
+          else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+          events.push({
+            id: `blk_s_${beat}_${offset}_${n.midi}`,
+            note: n.fullNote,
+            midi: n.midi,
+            time: beat + offset,
+            step: Math.floor(((beat + offset) % 4) / 0.5),
+            duration: '2n',
+            hand: assignedHand,
+            velocity: 0.85,
+          });
+        });
+      });
+    }
+    return events;
+  }
+
+  // 3. PROGRESSION / CADENCIA
+  const vaultFormula = HARMONIC_VAULT.find((f) => f.id === targetItemId);
+  if (vaultFormula) {
+    const transposedChords = getTransposedFormulaChords(vaultFormula, rootNote, voicingType);
+    const events: RunwayNoteEvent[] = [];
+    let currentBeat = 0;
+    const durationPerChord = 4; // 1 compás por acorde
+
+    if (isArpeggio) {
+      transposedChords.forEach((chordData, chordIdx) => {
+        const rootM = chordData.notes[0]?.midi || 60;
+        const intervals = chordData.notes.map((n) => n.midi - rootM);
+        const chordArpEvents = buildExtendedArpeggioNotes({
+          rootNote: chordData.notes[0]?.name || rootNote,
+          chordFormula: intervals.length > 0 ? intervals : [0, 4, 7],
+          octaveSpan,
+          startOctave: config.startOctave,
+          pattern,
+          subdivision,
+          handMode,
+          keyboardRange,
+          totalBars: 1,
+        });
+
+        chordArpEvents.forEach((ev) => {
+          if (ev.time < durationPerChord) {
+            events.push({
+              ...ev,
+              id: `${ev.id}_c${chordIdx}`,
+              time: Number((currentBeat + ev.time).toFixed(4)),
+            });
+          }
+        });
+        currentBeat += durationPerChord;
+      });
+      return events;
+    }
+
+    // Block comping for progression
+    transposedChords.forEach((chordData, chordIdx) => {
+      const cNotes = chordData.notes;
+      [0, 2].forEach((offset) => {
+        cNotes.forEach((n) => {
+          let assignedHand: 'left' | 'right' = 'right';
+          if (handMode === 'left') assignedHand = 'left';
+          else if (handMode === 'right') assignedHand = 'right';
+          else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+          events.push({
+            id: `blk_v_${chordIdx}_${offset}_${n.midi}`,
+            note: n.fullNote,
+            midi: n.midi,
+            time: currentBeat + offset,
+            step: Math.floor(((currentBeat + offset) % 4) / 0.5),
+            duration: '2n',
+            hand: assignedHand,
+            velocity: 0.85,
+          });
+        });
+      });
+      currentBeat += durationPerChord;
+    });
+    return events;
+  }
+
+  // Fallback for PROGRESSION_PRESETS
+  const prog = PROGRESSION_PRESETS.find((p) => p.id === targetItemId) || PROGRESSION_PRESETS[0];
+  const events: RunwayNoteEvent[] = [];
+  let currentBeat = 0;
+
+  prog.chords.forEach((c, chordIdx) => {
+    const rootMidi = noteToMidi(`${rootNote}4`) + c.rootOffset;
+    const cRoot = CHROMATIC_NOTES[((rootMidi % 12) + 12) % 12];
+    const cNotes = getChordNotes(cRoot, c.chordId, voicingType, Math.floor(rootMidi / 12) - 1);
+
+    if (isArpeggio) {
+      const chordArpEvents = buildExtendedArpeggioNotes({
+        rootNote: cRoot,
+        chordId: c.chordId,
+        octaveSpan,
+        startOctave: config.startOctave,
+        pattern,
+        subdivision,
+        handMode,
+        keyboardRange,
+        totalBars: Math.max(1, Math.round(c.durationBeats / 4)),
+      });
+
+      chordArpEvents.forEach((ev) => {
+        if (ev.time < c.durationBeats) {
+          events.push({
+            ...ev,
+            id: `${ev.id}_p${chordIdx}`,
+            time: Number((currentBeat + ev.time).toFixed(4)),
+          });
+        }
+      });
+    } else {
+      [0, c.durationBeats / 2].forEach((offset) => {
+        cNotes.forEach((n) => {
+          let assignedHand: 'left' | 'right' = 'right';
+          if (handMode === 'left') assignedHand = 'left';
+          else if (handMode === 'right') assignedHand = 'right';
+          else assignedHand = n.midi < 60 ? 'left' : 'right';
+
+          events.push({
+            id: `blk_p_${chordIdx}_${offset}_${n.midi}`,
+            note: n.fullNote,
+            midi: n.midi,
+            time: currentBeat + offset,
+            step: Math.floor(((currentBeat + offset) % 4) / 0.5),
+            duration: `${Math.round(c.durationBeats / 2)}n`,
+            hand: assignedHand,
+            velocity: 0.85,
+          });
+        });
+      });
+    }
+    currentBeat += c.durationBeats;
+  });
+
+  return events;
+}
+
 /**
  * Generates Runway timeline sequence from active selection and texture
  */
