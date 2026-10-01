@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import * as Tone from 'tone';
 import { useKeysPractice } from '@/context/KeysPracticeContext';
+import { keysAudioEngine } from '@/services/audio/keysAudioEngine';
 import { RunwayNoteEvent, durationToBeats } from '@/services/theory/workoutEngine';
 import { HandFocus } from '@/data/practiceWorkoutsData';
 import {
@@ -84,7 +86,32 @@ export default function EditorSequenceInspector({
 
   // Master Action: Compile, save to shared context & storage, and navigate to /studio/keys/practice
   const handleLaunchPracticeMode = async () => {
-    // 1. Save state in shared context
+    // ── STEP 1: Unlock AudioContext from user gesture ────────────────────────
+    // Tone.start() MUST be called synchronously inside a click handler to satisfy
+    // browser autoplay policy. Calling it here (before any await) keeps it in the
+    // same user-gesture task and allows Freeverb/PolySynth nodes to be created
+    // safely without the channelData=0 / length=0 crash.
+    try {
+      await Tone.start();
+    } catch (e) {
+      console.warn('[Launch] Tone.start() deferred:', e);
+    }
+
+    // ── STEP 2: Pre-init audio engine while AudioContext is confirmed running ─
+    try {
+      await keysAudioEngine.ensureStarted();
+    } catch (e) {
+      console.warn('[Launch] Audio engine init deferred:', e);
+    }
+
+    // ── STEP 3: Validate sequence notes before saving ─────────────────────────
+    // Guard against saving an empty notes array that could crash Runway rendering
+    const notesToSave =
+      Array.isArray(sequenceNotes) && sequenceNotes.length > 0
+        ? sequenceNotes
+        : [];
+
+    // ── STEP 4: Compile & persist session state ────────────────────────────────
     setPracticeSession({
       currentWorkout: {
         title,
@@ -97,24 +124,20 @@ export default function EditorSequenceInspector({
         rightHandInstruction,
         pedagogicalTip,
       },
-      runwayNotes: sequenceNotes,
+      runwayNotes: notesToSave,
       sourceTheory,
     });
 
-    // 2. Propose real fullscreen if supported
+    // ── STEP 5: Request fullscreen (best-effort, won't block navigation) ──────
     try {
       if (typeof document !== 'undefined' && !document.fullscreenElement) {
-        if (document.documentElement.requestFullscreen) {
-          // Request fullscreen can fail without direct synchronous click in some browsers,
-          // so catch gracefully
-          await document.documentElement.requestFullscreen().catch(() => {});
-        }
+        await document.documentElement.requestFullscreen().catch(() => {});
       }
     } catch (e) {
-      console.warn('Fullscreen request deferred:', e);
+      // Fullscreen can be blocked by browser policy — ignore
     }
 
-    // 3. Redirect to dedicated Synthesia practice page
+    // ── STEP 6: Navigate to Synthesia practice page ───────────────────────────
     router.push('/studio/keys/practice');
   };
 

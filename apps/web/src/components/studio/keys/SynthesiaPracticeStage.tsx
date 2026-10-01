@@ -57,6 +57,14 @@ export default function SynthesiaPracticeStage() {
     toggleSustain,
   } = useKeysPractice();
 
+  // ─── Mounted guard (prevents SSR rendering of canvas/audio nodes) ───────────
+  // React error #300 "fewer hooks than expected" is caused when the component
+  // throws or returns early BEFORE completing all hook calls. By keeping ALL
+  // hooks above and using a mounted flag for the early return below, we satisfy
+  // the Rules of Hooks: hooks are always called in the same order, every render.
+  const [mounted, setMounted] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+
   // Playback & Transport State
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLooping, setIsLooping] = useState(true);
@@ -90,12 +98,25 @@ export default function SynthesiaPracticeStage() {
   const triggeredNoteIdsRef = useRef<Set<string>>(new Set());
   const isMouseDownRef = useRef(false);
 
-  // Synchronize BPM with context
+  // ─── Mount effect: set mounted flag & sync BPM ───────────────────────────────
+  // NOTE: The 'mounted' early return below comes AFTER ALL hooks — this is the
+  // only safe place for an early return in a component with many hooks.
   useEffect(() => {
+    setMounted(true);
+    // Sync BPM from context on mount
     if (currentWorkout.bpm) {
       setBpmState(currentWorkout.bpm);
     }
-  }, [currentWorkout.bpm]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Synchronize BPM when context changes after mount
+  useEffect(() => {
+    if (!mounted) return;
+    if (currentWorkout.bpm) {
+      setBpmState(currentWorkout.bpm);
+    }
+  }, [currentWorkout.bpm, mounted]);
+
 
   const handleBpmChange = (newBpm: number) => {
     const clamped = Math.max(30, Math.min(240, newBpm));
@@ -766,6 +787,25 @@ export default function SynthesiaPracticeStage() {
     if (hasRH) return 'right';
     return currentWorkout.handFocus;
   }, [currentMeasure, runwayNotes, currentWorkout.handFocus]);
+
+  // ─── SAFE EARLY RETURN — placed AFTER all hooks ─────────────────────────────
+  // This must come AFTER every hook call (useState/useRef/useEffect/useMemo/useCallback)
+  // to avoid React error #300 "Rendered fewer hooks than expected".
+  if (!mounted) {
+    return (
+      <div className="fixed inset-0 z-[100] w-screen h-screen bg-[#080c14] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-slate-400">
+          <div className="w-12 h-12 rounded-full border-4 border-cyan-500/30 border-t-cyan-400 animate-spin" />
+          <span className="text-sm font-mono font-bold tracking-wider uppercase text-cyan-400">
+            Cargando Escenario Synthesia...
+          </span>
+          <span className="text-xs text-slate-500 font-mono">
+            {currentWorkout.title}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[100] w-screen h-screen overflow-hidden bg-[#080c14] text-slate-100 flex flex-col justify-between select-none">
