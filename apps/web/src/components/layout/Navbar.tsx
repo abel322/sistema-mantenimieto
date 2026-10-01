@@ -21,6 +21,11 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Hide Navbar completely on dedicated Synthesia practice page
+  if (pathname?.startsWith('/studio/keys/practice')) {
+    return null;
+  }
+
   const navLinks = [
     {
       label: 'Drum Lab',

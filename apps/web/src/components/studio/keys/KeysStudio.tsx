@@ -31,11 +31,14 @@ import {
   stepNotesToRunwayNoteEvents,
 } from '@/services/theory/workoutEngine';
 import { keysAudioEngine, TimbreType } from '@/services/audio/keysAudioEngine';
+import { useKeysPractice } from '@/context/KeysPracticeContext';
 import InteractivePianoKeyboard from './InteractivePianoKeyboard';
+import EditorSequenceInspector from './EditorSequenceInspector';
 import KeysRunwaySequencer from './KeysRunwaySequencer';
 import KeysTheoryBar from './KeysTheoryBar';
 import WorkoutsDashboard from './WorkoutsDashboard';
 import JamStation from './JamStation';
+import CustomWorkoutModal from './CustomWorkoutModal';
 import CircleOfFifthsModal from './CircleOfFifthsModal';
 import {
   Headphones,
@@ -51,11 +54,16 @@ import {
   Radio,
   BookOpen,
   Layers,
+  Wrench,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export type WorkflowMode = 'workouts' | 'jam' | 'theory';
 
 export default function KeysStudio() {
+  const { setPracticeSession } = useKeysPractice();
+
   // Master Workflow Mode Selector
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode>('workouts');
 
@@ -87,15 +95,19 @@ export default function KeysStudio() {
 
   // Modal State
   const [isCircleModalOpen, setIsCircleModalOpen] = useState(false);
+  const [isCustomWorkoutModalOpen, setIsCustomWorkoutModalOpen] = useState(false);
 
   // Sequencer & Active Notes State
-  const [bpm, setBpm] = useState(75);
+  const [bpm, setBpm] = useState(80);
   const [stepRecordActive, setStepRecordActive] = useState(false);
   const [lastKeyboardTriggerNote, setLastKeyboardTriggerNote] = useState<NoteInfo | null>(null);
   const [activeNotesMap, setActiveNotesMap] = useState<Map<number, NoteInfo>>(new Map());
 
   // Runway Sequence array
   const [sequenceNotes, setSequenceNotes] = useState<RunwayNoteEvent[]>([]);
+
+  // Optional collapsible editor mini-sequencer
+  const [showEditorSequencer, setShowEditorSequencer] = useState(false);
 
   // Update Timbre & Audio settings
   const handleTimbreChange = (newTimbre: TimbreType) => {
@@ -187,36 +199,36 @@ export default function KeysStudio() {
     setActiveNotesMap(map);
   }, [rootNote, category, selectedItemId, voicingType, workflowMode]);
 
-  // Master Action: Load calculated sequence into Runway
-  const handleLoadIntoRunway = useCallback((customEvents?: RunwayNoteEvent[]) => {
-    if (customEvents && customEvents.length > 0) {
-      setSequenceNotes(customEvents);
+  // Master Action: Load calculated sequence into Runway & update session state
+  const handleLoadIntoRunway = useCallback(
+    (customEvents?: RunwayNoteEvent[]) => {
+      let eventsToSet: RunwayNoteEvent[] = [];
+      if (customEvents && customEvents.length > 0) {
+        eventsToSet = customEvents;
+      } else {
+        const seq = generateRunwaySequence(
+          rootNote,
+          selectedItemId,
+          category,
+          texture,
+          voicingType,
+          bpm
+        );
+        eventsToSet = stepNotesToRunwayNoteEvents(seq);
+      }
+
+      setSequenceNotes(eventsToSet);
       try {
-        Tone.Transport.bpm.value = bpm;
-        Tone.Transport.seconds = 0;
+        if (Tone.Transport) {
+          Tone.Transport.bpm.value = bpm;
+          Tone.Transport.seconds = 0;
+        }
       } catch (e) {
         console.warn('Tone.Transport error', e);
       }
-      return;
-    }
-
-    const seq = generateRunwaySequence(
-      rootNote,
-      selectedItemId,
-      category,
-      texture,
-      voicingType,
-      bpm
-    );
-    const events = stepNotesToRunwayNoteEvents(seq);
-    setSequenceNotes(events);
-    try {
-      Tone.Transport.bpm.value = bpm;
-      Tone.Transport.seconds = 0;
-    } catch (e) {
-      console.warn('Tone.Transport error', e);
-    }
-  }, [rootNote, selectedItemId, category, texture, voicingType, bpm]);
+    },
+    [rootNote, selectedItemId, category, texture, voicingType, bpm]
+  );
 
   // Handler: Load Workout from Workouts Dashboard
   const handleLoadWorkout = (workout: PracticeRoutine) => {
@@ -226,20 +238,17 @@ export default function KeysStudio() {
     }
     const currentRootNote = workout.rootNote || rootNote || 'C';
     setRootNote(currentRootNote);
-    const targetBpm = (workout as any).targetBpm || workout.bpm || 120;
+    const targetBpm = (workout as any).targetBpm || workout.bpm || 80;
     setBpm(targetBpm);
     setTexture(workout.texture);
     setVoicingType(workout.voicingType);
     setCategory(workout.category);
     setSelectedItemId(workout.targetItemId);
 
-    // 1. Generate concrete note events for the routine with current root
+    // Generate concrete note events for the routine with current root
     const notesToLoad = generateWorkoutRunwayNotes(workout, currentRootNote);
-
-    // 2. Set runway sequence directly
     setSequenceNotes(notesToLoad);
 
-    // 3. Adjust Tone.Transport BPM and reset to 0
     if (targetBpm && Tone.Transport) {
       try {
         if (Tone.Transport.bpm) Tone.Transport.bpm.value = targetBpm;
@@ -261,6 +270,59 @@ export default function KeysStudio() {
     }
   }, []);
 
+  // Compute Current Descriptive Titles for Inspector
+  const { inspectorTitle, inspectorTheoryText, inspectorObjective } = useMemo(() => {
+    if (workflowMode === 'workouts' && activeRoutine) {
+      return {
+        inspectorTitle: activeRoutine.title,
+        inspectorTheoryText: `${activeRoutine.targetItemName || activeRoutine.title} • Tónica ${rootNote}`,
+        inspectorObjective: activeRoutine.objective,
+      };
+    }
+
+    if (workflowMode === 'theory') {
+      const vaultFormula = HARMONIC_VAULT.find((f) => f.id === selectedItemId);
+      if (vaultFormula) {
+        return {
+          inspectorTitle: `${vaultFormula.name} (${rootNote})`,
+          inspectorTheoryText: `${vaultFormula.romanNumerals.join(' - ')} • Género: ${vaultFormula.genre} • Nivel: ${vaultFormula.level}`,
+          inspectorObjective: vaultFormula.description,
+        };
+      }
+      const chord = CHORD_CATALOG.find((c) => c.id === selectedItemId);
+      if (chord) {
+        return {
+          inspectorTitle: `${rootNote} ${chord.name} (${chord.symbol})`,
+          inspectorTheoryText: `Familia: ${chord.family} • Voicing: ${voicingType} • Fórmula: ${chord.formula}`,
+          inspectorObjective: `Dominio armónico y postura del acorde ${rootNote}${chord.symbol}.`,
+        };
+      }
+      const scale = SCALE_CATALOG.find((s) => s.id === selectedItemId);
+      if (scale) {
+        return {
+          inspectorTitle: `Escala ${rootNote} ${scale.name}`,
+          inspectorTheoryText: `Categoría: ${scale.category} • Grados: ${scale.formula}`,
+          inspectorObjective: `Digitación fluida de la escala ${rootNote} ${scale.name}.`,
+        };
+      }
+    }
+
+    if (workflowMode === 'jam') {
+      const scale = SCALE_CATALOG.find((s) => s.id === selectedJamScaleId) || SCALE_CATALOG[0];
+      return {
+        inspectorTitle: `Modo Jam: ${rootNote} ${scale.name}`,
+        inspectorTheoryText: `Smart Key Guard Activo • Tonos Target (1 / 5) y Notas Seguras`,
+        inspectorObjective: 'Improvisación guiada en tiempo real sin notas erróneas.',
+      };
+    }
+
+    return {
+      inspectorTitle: `Entrenamiento Sonora Keys: ${rootNote}`,
+      inspectorTheoryText: 'Secuencia teórica armada',
+      inspectorObjective: 'Práctica técnica y coordinación motriz.',
+    };
+  }, [workflowMode, activeRoutine, selectedItemId, rootNote, voicingType, selectedJamScaleId]);
+
   return (
     <div className="w-full flex flex-col gap-6">
       {/* Studio Header Bar */}
@@ -278,17 +340,17 @@ export default function KeysStudio() {
               <Headphones className="w-4 h-4" />
             </span>
             <span className="text-xs font-mono uppercase tracking-widest text-cyan-400 font-extrabold">
-              KEYS &amp; ADVANCED HARMONY WORKSTATION
+              TALLER DE EDICIÓN &amp; COMPOSICIÓN
             </span>
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono font-semibold">
-              Tone.js PolySynth
+              Sonora Theory Engine
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-            Estudio Interactivo de Teclado, Piano &amp; Armonía Moderna
+            Taller Teórico de Piano, Acordes, Escalas &amp; Rutinas
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Sistema pedagógico integral: entrenamientos progresivos por nivel, sala de improvisación guiada y enciclopedia armónica completa.
+            Programa progresiones armónicas, explora más de 200 cadencias y rutinas por nivel, y lánzalas al Escenario de Práctica Synthesia a pantalla completa.
           </p>
         </div>
 
@@ -348,7 +410,7 @@ export default function KeysStudio() {
       {/* ======================================================= */}
       {/* 1. SELECTOR MAESTRO DE MODALIDAD (Workstation Header)   */}
       {/* ======================================================= */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-[#090f21] border border-slate-800 shadow-xl">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-2xl bg-[#090f21] border border-slate-800 shadow-xl">
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setWorkflowMode('workouts')}
@@ -359,19 +421,7 @@ export default function KeysStudio() {
             }`}
           >
             <Target className="w-4 h-4 fill-current" />
-            <span>🎯 Entrenamientos por Nivel</span>
-          </button>
-
-          <button
-            onClick={() => setWorkflowMode('jam')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
-              workflowMode === 'jam'
-                ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.01]'
-                : 'bg-slate-950/70 text-slate-400 hover:text-white border border-slate-800/80'
-            }`}
-          >
-            <Radio className="w-4 h-4" />
-            <span>🎷 Modo Jam &amp; Improvisación</span>
+            <span>🎯 Rutinas Guiadas (Nivel 1 - 4)</span>
           </button>
 
           <button
@@ -383,7 +433,28 @@ export default function KeysStudio() {
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>📚 Explorador Teórico Libre</span>
+            <span>📚 Biblioteca Armónica &amp; Acordes</span>
+          </button>
+
+          <button
+            onClick={() => setWorkflowMode('jam')}
+            className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
+              workflowMode === 'jam'
+                ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-slate-950 shadow-lg shadow-amber-500/25 scale-[1.01]'
+                : 'bg-slate-950/70 text-slate-400 hover:text-white border border-slate-800/80'
+            }`}
+          >
+            <Radio className="w-4 h-4" />
+            <span>🎷 Jam Station &amp; Smart Guard</span>
+          </button>
+
+          {/* Custom Workout Modal Button */}
+          <button
+            onClick={() => setIsCustomWorkoutModalOpen(true)}
+            className="px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800"
+          >
+            <Wrench className="w-3.5 h-3.5 text-cyan-400" />
+            <span>🛠️ Creador Personalizado</span>
           </button>
         </div>
 
@@ -392,10 +463,10 @@ export default function KeysStudio() {
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
           <span>
             {workflowMode === 'workouts'
-              ? 'Práctica Dirigida: 4 Niveles'
+              ? 'Práctica Dirigida por Niveles'
               : workflowMode === 'jam'
-              ? 'Sala de Jam: Smart Guard Activo'
-              : 'Enciclopedia: 69 Acordes + 200 Cadencias'}
+              ? 'Improvisación con Smart Guard'
+              : 'Enciclopedia Sonora 200+ Fórmulas'}
           </span>
         </div>
       </div>
@@ -446,7 +517,7 @@ export default function KeysStudio() {
       )}
 
       {/* ======================================================= */}
-      {/* 3. INTERACTIVE PIANO KEYBOARD (With Smart Guard)        */}
+      {/* 3. INTERACTIVE PIANO KEYBOARD (Preview & Posture Test)  */}
       {/* ======================================================= */}
       <InteractivePianoKeyboard
         range={keyboardRange}
@@ -465,29 +536,70 @@ export default function KeysStudio() {
       />
 
       {/* ======================================================= */}
-      {/* 4. RUNWAY SEQUENCER (With Lateral Feedback & Wait Mode) */}
+      {/* 4. PANEL DE VISTA PREVIA DE EDICIÓN & MASTER ACTION     */}
       {/* ======================================================= */}
-      <KeysRunwaySequencer
-        notes={sequenceNotes}
-        sequenceNotes={sequenceNotes}
-        onSequenceUpdate={setSequenceNotes}
-        onActiveNotesChange={setActiveNotesMap}
+      <EditorSequenceInspector
+        title={inspectorTitle}
+        sourceTheory={inspectorTheoryText}
+        rootNote={rootNote}
         bpm={bpm}
         onBpmChange={setBpm}
-        stepRecordActive={stepRecordActive}
-        onStepRecordToggle={setStepRecordActive}
-        lastKeyboardTriggerNote={lastKeyboardTriggerNote}
-        activeRoutine={activeRoutine}
-        autoPlayTrigger={autoPlayRunway}
         handFocus={handFocus}
+        onHandFocusChange={setHandFocus}
+        sequenceNotes={sequenceNotes}
+        objective={inspectorObjective}
+        leftHandInstruction={activeRoutine?.leftHandInstruction}
+        rightHandInstruction={activeRoutine?.rightHandInstruction}
+        pedagogicalTip={activeRoutine?.pedagogicalTip}
       />
 
-      {/* 5. Circle of Fifths Modal */}
+      {/* ======================================================= */}
+      {/* 5. COLLAPSIBLE TEST SEQUENCER IN EDITOR (Optional)      */}
+      {/* ======================================================= */}
+      <div className="w-full flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setShowEditorSequencer(!showEditorSequencer)}
+          className="self-center px-4 py-2 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 text-xs font-mono font-semibold transition-all flex items-center gap-2"
+        >
+          {showEditorSequencer ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          <span>{showEditorSequencer ? 'Ocultar' : 'Mostrar'} Mini-Secuenciador de Prueba en Editor</span>
+        </button>
+
+        {showEditorSequencer && (
+          <KeysRunwaySequencer
+            notes={sequenceNotes}
+            sequenceNotes={sequenceNotes}
+            onSequenceUpdate={setSequenceNotes}
+            onActiveNotesChange={setActiveNotesMap}
+            bpm={bpm}
+            onBpmChange={setBpm}
+            stepRecordActive={stepRecordActive}
+            onStepRecordToggle={setStepRecordActive}
+            lastKeyboardTriggerNote={lastKeyboardTriggerNote}
+            activeRoutine={activeRoutine}
+            autoPlayTrigger={autoPlayRunway}
+            handFocus={handFocus}
+          />
+        )}
+      </div>
+
+      {/* Circle of Fifths Modal */}
       <CircleOfFifthsModal
         isOpen={isCircleModalOpen}
         onClose={() => setIsCircleModalOpen(false)}
         onSelectKey={(k) => setRootNote(k)}
         activeKey={rootNote}
+      />
+
+      {/* Custom Workout Modal */}
+      <CustomWorkoutModal
+        isOpen={isCustomWorkoutModalOpen}
+        onClose={() => setIsCustomWorkoutModalOpen(false)}
+        onSaveAndLoad={(customRoutine) => {
+          setIsCustomWorkoutModalOpen(false);
+          handleLoadWorkout(customRoutine);
+        }}
       />
     </div>
   );
