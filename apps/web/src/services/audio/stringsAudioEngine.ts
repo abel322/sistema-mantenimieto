@@ -275,6 +275,20 @@ class StringsAudioEngine {
   }
 
   /**
+   * Plays a single fret note on an instrument string
+   */
+  public async playFret(
+    instrument: InstrumentType,
+    basePitch: string,
+    fret: number,
+    articulation: StringArticulation = 'normal',
+    duration: string = '8n'
+  ) {
+    const noteInfo = calculateFretNote(basePitch, fret);
+    await this.playNote(instrument, noteInfo.fullNote, articulation, duration);
+  }
+
+  /**
    * Plays notes sequentially as an arpeggio (ascending or pattern)
    */
   public async playArpeggio(

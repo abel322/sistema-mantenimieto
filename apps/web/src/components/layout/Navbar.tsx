@@ -84,7 +84,10 @@ export default function Navbar() {
   // RETORNO CONDICIONAL ESTRICTAMENTE DESPUÉS DE EJECUTAR TODOS LOS HOOKS
   // Regla absoluta: evita React Error #300 (Rendered fewer hooks than expected)
   // =========================================================================
-  if (pathname?.startsWith('/studio/keys/practice')) {
+  if (
+    pathname?.startsWith('/studio/keys/practice') ||
+    pathname?.startsWith('/studio/strings/practice')
+  ) {
     return null;
   }
 
