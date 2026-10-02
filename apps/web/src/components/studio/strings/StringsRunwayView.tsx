@@ -53,19 +53,23 @@ export default function StringsRunwayView({
 
   // Viewport dimensions
   const [containerWidth, setContainerWidth] = useState<number>(900);
+  const [containerHeight, setContainerHeight] = useState<number>(200);
   // Manual scroll scrub offset when paused
   const [scrubStepOffset, setScrubStepOffset] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const dragStartXRef = useRef<number>(0);
   const dragStartOffsetRef = useRef<number>(0);
 
-  // ResizeObserver to adapt dynamically to responsive screen width
+  // ResizeObserver to adapt dynamically to responsive screen width and height
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.contentRect.width > 0) {
           setContainerWidth(entry.contentRect.width);
+        }
+        if (entry.contentRect.height > 0) {
+          setContainerHeight(entry.contentRect.height);
         }
       }
     });
@@ -84,16 +88,16 @@ export default function StringsRunwayView({
   const visibleStepsCount = zoom * 16;
   const stepWidthPx = Math.max(18, availableLookaheadWidth / visibleStepsCount);
 
-  // String Y vertical positions inside ~240px container
+  // String Y vertical positions inside adaptive container
   const stringYPositions = useMemo(() => {
-    const topMargin = 42;
-    const bottomMargin = 32;
-    const usableHeight = 240 - topMargin - bottomMargin;
+    const topMargin = 26;
+    const bottomMargin = 22;
+    const usableHeight = Math.max(70, containerHeight - topMargin - bottomMargin);
     const spacing = usableHeight / Math.max(1, numStrings - 1);
     return Array.from({ length: numStrings }, (_, idx) =>
       Math.round(topMargin + idx * spacing)
     );
-  }, [numStrings]);
+  }, [numStrings, containerHeight]);
 
   // Real-time animation position state (fractional step position)
   const [animFractionalStep, setAnimFractionalStep] = useState<number>(0);
@@ -370,7 +374,7 @@ export default function StringsRunwayView({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
-      className={`relative w-full h-[240px] bg-[#070B14] border border-white/10 rounded-2xl overflow-hidden shadow-2xl select-none ${
+      className={`relative w-full h-[180px] sm:h-[200px] md:h-[220px] lg:h-[240px] bg-[#070B14] border border-white/10 rounded-2xl overflow-hidden shadow-2xl select-none ${
         isDragging ? 'cursor-grabbing' : 'cursor-default'
       }`}
       style={{
@@ -468,11 +472,11 @@ export default function StringsRunwayView({
           return (
             <div
               key={`string-head-badge-${sIdx}`}
-              style={{ top: `${y - 12}px` }}
-              className="absolute left-3 flex items-center gap-2 pointer-events-auto"
+              style={{ top: `${y - 10}px` }}
+              className="absolute left-2.5 sm:left-3 flex items-center gap-1.5 sm:gap-2 pointer-events-auto"
             >
               <div
-                className={`w-6 h-6 rounded-lg flex items-center justify-center font-mono font-black text-xs transition-all duration-75 shadow-md ${
+                className={`w-5 h-5 rounded-md flex items-center justify-center font-mono font-black text-[10px] transition-all duration-75 shadow-md ${
                   isHitActive
                     ? 'bg-cyan-400 text-slate-950 border border-white shadow-[0_0_18px_#22d3ee] scale-110'
                     : 'bg-slate-900/90 text-slate-300 border border-slate-700/80'
@@ -569,7 +573,7 @@ export default function StringsRunwayView({
 
               {/* Note Fret Number Circular Pill */}
               <div
-                className={`min-w-[26px] h-[26px] px-1.5 rounded-full flex items-center justify-center font-mono font-black text-xs sm:text-sm border transition-all ${
+                className={`min-w-[22px] h-[22px] px-1 rounded-full flex items-center justify-center font-mono font-black text-[11px] sm:text-xs border transition-all ${
                   note.isHitting
                     ? 'bg-amber-400 text-black border-white shadow-[0_0_18px_rgba(251,191,36,1)]'
                     : note.isSelected

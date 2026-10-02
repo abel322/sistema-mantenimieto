@@ -175,22 +175,22 @@ export default function InteractiveFretboard({
   }, [numFrets]);
 
   const fretboardWidth = 1520;
-  const svgHeight = 220;
+  const svgHeight = 150;
 
   // Board vertical limits
-  const boardTopY = 28;
-  const boardBottomY = 192;
+  const boardTopY = 20;
+  const boardBottomY = 132;
   const boardHeight = boardBottomY - boardTopY;
   const boardCenterY = (boardTopY + boardBottomY) / 2;
 
   // Ruler vertical positions
-  const topRulerY = 17;
-  const bottomRulerY = 208;
+  const topRulerY = 13;
+  const bottomRulerY = 144;
 
   // String vertical positions (proportional within board height)
   const stringYPositions = useMemo(() => {
     if (numStrings === 4) {
-      const pad = 26;
+      const pad = 16;
       const step = (boardHeight - pad * 2) / 3;
       return [
         boardTopY + pad,
@@ -200,7 +200,7 @@ export default function InteractiveFretboard({
       ];
     }
     if (numStrings === 5) {
-      const pad = 22;
+      const pad = 14;
       const step = (boardHeight - pad * 2) / 4;
       return [
         boardTopY + pad,
@@ -211,7 +211,7 @@ export default function InteractiveFretboard({
       ];
     }
     // 6 strings
-    const pad = 18;
+    const pad = 12;
     const step = (boardHeight - pad * 2) / 5;
     return [
       boardTopY + pad,
@@ -294,11 +294,11 @@ export default function InteractiveFretboard({
   };
 
   return (
-    <div className={`w-full overflow-x-auto custom-scrollbar py-4 bg-[#0a0f1d] border border-white/10 rounded-2xl shadow-inner ${className}`}>
-      <div style={{ minWidth: `${fretboardWidth}px` }} className="relative mx-auto px-4 select-none">
+    <div className={`w-full overflow-x-auto custom-scrollbar py-1.5 md:py-2 bg-[#0a0f1d] border border-white/10 rounded-xl md:rounded-2xl shadow-inner ${className}`}>
+      <div style={{ minWidth: `${fretboardWidth}px` }} className="relative mx-auto px-2 md:px-3 select-none">
         <svg
           viewBox={`0 0 ${fretboardWidth} ${svgHeight}`}
-          className="w-full h-auto overflow-visible"
+          className="w-full h-[120px] md:h-[140px] drop-shadow-2xl overflow-visible"
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
@@ -408,7 +408,7 @@ export default function InteractiveFretboard({
                 key={`single-dot-${fret}`}
                 cx={midX}
                 cy={boardCenterY}
-                r={5}
+                r={3.8}
                 fill="#e2e8f0"
                 opacity={0.75}
                 stroke="#94a3b8"
@@ -427,7 +427,7 @@ export default function InteractiveFretboard({
                 <circle
                   cx={midX}
                   cy={dotY1}
-                  r={4.2}
+                  r={3.2}
                   fill="#e2e8f0"
                   opacity={0.75}
                   stroke="#94a3b8"
@@ -436,7 +436,7 @@ export default function InteractiveFretboard({
                 <circle
                   cx={midX}
                   cy={dotY2}
-                  r={4.2}
+                  r={3.2}
                   fill="#e2e8f0"
                   opacity={0.75}
                   stroke="#94a3b8"
@@ -517,7 +517,7 @@ export default function InteractiveFretboard({
                   x={midX}
                   y={topRulerY}
                   fill={textColor}
-                  fontSize="11"
+                  fontSize="9.5"
                   fontWeight={isKeyFret ? 'bold' : '600'}
                   fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
                   textAnchor="middle"
@@ -528,7 +528,7 @@ export default function InteractiveFretboard({
                   x={midX}
                   y={bottomRulerY}
                   fill={textColor}
-                  fontSize="11"
+                  fontSize="9.5"
                   fontWeight={isKeyFret ? 'bold' : '600'}
                   fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
                   textAnchor="middle"
@@ -571,7 +571,7 @@ export default function InteractiveFretboard({
           {stringsConfig.map((str, sIdx) => {
             const stringY = stringYPositions[sIdx];
             const slotHeight =
-              numStrings === 4 ? 37 : numStrings === 5 ? 30 : 25;
+              numStrings === 4 ? 26 : numStrings === 5 ? 22 : 18;
 
             const voicingNote =
               theoryMode === 'chord_voicing'
@@ -865,20 +865,20 @@ export default function InteractiveFretboard({
                               <circle
                                 cx={noteX}
                                 cy={stringY}
-                                r={17}
+                                r={13}
                                 fill="none"
                                 stroke="#22d3ee"
-                                strokeWidth="2.5"
+                                strokeWidth="2"
                                 opacity="0.9"
                                 className="animate-ping"
                               />
                               <circle
                                 cx={noteX}
                                 cy={stringY}
-                                r={14.5}
+                                r={11}
                                 fill="none"
                                 stroke="#38bdf8"
-                                strokeWidth="2"
+                                strokeWidth="1.5"
                                 opacity="0.8"
                               />
                             </>
@@ -887,10 +887,10 @@ export default function InteractiveFretboard({
                           <circle
                             cx={noteX}
                             cy={stringY}
-                            r={isActive ? 12 : isRoot ? 10.5 : 9}
+                            r={isActive ? 9.5 : isRoot ? 8 : 6.8}
                             fill={badgeFill}
                             stroke={badgeStroke}
-                            strokeWidth={isActive ? 3 : isRoot ? 2.4 : 1.5}
+                            strokeWidth={isActive ? 2.4 : isRoot ? 2 : 1.2}
                             className={`transition-transform duration-75 ${
                               isActive ? 'scale-110 drop-shadow-[0_0_12px_#22d3ee]' : 'group-hover:scale-125'
                             }`}
@@ -898,9 +898,9 @@ export default function InteractiveFretboard({
 
                           <text
                             x={noteX}
-                            y={stringY + 3.2}
+                            y={stringY + 2.5}
                             fill={textColor}
-                            fontSize={label.length > 2 ? '7' : '8.5'}
+                            fontSize={label.length > 2 ? '6' : '7.2'}
                             fontWeight={textFontWeight}
                             fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
                             textAnchor="middle"
