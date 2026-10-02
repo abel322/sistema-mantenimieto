@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import * as Tone from 'tone';
 import { useDrumAudio } from '@/hooks/useDrumAudio';
 import { useDrumScore } from '@/hooks/useDrumScore';
 import { useDrumStorage } from '@/hooks/useDrumStorage';
+import { useDrumPractice, compileMeasuresToDrumEvents } from '@/context/DrumPracticeContext';
 import DrumScoreRenderer from './DrumScoreRenderer';
 import DrumSequencerGrid from './DrumSequencerGrid';
 import DrumTransport from './DrumTransport';
@@ -14,8 +17,10 @@ import GrooveLibraryModal from './GrooveLibraryModal';
 import SaveExerciseModal from './SaveExerciseModal';
 import ExerciseLibraryModal from './ExerciseLibraryModal';
 import WorkoutBuilderModal from './WorkoutBuilderModal';
+import MiniScorePreview from './MiniScorePreview';
 import { DrumPieceId, DrumPreset, DRUM_PIECES, GroovePattern } from '@/types/drum';
 import { convertGrooveToDrumMeasures } from '@/lib/groovesData';
+import { DRUM_PRESETS } from '@/lib/drumPresets';
 import {
   Layers,
   Music,
@@ -28,10 +33,15 @@ import {
   Save,
   FolderOpen,
   X,
+  Rocket,
+  ArrowRight,
+  Play,
 } from 'lucide-react';
 
 export default function DrumLab() {
-  const [viewMode, setViewMode] = useState<'both' | 'score' | 'grid'>('both');
+  const router = useRouter();
+  const drumPractice = useDrumPractice();
+  const [viewMode, setViewMode] = useState<'editor' | 'score' | 'both'>('editor');
   const [scoreLayoutMode, setScoreLayoutMode] = useState<'paginated' | 'runway'>('paginated');
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
@@ -236,6 +246,50 @@ export default function DrumLab() {
     },
     [audio, score]
   );
+
+  // Master Action: Compilar compases, sincronizar estado con DrumPracticeContext y abrir Synthesia Runway
+  const handleLaunchPracticeMode = useCallback(async () => {
+    // 1. Desbloquear Web Audio context en el gesto de usuario (click)
+    try {
+      await Tone.start();
+    } catch (e) {
+      console.warn('[DrumLab] Tone.start() deferred:', e);
+    }
+
+    try {
+      audio.initAudio();
+    } catch (e) {
+      console.warn('[DrumLab] audio.initAudio deferred:', e);
+    }
+
+    // 2. Compilar compases activos a DrumNoteEvent[] para el Runway a 60 FPS
+    const compiledEvents = compileMeasuresToDrumEvents(score.measures);
+
+    // 3. Determinar título y almacenar sesión compartida persistente
+    const currentPreset = DRUM_PRESETS.find((p) => p.id === score.activePresetId);
+    const exerciseTitle = currentPreset?.name || 'Taller de Edición Drum Lab';
+
+    drumPractice.setSession({
+      title: exerciseTitle,
+      bpm: audio.bpm,
+      timeSignature: score.timeSignature,
+      measures: score.measures,
+      drumEvents: compiledEvents,
+      displayMode: 'runway',
+      isMetronomeActive: audio.isMetronomeActive,
+      metronomeVolume: audio.metronomeVolume,
+    });
+
+    // 4. Intentar pantalla completa nativa (best-effort)
+    try {
+      if (typeof document !== 'undefined' && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch (_) {}
+
+    // 5. Navegar a la estación de práctica a pantalla completa
+    router.push('/studio/drums/practice');
+  }, [audio, score, drumPractice, router]);
 
   // Global Keyboard Shortcuts (Guitar Pro style rapid entry)
   useEffect(() => {
@@ -487,34 +541,37 @@ export default function DrumLab() {
             {/* View Layout Mode Selector */}
             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 flex-shrink-0">
               <button
+                type="button"
+                onClick={() => setViewMode('editor')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  viewMode === 'editor'
+                    ? 'bg-gradient-electric text-white shadow-glow-violet'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Taller DAW
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('score')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  viewMode === 'score'
+                    ? 'bg-gradient-electric text-white shadow-glow-violet'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Partitura VexFlow
+              </button>
+              <button
+                type="button"
                 onClick={() => setViewMode('both')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                   viewMode === 'both'
                     ? 'bg-gradient-electric text-white shadow-glow-violet'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Vista Completa
-              </button>
-              <button
-                onClick={() => setViewMode('score')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  viewMode === 'score'
-                    ? 'bg-gradient-electric text-white shadow-glow-violet'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Partitura
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                  viewMode === 'grid'
-                    ? 'bg-gradient-electric text-white shadow-glow-violet'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                DAW
               </button>
             </div>
           </div>
@@ -561,7 +618,98 @@ export default function DrumLab() {
           />
         </div>
 
-        {/* 3. Runway de Partitura / Pentagramas */}
+        {/* ================================================================= */}
+        {/* VISTA PREVIA COMPACTA & BOTÓN MAESTRO DE ACCIÓN: MODO PRÁCTICA   */}
+        {/* ================================================================= */}
+        <section className="w-full box-border p-5 rounded-3xl bg-gradient-to-b from-[#0a1226]/95 via-[#070d1e]/98 to-[#040813] border-2 border-cyan-500/30 shadow-[0_0_40px_rgba(6,182,212,0.15)] backdrop-blur-xl relative overflow-hidden space-y-4">
+          {/* Ambient glow lights */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl pointer-events-none -ml-20 -mb-20" />
+
+          {/* Top metadata strip */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3 relative z-10">
+            <div>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                  VISTA PREVIA COMPACTA DE PARTITURA
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-800/80 text-slate-300 font-mono text-[11px] border border-slate-700">
+                  {score.measures.length} {score.measures.length === 1 ? 'Compás' : 'Compases'} • {score.timeSignature[0]}/{score.timeSignature[1]}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-800/80 text-cyan-300 font-mono text-[11px] border border-slate-700 font-bold">
+                  {audio.bpm} BPM
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                <span>Partitura de 5 líneas con sticking resultante:</span>
+                <span className="font-mono text-cyan-300 font-bold">R (Mano Derecha)</span>
+                <span>•</span>
+                <span className="font-mono text-purple-300 font-bold">L (Mano Izquierda)</span>
+                <span>•</span>
+                <span className="font-mono text-emerald-300 font-bold">K (Bombo)</span>
+                <span>•</span>
+                <span className="font-mono text-amber-300 font-bold">F (Hi-Hat Pie)</span>
+              </p>
+            </div>
+
+            {/* Quick Mode indicator */}
+            <div className="text-[11px] font-mono text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>DAW WORKSHOP ACTIVO</span>
+            </div>
+          </div>
+
+          {/* Miniatura 5 líneas con sticking */}
+          <div className="w-full overflow-x-auto py-2 px-3 bg-slate-950/70 rounded-2xl border border-slate-800/80 relative z-10 flex items-center justify-center min-h-[92px]">
+            <MiniScorePreview
+              measures={score.measures}
+              timeSignature={score.timeSignature}
+              className="max-w-full"
+            />
+          </div>
+
+          {/* ================================================================= */}
+          {/* BOTÓN MAESTRO DE ACCIÓN: INICIAR PRÁCTICA EN VIVO                */}
+          {/* ================================================================= */}
+          <div className="pt-1 relative z-10">
+            <button
+              type="button"
+              onClick={handleLaunchPracticeMode}
+              className="group relative w-full py-4 sm:py-5 px-6 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 hover:from-emerald-300 hover:via-teal-300 hover:to-cyan-300 text-slate-950 font-black shadow-[0_0_35px_rgba(20,184,166,0.45)] hover:shadow-[0_0_55px_rgba(6,182,212,0.7)] transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] flex flex-col sm:flex-row items-center justify-between gap-3 overflow-hidden cursor-pointer"
+            >
+              {/* Shimmer animation bar */}
+              <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
+
+              {/* Left: Icon & Master Title */}
+              <div className="flex items-center gap-3.5 z-10">
+                <span className="w-12 h-12 rounded-xl bg-slate-950/90 text-cyan-300 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <Rocket className="w-6 h-6 animate-bounce" />
+                </span>
+                <div className="text-left">
+                  <div className="text-base sm:text-lg lg:text-xl font-black tracking-tight uppercase flex items-center gap-2">
+                    <span>🚀 INICIAR PRÁCTICA EN VIVO</span>
+                    <span className="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full bg-slate-950 text-cyan-300 font-mono font-bold">
+                      Synthesia / Fullscreen Runway
+                    </span>
+                  </div>
+                  <p className="text-[11px] sm:text-xs font-semibold text-slate-900/80">
+                    Pasa al escenario inmersivo a pantalla completa (100vh) • Pista continua a 60 FPS • Sin distracciones
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: Enter Stage Indicator */}
+              <div className="flex items-center gap-2 z-10 bg-slate-950/90 text-white px-5 py-2.5 rounded-xl border border-cyan-400/40 text-xs font-mono font-bold shadow-md group-hover:border-cyan-300 flex-shrink-0">
+                <Play className="w-4 h-4 fill-cyan-400 text-cyan-400" />
+                <span>ABRIR ESCENARIO</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
+          </div>
+        </section>
+
+        {/* 3. Runway de Partitura / Pentagramas (Expandida) */}
         {(viewMode === 'both' || viewMode === 'score') && (
           <section className="w-full box-border space-y-2">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-300 px-1 font-mono">
@@ -691,7 +839,7 @@ export default function DrumLab() {
         />
 
         {/* 5. Matriz DAW / Resto de módulos */}
-        {(viewMode === 'both' || viewMode === 'grid') && (
+        {(viewMode === 'both' || viewMode === 'editor') && (
           <section className="w-full box-border space-y-2">
             <div className="flex items-center justify-between text-xs text-gray-400 px-1 font-mono">
               <span className="flex items-center gap-1.5 text-synth-violet">
