@@ -126,12 +126,12 @@ export default function DrumScoreRenderer({
     ? measures.length
     : Math.max(1, Math.min(measures.length, Math.floor((containerWidth - 40) / minMeasureWidth)));
 
-  const baseMeasureWidth = Math.round(410 * zoomLevel);
+  const baseMeasureWidth = Math.round(520 * zoomLevel);
   const currentMeasureWidth = isRunway
     ? baseMeasureWidth
     : Math.floor((containerWidth - 40) / measuresPerRow);
 
-  const rowHeight = Math.round(175 * zoomLevel);
+  const rowHeight = Math.round(200 * zoomLevel);
   const numRows = isRunway ? 1 : Math.ceil(measures.length / measuresPerRow);
 
   const totalWidth = isRunway
@@ -139,8 +139,8 @@ export default function DrumScoreRenderer({
     : containerWidth;
 
   const totalHeight = isRunway
-    ? Math.round(220 * zoomLevel)
-    : Math.max(200, numRows * rowHeight + 35);
+    ? Math.round(230 * zoomLevel)
+    : Math.max(220, numRows * rowHeight + 35);
 
   // Render VexFlow score onto container
   useEffect(() => {
@@ -195,8 +195,10 @@ export default function DrumScoreRenderer({
           const measureX = 20 + colIndex * currentMeasureWidth;
           const measureY = (isRunway ? 34 : 25) + rowIndex * rowHeight;
 
-          // Create percussion stave with high-contrast lines
-          const stave = new Stave(measureX, measureY, currentMeasureWidth);
+          // Create percussion stave with high-contrast lines and 40% increased height
+          const stave = new Stave(measureX, measureY, currentMeasureWidth, {
+            spacingBetweenLinesPx: 14,
+          });
           stave.setStyle({ fillStyle: staveFill, strokeStyle: staveColor });
 
           // Clef at the start of each line
@@ -281,21 +283,15 @@ export default function DrumScoreRenderer({
                   clef: 'percussion',
                 });
 
-                // Apply custom noteheads (e.g. cross 'x' for hi-hat/ride/crash)
-                if (staveNote.noteHeads) {
-                  sortedHits.forEach((hit, keyIndex) => {
-                    const pieceInfo = DRUM_PIECES[hit.pieceId];
-                    const noteHead = staveNote.noteHeads[keyIndex];
-
-                    if (noteHead && noteHead.glyphProps) {
-                      if (pieceInfo?.notehead === 'x') {
-                        noteHead.glyphProps.codeHead = Glyphs.noteheadXBlack || '';
-                      } else if (pieceInfo?.notehead === 'circle-x') {
-                        noteHead.glyphProps.codeHead = Glyphs.noteheadCircleX || '';
-                      }
-                    }
-                  });
-                }
+                // Plicas (stems) bien definidas, nítidas y gruesas
+                try {
+                  if (typeof staveNote.setStemStyle === 'function') {
+                    staveNote.setStemStyle({
+                      strokeStyle: isDarkTheme ? '#CBD5E1' : '#475569',
+                      lineWidth: 2.2,
+                    });
+                  }
+                } catch (_) {}
 
                 // Accent articulation (a>)
                 const hasAccent = step.hits.some((h) => h.accent);
@@ -305,7 +301,7 @@ export default function DrumScoreRenderer({
                   } catch (_) {}
                 }
 
-                // Ghost note: Enclose notehead directly in parentheses without displacing stems/beams
+                // Ghost note: Encapsuladas entre paréntesis con opacidad del 60%
                 sortedHits.forEach((hit, keyIndex) => {
                   if (hit.ghost) {
                     let attached = false;
@@ -321,7 +317,7 @@ export default function DrumScoreRenderer({
                     if (!attached) {
                       try {
                         const ann = new Annotation('( )');
-                        ann.setFont('sans-serif', 11, 'bold');
+                        ann.setFont('sans-serif', 12, 'bold');
                         ann.setVerticalJustification(Annotation.VerticalJustify.CENTER);
                         staveNote.addModifier(ann, keyIndex);
                       } catch (_) {}
@@ -329,13 +325,24 @@ export default function DrumScoreRenderer({
                   }
                 });
 
-                // Sticking annotation (R / L / K)
+                // Sticking Dinámico (R / L): Tamaño grande (16px bold), facilitando la lectura a distancia
                 const sticking = step.sticking || step.hits.find((h) => h.sticking)?.sticking;
                 if (sticking && Annotation) {
                   try {
                     const stickingAnn = new Annotation(sticking);
-                    stickingAnn.setFont('monospace', 10, 'bold');
+                    stickingAnn.setFont('ui-monospace, SFMono-Regular, monospace', 16, 'bold');
                     stickingAnn.setVerticalJustification(Annotation.VerticalJustify.BOTTOM);
+                    const stickLetter = sticking.trim().toUpperCase();
+                    // 'R' (Cyan neón #22d3ee), 'L' (Violeta/Índigo neón #c084fc)
+                    const stickColor =
+                      stickLetter === 'R'
+                        ? '#22D3EE'
+                        : stickLetter === 'L'
+                        ? '#C084FC'
+                        : '#10B981';
+                    try {
+                      stickingAnn.setStyle({ fillStyle: stickColor, strokeStyle: stickColor });
+                    } catch (_) {}
                     staveNote.addModifier(stickingAnn, 0);
                   } catch (_) {}
                 }
@@ -382,33 +389,68 @@ export default function DrumScoreRenderer({
                   if (!graceAdded && Annotation) {
                     try {
                       const graceAnn = new Annotation(isDrag ? 'drag' : 'flam');
-                      graceAnn.setFont('sans-serif', 9, 'bold');
+                      graceAnn.setFont('sans-serif', 10, 'bold');
                       graceAnn.setVerticalJustification(Annotation.VerticalJustify.TOP);
                       staveNote.addModifier(graceAnn, 0);
                     } catch (_) {}
                   }
                 }
 
-                // Note styling (amber neon if syncopated and highlighted, else cyan)
+                // Código de Colores Intuitivo por Instrumento y Técnica (Estilo Soundslice / Drumeo)
                 const isStepSyncopated =
                   step.isSyncopated ||
                   step.tiedToNext ||
                   step.tiedFromPrev ||
                   (step.hits && step.hits.some((h: any) => h.isSyncopated || h.tiedToNext));
-
                 const shouldHighlightSync = highlightSyncopations || isSyncopationDrill;
-                const noteColor =
-                  shouldHighlightSync && isStepSyncopated
-                    ? isDarkTheme
-                      ? '#F59E0B'
-                      : '#D97706'
-                    : isDarkTheme
-                    ? '#F8FAFC'
-                    : '#0F172A';
-                staveNote.setStyle({ fillStyle: noteColor, strokeStyle: noteColor });
+
                 if (staveNote.noteHeads) {
-                  staveNote.noteHeads.forEach((nh: any) => {
-                    nh.setStyle({ fillStyle: noteColor, strokeStyle: noteColor });
+                  sortedHits.forEach((hit, keyIndex) => {
+                    const pieceInfo = DRUM_PIECES[hit.pieceId];
+                    const noteHead = staveNote.noteHeads[keyIndex];
+
+                    if (noteHead && noteHead.glyphProps) {
+                      if (pieceInfo?.notehead === 'x') {
+                        noteHead.glyphProps.codeHead = Glyphs.noteheadXBlack || '';
+                      } else if (pieceInfo?.notehead === 'circle-x') {
+                        noteHead.glyphProps.codeHead = Glyphs.noteheadCircleX || '';
+                      }
+                    }
+
+                    // Paleta Intuitiva: Hi-Hat/Platillos Cyan (#22d3ee), Caja Blanco / Ámbar (#fbbf24), Bombo Esmeralda (#10b981)
+                    let headColor = isDarkTheme ? '#F8FAFC' : '#0F172A';
+
+                    if (shouldHighlightSync && (isStepSyncopated || hit.isSyncopated)) {
+                      headColor = '#F59E0B'; // Ámbar neón si es síncopa destacada
+                    } else if (hit.ghost) {
+                      headColor = '#94A3B8'; // Ghost Note opacidad ~60%
+                    } else {
+                      const pId = hit.pieceId;
+                      if (
+                        pId === 'hihat' ||
+                        pId === 'hihatOpen' ||
+                        pId === 'hihatClosed' ||
+                        pId === 'crash' ||
+                        pId === 'ride' ||
+                        pId === 'china' ||
+                        pieceInfo?.notehead === 'x' ||
+                        pieceInfo?.notehead === 'circle-x'
+                      ) {
+                        headColor = '#22D3EE'; // Cyan neón brillante
+                      } else if (pId === 'kick' || pId === 'hihatFoot') {
+                        headColor = '#10B981'; // Esmeralda neón
+                      } else if (pId === 'snare') {
+                        headColor = hit.accent ? '#FBBF24' : '#FFFFFF'; // Blanco nítido con halo ámbar cuando lleva acento
+                      } else if (pId === 'tom1' || pId === 'tom2' || pId === 'floorTom') {
+                        headColor = '#38BDF8'; // Azul cielo brillante para toms
+                      } else {
+                        headColor = isDarkTheme ? '#F8FAFC' : '#0F172A';
+                      }
+                    }
+
+                    if (noteHead && typeof noteHead.setStyle === 'function') {
+                      noteHead.setStyle({ fillStyle: headColor, strokeStyle: headColor });
+                    }
                   });
                 }
               }
@@ -476,14 +518,18 @@ export default function DrumScoreRenderer({
 
             voice.draw(context, stave);
 
-            // Draw Beams with theme styling
+            // Barras de unión (beams) bien definidas y gruesas
             measureBeams.forEach((beam) => {
               try {
                 if (typeof (beam as any).setStyle === 'function') {
                   (beam as any).setStyle({
                     fillStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
                     strokeStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
+                    lineWidth: 3.8,
                   });
+                }
+                if ((beam as any).renderOptions) {
+                  (beam as any).renderOptions.beamWidth = 6.5;
                 }
                 beam.setContext(context).draw();
               } catch (_) {}
@@ -849,264 +895,7 @@ export default function DrumScoreRenderer({
   const selectedStep = selectedBeat?.steps[selectedStepIndex];
 
   return (
-    <div className="relative w-full box-border rounded-2xl bg-white dark:bg-[#0A0E1A] border border-slate-200 dark:border-white/10 p-5 shadow-sm dark:shadow-2xl overflow-hidden select-none text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Score Header Info Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-500/30 font-mono text-[11px] text-cyan-800 dark:text-cyan-400">
-            <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
-            PERCUSSION CLEF (5-LINE STANDARD)
-          </span>
-          <span className="text-slate-700 dark:text-slate-300 font-mono font-medium">
-            {measures[0]?.timeSignature[0]}/{measures[0]?.timeSignature[1]} Meter
-          </span>
-          <span className="text-slate-400 dark:text-gray-500">•</span>
-          <span className="text-slate-700 dark:text-slate-300 font-mono">
-            {measures.length} {measures.length === 1 ? 'Measure' : 'Measures'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3 flex-wrap text-[11px] font-mono">
-          {/* Mini Floating Transport Bar (Always accessible alongside score) */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 shadow-sm select-none text-slate-700 dark:text-slate-200">
-            {onTogglePlay && (
-              <button
-                type="button"
-                onClick={onTogglePlay}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-mono font-bold text-xs transition-all cursor-pointer shadow-md ${
-                  isPlaying
-                    ? 'bg-amber-500 hover:bg-amber-400 text-black shadow-amber-500/30'
-                    : 'bg-synth-cyan hover:bg-cyan-300 text-black shadow-glow-cyan'
-                }`}
-                title={isPlaying ? 'Pausar (Espacio)' : 'Reproducir (Espacio)'}
-              >
-                {isPlaying ? (
-                  <>
-                    <Pause className="w-3.5 h-3.5 fill-current" />
-                    <span>PAUSA</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>PLAY</span>
-                  </>
-                )}
-              </button>
-            )}
-
-            {onStop && (
-              <button
-                type="button"
-                onClick={handleStop}
-                className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-500/20 text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200 dark:border-white/10 hover:border-rose-500/40 transition-all cursor-pointer"
-                title="Detener y volver al Compás 1"
-              >
-                <Square className="w-3.5 h-3.5 fill-current" />
-              </button>
-            )}
-
-            {onSetBpm && bpm && (
-              <div className="flex items-center px-1 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 font-mono text-xs">
-                <button
-                  type="button"
-                  onClick={() => onSetBpm(bpm - 5)}
-                  className="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700 rounded transition-colors"
-                  title="Bajar 5 BPM"
-                >
-                  -
-                </button>
-                <span className="px-1.5 text-cyan-800 dark:text-synth-cyan font-bold min-w-[50px] text-center">
-                  {bpm} <span className="text-[9px] text-slate-500 dark:text-slate-400 font-normal">BPM</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onSetBpm(bpm + 5)}
-                  className="w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700 rounded transition-colors"
-                  title="Subir 5 BPM"
-                >
-                  +
-                </button>
-              </div>
-            )}
-
-            {onToggleMetronome && (
-              <button
-                type="button"
-                onClick={onToggleMetronome}
-                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                  isMetronomeActive
-                    ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
-                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title={isMetronomeActive ? 'Desactivar Metrónomo (Click)' : 'Activar Metrónomo (Click)'}
-              >
-                <Bell className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {onToggleLoop && (
-              <button
-                type="button"
-                onClick={onToggleLoop}
-                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                  isLooping
-                    ? 'bg-cyan-100 dark:bg-synth-cyan/20 border-cyan-400 dark:border-synth-cyan text-cyan-900 dark:text-synth-cyan shadow-[0_0_8px_rgba(34,211,238,0.3)]'
-                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title={isLooping ? 'Loop Activado' : 'Loop Desactivado'}
-              >
-                <Repeat className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* View Mode Toggle: Paginated (Multiline) vs Runway (Continuous strip) */}
-          {onToggleLayoutMode && (
-            <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 dark:text-slate-200 select-none">
-              <button
-                type="button"
-                onClick={() => onToggleLayoutMode('paginated')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  !isRunway
-                    ? 'bg-gradient-electric text-white shadow-glow-violet'
-                    : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Vista Partitura: Páginas / Multilínea (2 compases por fila)"
-              >
-                <span>⊞</span>
-                <span className="hidden sm:inline">Páginas</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onToggleLayoutMode('runway')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isRunway
-                    ? 'bg-synth-cyan text-black shadow-glow-cyan font-extrabold'
-                    : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Modo Ensayo Horizontal: Cinta Continua / Runway con Auto-Scroll sincronizado"
-              >
-                <span>⇄</span>
-                <span>Runway</span>
-                {isRunway && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* Zoom Level Selector (80%, 100%, 120%) */}
-          {onChangeZoomLevel && (
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/90 p-0.5 rounded-xl border border-slate-200 dark:border-white/10 select-none">
-              <span className="text-[10px] text-slate-500 dark:text-slate-300 px-1 font-semibold">ZOOM:</span>
-              {[0.8, 1.0, 1.2].map((z) => (
-                <button
-                  key={`zoom-btn-${z}`}
-                  type="button"
-                  onClick={() => onChangeZoomLevel(z)}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold transition-all cursor-pointer ${
-                    zoomLevel === z
-                      ? 'bg-synth-cyan text-black shadow-glow-cyan'
-                      : 'text-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:border dark:border-white/10 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {Math.round(z * 100)}%
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Synchronized Beat Flash Counter (Cyan on 1, Violet on 2, 3, 4) */}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 font-mono text-[11px]">
-            <span className="text-slate-500 dark:text-slate-300 text-[10px] mr-1">PULSO:</span>
-            {[0, 1, 2, 3].map((b) => {
-              const isCurrent = isPlaying && currentBeatFlash?.beatIndex === b;
-              return (
-                <span
-                  key={`score-beat-${b}`}
-                  className={`px-1.5 py-0.2 rounded font-bold transition-all duration-75 ${
-                    isCurrent
-                      ? b === 0
-                        ? 'bg-cyan-500 dark:bg-synth-cyan text-white dark:text-black shadow-[0_0_12px_#22d3ee] scale-110'
-                        : 'bg-purple-600 dark:bg-synth-violet text-white shadow-[0_0_10px_#a855f7] scale-110'
-                      : 'text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/5'
-                  }`}
-                >
-                  T{b + 1}
-                </span>
-              );
-            })}
-          </div>
-
-          {/* Pedagogical Toggle Switch for Syncopations */}
-          {onToggleHighlightSyncopations && (
-            <button
-              type="button"
-              onClick={onToggleHighlightSyncopations}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none ${
-                highlightSyncopations || isSyncopationDrill
-                  ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-400 text-amber-900 dark:text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.4)] ring-1 ring-amber-400'
-                  : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-amber-900 dark:hover:text-amber-300 hover:border-amber-400'
-              }`}
-              title="Resaltar visualmente notas y ligaduras sincopadas (Ámbar neón #F59E0B)"
-            >
-              <span className="text-sm">𝄐</span>
-              <span>Destacar Síncopas</span>
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  highlightSyncopations || isSyncopationDrill ? 'bg-amber-500 dark:bg-amber-400 animate-pulse' : 'bg-gray-400 dark:bg-gray-600'
-                }`}
-              />
-            </button>
-          )}
-
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-cyan-600 dark:bg-cyan-400" />
-            <span className="text-slate-700 dark:text-gray-300">Active Hit</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 dark:bg-amber-400" />
-            <span className="text-amber-800 dark:text-amber-300 font-semibold">𝄐 Síncopa / Tie</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-amber-700 dark:text-amber-400 font-bold text-xs">&gt;</span>
-            <span className="text-slate-700 dark:text-gray-300">Accent</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-purple-700 dark:text-purple-400 font-bold">(•)</span>
-            <span className="text-slate-700 dark:text-gray-300">Ghost Note</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-rose-600 dark:text-rose-400 font-mono text-xs">x</span>
-            <span className="text-slate-700 dark:text-gray-300">Cymbals/Hi-Hat</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Syncopation & Anchor Drill Pedagogical Info Banner */}
-      {(highlightSyncopations || isSyncopationDrill) && (
-        <div className="mt-3 px-3.5 py-2 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 dark:border-amber-400/40 flex items-center justify-between text-[11px] font-mono text-amber-900 dark:text-amber-200">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{isSyncopationDrill ? '🎯' : '𝄐'}</span>
-            <span>
-              {isSyncopationDrill ? (
-                <>
-                  <strong>Modo Anclaje / Syncopation Drill Activo:</strong> El metrónomo marca estrictamente los 4 pulsos a tierra con timbre percusivo (woodblock digital). Las guías punteadas <strong>⚓ T1-T4 (Tierra)</strong> señalan los tiempos fuertes silenciados o esquivados, manteniendo las notas sincopadas en <strong>ámbar neón (#F59E0B)</strong>.
-                </>
-              ) : (
-                <>
-                  <strong>Modo Pedagógico Activo:</strong> Cabezas de nota y ligaduras en <strong>ámbar neón (#F59E0B)</strong> muestran cómo el ritmo desplaza los acentos a contratiempo y esquiva el impacto en los tiempos fuertes.
-                </>
-              )}
-            </span>
-          </div>
-          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 dark:bg-amber-500/30 text-amber-900 dark:text-amber-300 font-bold uppercase border border-amber-500/30 dark:border-amber-400/30">
-            {isSyncopationDrill ? 'Sync Drill' : 'Sincopado'}
-          </span>
-        </div>
-      )}
-
+    <div className="relative w-full h-full box-border bg-transparent overflow-hidden select-none text-slate-900 dark:text-slate-100 flex flex-col justify-between">
       {/* Main Score Scroll Container (Horizontal Runway or Paginated) */}
       <div
         ref={scrollContainerRef}
@@ -1203,6 +992,55 @@ export default function DrumScoreRenderer({
 
           {/* VexFlow Render Canvas Container */}
           <div ref={containerRef} className="w-full h-full pointer-events-none" />
+
+          {/* Cuadrícula de Pulsos Translúcida (Beat Grid) estilo Soundslice / Drumeo */}
+          {measures.map((m, mIdx) => {
+            const [beatsCount] = m.timeSignature;
+            const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
+            const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
+            const measureX = 20 + colIndex * currentMeasureWidth;
+            const measureY = (isRunway ? 34 : 25) + rowIndex * rowHeight;
+
+            return Array.from({ length: beatsCount }).map((_, bIdx) => {
+              const matchingPos = notePositions.find(
+                (p) => p.measureIndex === mIdx && p.beatIndex === bIdx && p.stepIndex === 0
+              );
+              const beatX = matchingPos ? matchingPos.x : measureX + (bIdx + 0.5) * (currentMeasureWidth / beatsCount);
+              const isCurrentBeat = isPlaying && playhead.measureIndex === mIdx && playhead.beatIndex === bIdx;
+
+              return (
+                <div
+                  key={`beat-grid-${mIdx}-${bIdx}`}
+                  className="absolute pointer-events-none z-10 flex flex-col items-center"
+                  style={{
+                    left: `${beatX}px`,
+                    top: `${measureY - 20}px`,
+                    height: `${rowHeight - 10}px`,
+                    transform: 'translateX(-50%)',
+                  }}
+                >
+                  {/* Número de Pulso en Ámbar/Dorado Tenue */}
+                  <span
+                    className={`font-mono text-xs font-black transition-all duration-75 select-none ${
+                      isCurrentBeat
+                        ? 'text-amber-300 scale-110 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)]'
+                        : 'text-amber-400/40'
+                    }`}
+                  >
+                    {bIdx + 1}
+                  </span>
+                  {/* Línea vertical guía translúcida */}
+                  <div
+                    className={`w-[1px] flex-1 mt-1 border-l border-dashed transition-colors duration-100 ${
+                      isCurrentBeat
+                        ? 'border-amber-400/70 shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                        : 'border-amber-400/20'
+                    }`}
+                  />
+                </div>
+              );
+            });
+          })}
 
           {/* Measure Section Badges and Active Playing Perimeter Glow */}
           {measures.map((_, mIdx) => {
@@ -1344,7 +1182,7 @@ export default function DrumScoreRenderer({
 
             const stepData =
               measures[pos.measureIndex]?.beats[pos.beatIndex]?.steps[pos.stepIndex];
-            const hasHits = stepData && stepData.hits.length > 0;
+            const hasHits = stepData && stepData.hits && stepData.hits.length > 0;
 
             return (
               <div
@@ -1355,36 +1193,44 @@ export default function DrumScoreRenderer({
                     ? 'z-20'
                     : isPlayheadHere
                     ? 'z-10'
-                    : 'z-0 hover:bg-black/[0.04] dark:hover:bg-white/[0.04]'
+                    : 'z-0 hover:bg-white/[0.04]'
                 }`}
                 style={{
                   left: `${pos.x}px`,
-                  top: `${pos.y + 4}px`,
-                  height: '135px',
-                  width: `${Math.max(26, pos.width * 0.9)}px`,
+                  top: `${pos.y - 12}px`,
+                  height: '160px',
+                  width: `${Math.max(28, pos.width * 0.9)}px`,
                 }}
               >
                 {/* Top Beat/Step Indicator Pill */}
                 <div
                   className={`text-[9px] font-mono px-1 py-0.2 rounded transition-all ${
                     isSelected
-                      ? 'bg-synth-cyan text-black font-bold shadow-[0_0_10px_#22d3ee]'
+                      ? 'bg-cyan-400 text-black font-bold shadow-[0_0_10px_#22d3ee]'
                       : isPlayheadHere
-                      ? 'bg-synth-violet text-white font-bold'
-                      : 'text-gray-500 opacity-0 group-hover:opacity-100 bg-slate-200/80 dark:bg-white/10'
+                      ? 'bg-purple-500 text-white font-bold'
+                      : 'text-gray-500 opacity-0 group-hover:opacity-100 bg-white/10'
                   }`}
                 >
                   {pos.stepIndex === 0 ? `B${pos.beatIndex + 1}` : `.${pos.stepIndex + 1}`}
                 </div>
 
-                {/* Selected Step Glowing Cursor Box */}
+                {/* Modern Neon Cursor (Replaces old bulky box) */}
                 {isSelected && (
-                  <div className="absolute inset-y-4 inset-x-0 border-2 border-synth-cyan/80 bg-synth-cyan/10 rounded-lg shadow-[0_0_15px_rgba(34,211,238,0.35)] pointer-events-none animate-pulse-subtle" />
+                  <div className="absolute inset-y-2 inset-x-0 border-2 border-cyan-400/80 bg-cyan-400/10 rounded-xl shadow-[0_0_18px_rgba(34,211,238,0.35)] pointer-events-none animate-pulse-subtle" />
+                )}
+
+                {/* Active Note Hit Pulse: Flash de luz y aura al momento exacto del golpe */}
+                {isPlayheadHere && hasHits && (
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    <div className="w-10 h-10 rounded-full bg-cyan-400/35 border border-cyan-300 shadow-[0_0_24px_#22d3ee] animate-ping" />
+                    <div className="absolute inset-0 m-auto w-3 h-3 rounded-full bg-white shadow-[0_0_12px_#ffffff] scale-125" />
+                  </div>
                 )}
 
                 {/* Hits Summary Tag on Hover */}
                 {hasHits && (
-                  <div className="opacity-0 group-hover:opacity-100 absolute -bottom-2 bg-white/95 dark:bg-obsidian-deep/95 border border-slate-300 dark:border-white/20 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-900 dark:text-cyan-300 shadow-md whitespace-nowrap pointer-events-none transition-opacity z-30">
+                  <div className="opacity-0 group-hover:opacity-100 absolute -bottom-2 bg-slate-900/95 border border-slate-700/80 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-300 shadow-md whitespace-nowrap pointer-events-none transition-opacity z-30">
                     {stepData.hits.map((h) => DRUM_PIECES[h.pieceId]?.shortName || h.pieceId).join('+')}
                   </div>
                 )}
@@ -1407,22 +1253,22 @@ export default function DrumScoreRenderer({
             >
               {/* Laser Core Beam (Cyan when playing, Amber when paused) */}
               <div
-                className={`w-[2px] h-full ${
+                className={`w-[2.5px] h-full ${
                   isPlaying
-                    ? 'bg-synth-cyan shadow-[0_0_14px_#22d3ee,0_0_28px_#38bdf8]'
-                    : 'bg-amber-400 shadow-[0_0_14px_#f59e0b,0_0_24px_#f59e0b]'
+                    ? 'bg-cyan-400 shadow-[0_0_16px_#22d3ee,0_0_32px_#06b6d4]'
+                    : 'bg-amber-400 shadow-[0_0_16px_#f59e0b,0_0_26px_#f59e0b]'
                 }`}
               />
               {/* Top Reading Diamond */}
               <div
                 className={`absolute -top-1 -left-[5px] w-3 h-3 rotate-45 ${
                   isPlaying
-                    ? 'bg-synth-cyan shadow-[0_0_12px_#22d3ee]'
-                    : 'bg-amber-400 shadow-[0_0_12px_#f59e0b]'
+                    ? 'bg-cyan-400 shadow-[0_0_14px_#22d3ee]'
+                    : 'bg-amber-400 shadow-[0_0_14px_#f59e0b]'
                 }`}
               />
               {/* Glowing reading core dot at stave center */}
-              <div className="absolute top-[88px] -left-[3px] w-2 h-2 rounded-full bg-white shadow-[0_0_10px_#fff]" />
+              <div className="absolute top-[88px] -left-[3px] w-2 h-2 rounded-full bg-white shadow-[0_0_12px_#fff]" />
             </div>
           )}
 
@@ -1432,14 +1278,14 @@ export default function DrumScoreRenderer({
               className="absolute -translate-x-1/2 pointer-events-none z-30 transition-all duration-75 ease-linear"
               style={{
                 left: `${activePlayheadPos.x}px`,
-                top: `${activePlayheadPos.y + 8}px`,
-                height: '115px',
+                top: `${activePlayheadPos.y - 6}px`,
+                height: `${rowHeight - 15}px`,
               }}
             >
               {/* Laser Core Beam */}
-              <div className="w-[2px] h-full bg-synth-cyan shadow-[0_0_12px_#22d3ee,0_0_24px_#38bdf8]" />
+              <div className="w-[2.5px] h-full bg-cyan-400 shadow-[0_0_16px_#22d3ee,0_0_30px_#06b6d4]" />
               {/* Laser Top Diamond Indicator */}
-              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-synth-cyan rotate-45 shadow-[0_0_10px_#22d3ee]" />
+              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-cyan-400 rotate-45 shadow-[0_0_12px_#22d3ee]" />
             </div>
           )}
         </div>

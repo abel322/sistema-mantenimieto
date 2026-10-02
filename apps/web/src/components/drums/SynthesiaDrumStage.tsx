@@ -43,6 +43,7 @@ export default function SynthesiaDrumStage() {
   const [selectedBeatIndex, setSelectedBeatIndex] = useState(0);
   const [selectedStepIndex, setSelectedStepIndex] = useState(0);
   const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
+  const [highlightSyncopations, setHighlightSyncopations] = useState(true);
 
   // Inicialización y sincronización en montaje
   useEffect(() => {
@@ -173,121 +174,152 @@ export default function SynthesiaDrumStage() {
   }
 
   return (
-    <div className="w-full min-h-[calc(100vh-5rem)] bg-[#0d131f] text-slate-100 flex flex-col justify-start py-6 px-3 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto w-full space-y-5">
+    <div className="w-full h-[calc(100vh-5rem)] bg-[#0d131f] text-slate-100 flex flex-col justify-between p-2.5 sm:p-3 overflow-hidden select-none">
+      <div className="max-w-7xl mx-auto w-full h-full flex flex-col justify-between gap-2.5 min-h-0">
         {/* ================================================================= */}
-        {/* BARRA DE TRANSPORTE Y CABECERA DEL REPRODUCTOR                    */}
+        {/* BARRA DE TRANSPORTE ÚNICA, ULTRA-COMPACTA Y ELEGANTE             */}
         {/* ================================================================= */}
-        <header className="w-full p-4 sm:p-5 rounded-3xl bg-[#131b2e]/95 border border-slate-800 shadow-xl backdrop-blur-xl flex flex-col gap-4">
-          {/* Top Line: Botón Volver + Metadatos de Partitura */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <Link
-                href="/studio/drums"
-                className="px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center gap-2 text-xs font-bold font-mono shadow-sm group"
-                title="Volver al Taller DAW para modificar ritmos y celdas"
-              >
-                <ArrowLeft className="w-4 h-4 text-cyan-400 group-hover:-translate-x-0.5 transition-transform" />
-                <span>Volver a Editar DAW / Matriz</span>
-              </Link>
+        <header className="w-full px-3 py-2 rounded-2xl bg-[#131b2e]/95 border border-slate-800 shadow-xl backdrop-blur-xl flex items-center justify-between gap-2.5 flex-wrap shrink-0">
+          {/* Bloque Izquierdo: Volver DAW + Título + Pill Síncopas */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Link
+              href="/studio/drums"
+              className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center gap-1.5 text-xs font-bold font-mono shadow-sm group shrink-0"
+              title="Volver al Taller DAW para modificar ritmos y celdas"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="hidden md:inline">Volver a Editar DAW</span>
+              <span className="md:hidden">DAW</span>
+            </Link>
 
-              <div className="h-5 w-px bg-slate-800 hidden sm:block" />
+            <div className="h-4 w-px bg-slate-800 hidden sm:block shrink-0" />
 
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-                <h1 className="text-base sm:text-lg font-black text-slate-100 tracking-tight">
-                  {title || 'Partitura de Batería'}
-                </h1>
-              </div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+              <h1 className="text-xs sm:text-sm font-black text-slate-100 tracking-tight truncate max-w-[140px] sm:max-w-[200px] lg:max-w-[280px]">
+                {title || 'Partitura de Batería'}
+              </h1>
             </div>
 
-            {/* Badges de Estado: Métrica & Compás Activo */}
-            <div className="flex items-center gap-2 font-mono text-xs flex-wrap">
-              <span className="px-2.5 py-1 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-700/60 font-bold">
-                Métrica: {timeSignature[0]}/{timeSignature[1]}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-purple-950/80 text-purple-300 border border-purple-700/60 font-bold">
-                Compás: C{activeMeasureNumber} / C{totalMeasures}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-slate-800">
-                Pulso: T{activeBeatNumber}
-              </span>
-            </div>
+            {/* Pill sutil Pedagógico: Síncopas activas con tooltip */}
+            <button
+              type="button"
+              onClick={() => setHighlightSyncopations((prev) => !prev)}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-mono font-bold transition-all flex items-center gap-1.5 border cursor-pointer select-none shrink-0 ${
+                highlightSyncopations
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.25)]'
+                  : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+              title="Modo Pedagógico: Resalta en ámbar neón (#F59E0B) las figuras y ligaduras sincopadas a contratiempo"
+            >
+              <span>💡</span>
+              <span className="hidden xl:inline">Síncopas activas</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${highlightSyncopations ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+            </button>
           </div>
 
-          {/* Bottom Line: Controles de Transporte, Metrónomo, Tempo y Visualización */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* 1. Botones Principales de Play / Stop / Loop */}
-            <div className="flex items-center gap-2">
-              {/* Play / Pausa */}
-              <button
-                type="button"
-                onClick={handleTogglePlay}
-                className={`px-5 py-2.5 rounded-xl font-mono font-black text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg ${
-                  audio.isPlaying
-                    ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-amber-400/30 scale-105'
-                    : 'bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 shadow-cyan-500/25 hover:scale-105 active:scale-95'
-                }`}
-                title="Reproducir / Pausar (Barra Espaciadora)"
-              >
-                {audio.isPlaying ? (
-                  <>
-                    <Pause className="w-4 h-4 fill-slate-950" />
-                    <span>PAUSAR</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 fill-slate-950 ml-0.5" />
-                    <span>REPRODUCIR</span>
-                  </>
-                )}
-              </button>
+          {/* Bloque Central: Transporte [PLAY / STOP / LOOP] + BPM (- / + / TAP) + CLICK */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Play / Pausa */}
+            <button
+              type="button"
+              onClick={handleTogglePlay}
+              className={`px-3.5 py-1.5 rounded-xl font-mono font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-md ${
+                audio.isPlaying
+                  ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-amber-400/30'
+                  : 'bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 text-slate-950 shadow-cyan-500/25 active:scale-95'
+              }`}
+              title="Reproducir / Pausar (Barra Espaciadora)"
+            >
+              {audio.isPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-slate-950" />
+                  <span>PAUSAR</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-slate-950 ml-0.5" />
+                  <span>REPRODUCIR</span>
+                </>
+              )}
+            </button>
 
-              {/* Stop / Reiniciar al inicio C1.1 */}
-              <button
-                type="button"
-                onClick={handleStopReset}
-                className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 font-mono font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Detener y volver al inicio (Tecla R)"
-              >
-                <Square className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-                <span className="hidden sm:inline">STOP (C1.1)</span>
-              </button>
+            {/* Stop / Reiniciar C1.1 */}
+            <button
+              type="button"
+              onClick={handleStopReset}
+              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 font-mono font-bold text-xs transition-all flex items-center gap-1 cursor-pointer"
+              title="Detener y volver al inicio (Tecla R)"
+            >
+              <Square className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
+              <span className="hidden sm:inline">STOP</span>
+            </button>
 
-              {/* Bucle Continuo (Loop) */}
+            {/* Loop */}
+            <button
+              type="button"
+              onClick={audio.toggleLoop}
+              className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-mono font-bold text-xs transition-all flex items-center gap-1 border cursor-pointer ${
+                audio.isLooping
+                  ? 'bg-cyan-950 text-cyan-300 border-cyan-700 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                  : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
+              }`}
+              title="Repetición Continua en Bucle (Tecla L)"
+            >
+              <Repeat className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">LOOP</span>
+            </button>
+
+            {/* BPM Controls */}
+            <div className="flex items-center gap-1 bg-slate-900/90 px-2 py-1 rounded-xl border border-slate-800">
+              <Clock className="w-3 h-3 text-cyan-400 hidden sm:block" />
               <button
                 type="button"
-                onClick={audio.toggleLoop}
-                className={`px-3 py-2.5 rounded-xl font-mono font-bold text-xs transition-all flex items-center gap-1.5 border cursor-pointer ${
-                  audio.isLooping
-                    ? 'bg-cyan-950 text-cyan-300 border-cyan-700 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
-                    : 'bg-slate-900 text-slate-500 border-slate-800 hover:text-slate-300'
-                }`}
-                title="Repetición Continua en Bucle (Tecla L)"
+                onClick={() => handleSetBpm(audio.bpm - 5)}
+                className="w-5 h-5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                title="Bajar 5 BPM"
               >
-                <Repeat className="w-3.5 h-3.5" />
-                <span>LOOP</span>
+                -
+              </button>
+              <span className="text-xs font-black text-cyan-300 font-mono px-1 min-w-[50px] text-center">
+                {audio.bpm} <span className="text-[9px] text-slate-400 font-normal">BPM</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => handleSetBpm(audio.bpm + 5)}
+                className="w-5 h-5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                title="Subir 5 BPM"
+              >
+                +
+              </button>
+              <button
+                type="button"
+                onClick={handleTapTempo}
+                className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-cyan-950 text-cyan-400 hover:text-cyan-300 text-[9px] font-mono font-bold border border-slate-700 transition-colors cursor-pointer hidden sm:block"
+                title="Haz clic a tempo para calcular BPM"
+              >
+                TAP
               </button>
             </div>
 
-            {/* 2. Metrónomo con Indicador Visual de Pulsos (T1, T2, T3, T4) */}
-            <div className="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+            {/* Metrónomo CLICK con Lámparas de Pulso */}
+            <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
               <button
                 type="button"
                 onClick={audio.toggleMetronome}
-                className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-2 py-1 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${
                   audio.isMetronomeActive
-                    ? 'bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+                    ? 'bg-amber-400 text-slate-950 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
                     : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
                 }`}
                 title="Activar / Desactivar Metrónomo (Tecla M)"
               >
-                <Bell className="w-3.5 h-3.5" />
-                <span>CLICK</span>
+                <Bell className="w-3 h-3" />
+                <span className="hidden sm:inline">CLICK</span>
               </button>
 
-              {/* Lámparas de pulso (T1..TN) */}
-              <div className="flex items-center gap-1 px-1">
+              {/* Lámparas de pulso T1..TN */}
+              <div className="flex items-center gap-0.5 px-0.5">
                 {Array.from({ length: beatsPerMeasure }).map((_, bIdx) => {
                   const isCurrentBeat = audio.playhead?.beatIndex === bIdx;
                   const isFlash =
@@ -299,11 +331,11 @@ export default function SynthesiaDrumStage() {
                   return (
                     <div
                       key={`stage-pulse-${bIdx}`}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-black transition-all ${
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-black transition-all ${
                         isFlash
                           ? isDownbeat
-                            ? 'bg-amber-400 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.9)] scale-110'
-                            : 'bg-cyan-400 text-slate-950 shadow-[0_0_12px_rgba(34,211,238,0.9)] scale-105'
+                            ? 'bg-amber-400 text-slate-950 shadow-[0_0_10px_rgba(251,191,36,0.9)] scale-110'
+                            : 'bg-cyan-400 text-slate-950 shadow-[0_0_10px_rgba(34,211,238,0.9)] scale-105'
                           : isCurrentBeat && audio.isPlaying
                           ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
                           : 'bg-slate-800/80 text-slate-500'
@@ -316,99 +348,59 @@ export default function SynthesiaDrumStage() {
                 })}
               </div>
             </div>
+          </div>
 
-            {/* 3. Tempo BPM & Tap Tempo */}
-            <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-2xl border border-slate-800">
-              <Clock className="w-3.5 h-3.5 text-cyan-400" />
-              <button
-                type="button"
-                onClick={() => handleSetBpm(audio.bpm - 5)}
-                className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
-                title="Bajar 5 BPM"
-              >
-                -
-              </button>
-              <div className="text-center font-mono">
-                <span className="text-sm font-black text-cyan-300 px-1">{audio.bpm}</span>
-                <span className="text-[10px] text-slate-400">BPM</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleSetBpm(audio.bpm + 5)}
-                className="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
-                title="Subir 5 BPM"
-              >
-                +
-              </button>
-              <button
-                type="button"
-                onClick={handleTapTempo}
-                className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-cyan-950 text-cyan-400 hover:text-cyan-300 text-[10px] font-mono font-bold border border-slate-700 transition-colors cursor-pointer"
-                title="Haz clic a tempo para calcular BPM"
-              >
-                TAP
-              </button>
+          {/* Bloque Derecho: Métrica 4/4 & Compás C1/CN + Runway/Páginas */}
+          <div className="flex items-center gap-2 shrink-0 font-mono text-xs">
+            {/* Badges de Métrica & Compás */}
+            <div className="flex items-center gap-1.5">
+              <span className="px-2 py-1 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-700/60 font-bold text-[11px]">
+                {timeSignature[0]}/{timeSignature[1]}
+              </span>
+              <span className="px-2 py-1 rounded-lg bg-purple-950/80 text-purple-300 border border-purple-700/60 font-bold text-[11px]">
+                C{activeMeasureNumber}/{totalMeasures}
+              </span>
             </div>
 
-            {/* 4. Selector de Modo de Partitura & Zoom */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono">
-                <button
-                  type="button"
-                  onClick={() => setScoreLayoutMode('runway')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    scoreLayoutMode === 'runway'
-                      ? 'bg-synth-cyan text-black shadow-glow-cyan font-black'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="Modo Runway: Pentagrama continuo con autoscroll sincronizado"
-                >
-                  <span>⇄</span>
-                  <span>Runway</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScoreLayoutMode('paginated')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    scoreLayoutMode === 'paginated'
-                      ? 'bg-gradient-electric text-white shadow-glow-violet'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="Modo Paginado: Multilínea clásico para lectura fija"
-                >
-                  <span>⊞</span>
-                  <span>Paginado</span>
-                </button>
-              </div>
-
-              {/* Zoom Buttons */}
-              <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-xl border border-slate-800 text-[10px] font-mono">
-                {[0.8, 1.0, 1.2].map((z) => (
-                  <button
-                    key={`score-zoom-${z}`}
-                    type="button"
-                    onClick={() => setZoomLevel(z)}
-                    className={`px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer ${
-                      zoomLevel === z
-                        ? 'bg-cyan-400 text-slate-950 font-black'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {Math.round(z * 100)}%
-                  </button>
-                ))}
-              </div>
+            {/* Selector Runway / Paginado */}
+            <div className="flex items-center p-0.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setScoreLayoutMode('runway')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  scoreLayoutMode === 'runway'
+                    ? 'bg-cyan-400 text-slate-950 font-black shadow-[0_0_10px_rgba(34,211,238,0.4)]'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Modo Runway: Pentagrama continuo con autoscroll sincronizado"
+              >
+                <span>⇄</span>
+                <span className="hidden sm:inline">Runway</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setScoreLayoutMode('paginated')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  scoreLayoutMode === 'paginated'
+                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black shadow-[0_0_10px_rgba(168,85,247,0.4)]'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Modo Paginado: Multilínea para lectura fija"
+              >
+                <span>⊞</span>
+                <span className="hidden sm:inline">Páginas</span>
+              </button>
             </div>
           </div>
         </header>
 
         {/* ================================================================= */}
-        {/* ESCENARIO PRINCIPAL: PENTAGRAMA DE PERCUSIÓN ESTÁNDAR (5 LÍNEAS)  */}
+        {/* ESCENARIO PRINCIPAL: PENTAGRAMA DE BATERÍA ESTÁNDAR (FLEX-1)     */}
         {/* ================================================================= */}
-        <main className="w-full rounded-3xl bg-[#131b2e]/90 border border-slate-800 shadow-2xl p-4 sm:p-6 backdrop-blur-xl relative overflow-hidden flex flex-col gap-4">
+        <main className="w-full flex-1 min-h-0 bg-[#131b2e]/90 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-xl relative overflow-hidden flex flex-col justify-between gap-2">
           {/* Header del Escenario de Partitura */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3 font-mono text-xs">
-            <span className="flex items-center gap-2 text-cyan-400 font-bold">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2 font-mono text-xs shrink-0">
+            <span className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
               <Music className="w-4 h-4 text-cyan-400" />
               <span>PENTAGRAMA ESTÁNDAR DE BATERÍA • CLAVE DE PERCUSIÓN (5 LÍNEAS)</span>
             </span>
@@ -416,15 +408,15 @@ export default function SynthesiaDrumStage() {
             <div className="flex items-center gap-3 text-[11px] text-slate-400">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                <span>CURSOR ACTIVO A 60 FPS</span>
+                <span>CURSOR LÁSER 60 FPS</span>
               </span>
               <span>•</span>
-              <span className="text-slate-300">AUDIO WEB VÍA TONE.JS</span>
+              <span className="text-slate-300">TONE.JS AUDIO</span>
             </div>
           </div>
 
           {/* Renderizado de Partitura con VexFlow & Cursor Láser Seguidor */}
-          <div className="w-full bg-[#0a0f1d] rounded-2xl border border-slate-800/90 shadow-inner overflow-hidden p-2 sm:p-4">
+          <div className="w-full flex-1 min-h-0 bg-[#0a0f1d] rounded-xl border border-slate-800/90 shadow-inner overflow-hidden flex flex-col justify-center relative">
             <DrumScoreRenderer
               measures={measures}
               selectedMeasureIndex={selectedMeasureIndex}
@@ -448,50 +440,39 @@ export default function SynthesiaDrumStage() {
               seekToSeconds={audio.seekToSeconds}
               seekToStep={audio.seekToStep}
               onSelectStep={handleSelectStep}
-              highlightSyncopations={true}
+              highlightSyncopations={highlightSyncopations}
               currentBeatFlash={audio.currentBeatFlash}
             />
           </div>
 
           {/* ================================================================= */}
-          {/* LEYENDA PEDAGÓGICA Y GUÍA DE STICKING ANALÍTICO                   */}
+          {/* PIE DE PÁGINA COMPACTO: LEYENDA MÍNIMA DE REFERENCIA RÁPIDA      */}
           {/* ================================================================= */}
-          <footer className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs font-mono">
-            {/* Stickings */}
-            <div className="flex items-center gap-3 flex-wrap">
+          <footer className="px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between gap-3 text-[11px] font-mono shrink-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
               <span className="text-slate-400 font-bold uppercase text-[10px]">Sticking:</span>
               <span className="flex items-center gap-1 text-cyan-300 font-bold">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-                R = Mano Derecha
+                R: Mano Derecha
               </span>
               <span className="flex items-center gap-1 text-purple-300 font-bold">
                 <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
-                L = Mano Izquierda
+                L: Mano Izquierda
               </span>
-              <span className="flex items-center gap-1 text-emerald-300 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                K = Bombo
-              </span>
-              <span className="flex items-center gap-1 text-amber-300 font-bold">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
-                F = Hi-Hat Pedal
-              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-cyan-400 font-bold">× Platillos</span>
+              <span className="text-slate-200 font-bold">● Caja / Toms</span>
+              <span className="text-emerald-400 font-bold">● Bombo</span>
             </div>
 
-            {/* Convenciones de Notas */}
-            <div className="flex items-center gap-3 text-slate-400 text-[11px] flex-wrap">
-              <span>✕ = Platillos / Hi-Hat</span>
+            <div className="text-[10px] text-slate-400 font-mono hidden md:flex items-center gap-2">
+              <span>[Espacio] Play/Pausa</span>
               <span>•</span>
-              <span>● = Caja / Toms / Bombo</span>
+              <span>[R] STOP</span>
               <span>•</span>
-              <span>( ) = Ghost Note</span>
+              <span>[M] Click</span>
               <span>•</span>
-              <span>&gt; = Acento</span>
-            </div>
-
-            {/* Atajos Rápidos */}
-            <div className="text-[10px] text-slate-500 font-mono hidden lg:block">
-              [Espacio] Play/Pausa • [R] Reiniciar • [M] Metrónomo • [L] Loop
+              <span>[L] Loop</span>
             </div>
           </footer>
         </main>
