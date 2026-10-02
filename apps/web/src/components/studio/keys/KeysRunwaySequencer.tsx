@@ -214,22 +214,23 @@ export default function KeysRunwaySequencer({
   // Canvas Continuous Runway / Pianoroll Renderer function
   const drawFrame = useCallback(
     (currentTransportTime: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      try {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-      const containerWidth = canvas.width;
-      const containerHeight = canvas.height;
+        const containerWidth = canvas.width;
+        const containerHeight = canvas.height;
 
-      ctx.clearRect(0, 0, containerWidth, containerHeight);
+        ctx.clearRect(0, 0, containerWidth, containerHeight);
 
-      // Background gradient
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, containerHeight);
-      bgGrad.addColorStop(0, '#040814');
-      bgGrad.addColorStop(1, '#091124');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, containerWidth, containerHeight);
+        // Background gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, containerHeight);
+        bgGrad.addColorStop(0, '#040814');
+        bgGrad.addColorStop(1, '#091124');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, containerWidth, containerHeight);
 
       if (viewMode === 'runway') {
         // --- MODO RUNWAY ---
@@ -383,7 +384,10 @@ export default function KeysRunwaySequencer({
         ctx.lineTo(playheadX, containerHeight);
         ctx.stroke();
       }
-    },
+    } catch (drawErr) {
+      console.warn('[KeysRunwaySequencer] drawFrame error caught safely:', drawErr);
+    }
+  },
     [internalNotes, totalBeats, viewMode, handFocus, isWaitingOnStep, waitingTargetStepIdx]
   );
 

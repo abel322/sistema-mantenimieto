@@ -1,4 +1,12 @@
 import * as Tone from 'tone';
+import {
+  installAudioBufferProtections,
+  createSafeAudioBuffer,
+  validateChannelData,
+} from './safeAudioBuffer';
+
+// Asegurar protecciones activas inmediatamente
+installAudioBufferProtections();
 
 export type TimbreType = 'grand' | 'rhodes';
 
@@ -47,8 +55,6 @@ class KeysAudioEngine {
       }
 
       // 2. Double-check context is running before creating any nodes
-      //    (Tone.Reverb internally calls Tone.Offline which needs a running context
-      //     with a valid sampleRate > 0 — that's why we replaced it with Freeverb)
       if (Tone.getContext().state !== 'running') {
         console.warn('[KeysAudioEngine] AudioContext not running after Tone.start(), deferring init');
         this.isInitializing = false;
@@ -60,7 +66,7 @@ class KeysAudioEngine {
       this.isInitialized = true;
       return true;
     } catch (e) {
-      console.warn('[KeysAudioEngine] start deferred:', e);
+      console.warn('[KeysAudioEngine] start deferred / error caught safely:', e);
       return false;
     } finally {
       this.isInitializing = false;
@@ -72,107 +78,120 @@ class KeysAudioEngine {
   }
 
   private initAudioNodes() {
-    // Guard: never build nodes with a closed/suspended context
-    const sampleRate = Tone.getContext().sampleRate;
-    if (!sampleRate || sampleRate === 0) {
-      throw new Error('[KeysAudioEngine] initAudioNodes called with sampleRate=0 — AudioContext not ready');
-    }
+    try {
+      const sampleRate = Tone.getContext().sampleRate || 44100;
+      if (!sampleRate || sampleRate <= 0) {
+        console.warn('[KeysAudioEngine] initAudioNodes called with sampleRate <= 0, skipping');
+        return;
+      }
 
-    // ---- Master Volume (final output) ----
-    this.masterVol = new Tone.Volume(0).toDestination();
+      // ---- Master Volume (final output) ----
+      this.masterVol = new Tone.Volume(0).toDestination();
 
-    // ---- Master Compressor ----
-    this.masterCompressor = new Tone.Compressor({
-      threshold: -16,
-      ratio: 3.5,
-      attack: 0.008,
-      release: 0.25,
-    });
-
-    // ---- Freeverb (algorithm-based reverb, NO Tone.Offline / NO buffer creation) ----
-    // Tone.Freeverb is safe to instantiate synchronously, unlike Tone.Reverb which
-    // calls Tone.Offline() to generate an impulse response buffer and crashes when
-    // the AudioContext sampleRate is 0 or the context hasn't started yet.
-    this.masterReverb = new Tone.Freeverb({
-      roomSize: 0.5,
-      dampening: 3000,
-      wet: 0.18,
-    });
-
-    // ---- Short stereo delay for presence ----
-    this.masterDelay = new Tone.FeedbackDelay({
-      delayTime: 0.04,
-      feedback: 0.08,
-      wet: 0.1,
-    });
-
-    // Master chain: Freeverb → Delay → Compressor → Volume → Destination
-    this.masterReverb.connect(this.masterDelay);
-    this.masterDelay.connect(this.masterCompressor);
-    this.masterCompressor.connect(this.masterVol);
-
-    // ---- 1. Acoustic Grand Piano Synth Chain ----
-    this.grandFilter = new Tone.Filter({
-      frequency: 5200,
-      type: 'lowpass',
-      rolloff: -12,
-    });
-    this.grandFilter.connect(this.masterReverb);
-
-    this.grandSynth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'triangle' },
-      envelope: {
-        attack: 0.005,
-        decay: 3.2,
-        sustain: 0.25,
-        release: 1.8,
-      },
-    });
-    this.grandSynth.connect(this.grandFilter);
-    this.grandSynth.volume.value = 0;
-
-    // ---- 2. Neo-Soul EP (Rhodes) Chain ----
-    this.rhodesFilter = new Tone.Filter({
-      frequency: 3800,
-      type: 'lowpass',
-      rolloff: -12,
-    });
-
-    this.rhodesChorus = new Tone.Chorus({
-      frequency: 2.2,
-      delayTime: 4.0,
-      depth: 0.5,
-      wet: 0.35,
-    }).start();
-
-    this.rhodesTremolo = new Tone.Tremolo({
-      frequency: 4.5,
-      depth: 0.4,
-      wet: 0.3,
-    }).start();
-
-    this.rhodesFilter.chain(this.rhodesChorus, this.rhodesTremolo, this.masterReverb);
-
-    this.rhodesSynth = new Tone.PolySynth(Tone.FMSynth, {
-      harmonicity: 2.0,
-      modulationIndex: 1.8,
-      oscillator: { type: 'sine' },
-      envelope: {
+      // ---- Master Compressor ----
+      this.masterCompressor = new Tone.Compressor({
+        threshold: -16,
+        ratio: 3.5,
         attack: 0.008,
-        decay: 2.4,
-        sustain: 0.35,
-        release: 1.4,
-      },
-      modulation: { type: 'triangle' },
-      modulationEnvelope: {
-        attack: 0.01,
-        decay: 0.8,
-        sustain: 0.2,
-        release: 0.5,
-      },
-    });
-    this.rhodesSynth.connect(this.rhodesFilter);
-    this.rhodesSynth.volume.value = -2;
+        release: 0.25,
+      });
+
+      // ---- Freeverb (algorithm-based reverb, NO Tone.Offline / NO buffer creation) ----
+      this.masterReverb = new Tone.Freeverb({
+        roomSize: 0.5,
+        dampening: 3000,
+        wet: 0.18,
+      });
+
+      // ---- Short stereo delay for presence ----
+      this.masterDelay = new Tone.FeedbackDelay({
+        delayTime: 0.04,
+        feedback: 0.08,
+        wet: 0.1,
+      });
+
+      // Master chain: Freeverb → Delay → Compressor → Volume → Destination
+      try {
+        this.masterReverb.connect(this.masterDelay);
+        this.masterDelay.connect(this.masterCompressor);
+        this.masterCompressor.connect(this.masterVol);
+      } catch (chainErr) {
+        console.warn('[KeysAudioEngine] Master chain connection warning:', chainErr);
+      }
+
+      // ---- 1. Acoustic Grand Piano Synth Chain ----
+      try {
+        this.grandFilter = new Tone.Filter({
+          frequency: 5200,
+          type: 'lowpass',
+          rolloff: -12,
+        });
+        this.grandFilter.connect(this.masterReverb);
+
+        this.grandSynth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: 'triangle' },
+          envelope: {
+            attack: 0.005,
+            decay: 3.2,
+            sustain: 0.25,
+            release: 1.8,
+          },
+        });
+        this.grandSynth.connect(this.grandFilter);
+        this.grandSynth.volume.value = 0;
+      } catch (synthErr) {
+        console.warn('[KeysAudioEngine] Grand Synth chain initialization warning:', synthErr);
+      }
+
+      // ---- 2. Neo-Soul EP (Rhodes) Chain ----
+      try {
+        this.rhodesFilter = new Tone.Filter({
+          frequency: 3800,
+          type: 'lowpass',
+          rolloff: -12,
+        });
+
+        this.rhodesChorus = new Tone.Chorus({
+          frequency: 2.2,
+          delayTime: 4.0,
+          depth: 0.5,
+          wet: 0.35,
+        }).start();
+
+        this.rhodesTremolo = new Tone.Tremolo({
+          frequency: 4.5,
+          depth: 0.4,
+          wet: 0.3,
+        }).start();
+
+        this.rhodesFilter.chain(this.rhodesChorus, this.rhodesTremolo, this.masterReverb);
+
+        this.rhodesSynth = new Tone.PolySynth(Tone.FMSynth, {
+          harmonicity: 2.0,
+          modulationIndex: 1.8,
+          oscillator: { type: 'sine' },
+          envelope: {
+            attack: 0.008,
+            decay: 2.4,
+            sustain: 0.35,
+            release: 1.4,
+          },
+          modulation: { type: 'triangle' },
+          modulationEnvelope: {
+            attack: 0.01,
+            decay: 0.8,
+            sustain: 0.2,
+            release: 0.5,
+          },
+        });
+        this.rhodesSynth.connect(this.rhodesFilter);
+        this.rhodesSynth.volume.value = -2;
+      } catch (rhodesErr) {
+        console.warn('[KeysAudioEngine] Rhodes Synth chain initialization warning:', rhodesErr);
+      }
+    } catch (err) {
+      console.warn('[KeysAudioEngine] initAudioNodes caught error safely:', err);
+    }
   }
 
   /**
@@ -296,6 +315,32 @@ class KeysAudioEngine {
   public setVolume(db: number) {
     if (this.masterVol) {
       this.masterVol.volume.value = Math.max(-60, Math.min(6, db));
+    }
+  }
+
+  /**
+   * Generador seguro de buffer para clics de metrónomo o impulsos sintéticos.
+   * Aplica longitud mínima >= 1 muestra y validación estricta de channelData no vacío.
+   */
+  public createClickBuffer(duration = 0.05, frequency = 1200): AudioBuffer | null {
+    try {
+      const rawCtx = Tone.getContext().rawContext;
+      if (!rawCtx) return null;
+      const sampleRate = rawCtx.sampleRate || 44100;
+      const safeLength = Math.max(1, Math.floor(sampleRate * (duration || 0.05)));
+      const buffer = rawCtx.createBuffer(1, safeLength, sampleRate);
+      const channelData = buffer.getChannelData(0);
+      if (!channelData || channelData.length === 0) {
+        console.warn("Se previno la creación de un AudioBuffer vacío.");
+        return null;
+      }
+      for (let i = 0; i < safeLength; i++) {
+        channelData[i] = Math.sin((2 * Math.PI * frequency * i) / sampleRate) * Math.exp(-i / (sampleRate * 0.008));
+      }
+      return buffer;
+    } catch (e) {
+      console.warn('[KeysAudioEngine] Error creando buffer de metrónomo seguro:', e);
+      return null;
     }
   }
 

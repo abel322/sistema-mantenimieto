@@ -60,28 +60,41 @@ class StringsAudioEngine {
   private guitarSynth: Tone.PolySynth | null = null;
   private guitarFilter: Tone.Filter | null = null;
   private guitarChorus: Tone.Chorus | null = null;
-  private guitarReverb: Tone.Reverb | null = null;
+  private guitarReverb: Tone.Freeverb | null = null; // Freeverb: no buffer creation, safe to instantiate synchronously
 
   // Master Volume
   private masterVol: Tone.Volume | null = null;
 
+  private isInitializing = false;
+
   /**
-   * Initializes AudioContext on user interaction
+   * Initializes AudioContext on user interaction.
+   * Must be called from a direct user gesture to satisfy browser autoplay policy.
    */
   public async ensureStarted(): Promise<boolean> {
+    if (this.isInitialized) return true;
+    if (this.isInitializing) return false;
+    this.isInitializing = true;
     try {
       if (Tone.getContext().state !== 'running') {
         await Tone.start();
       }
-
+      // Guard: never build audio graph before AudioContext is running
+      const sampleRate = Tone.getContext().sampleRate;
+      if (!sampleRate || sampleRate === 0) {
+        console.warn('[StringsAudioEngine] AudioContext sampleRate=0, deferring init');
+        return false;
+      }
       if (!this.isInitialized) {
         this.initSynths();
         this.isInitialized = true;
       }
       return true;
     } catch (e) {
-      console.warn('Tone.js audio start deferred or blocked:', e);
+      console.warn('[StringsAudioEngine] Audio start deferred:', e);
       return false;
+    } finally {
+      this.isInitializing = false;
     }
   }
 
@@ -162,9 +175,12 @@ class StringsAudioEngine {
       wet: 0.25,
     }).start();
 
-    this.guitarReverb = new Tone.Reverb({
-      decay: 1.6,
-      preDelay: 0.01,
+    // Freeverb: algorithmic reverb — does NOT call Tone.Offline() or create an
+    // AudioBuffer, so it is safe to instantiate without awaiting reverb.generate().
+    // This prevents the "channelData must be a non-empty array" crash.
+    this.guitarReverb = new Tone.Freeverb({
+      roomSize: 0.4,
+      dampening: 3500,
       wet: 0.2,
     });
 

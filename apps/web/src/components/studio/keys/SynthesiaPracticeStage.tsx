@@ -393,23 +393,24 @@ export default function SynthesiaPracticeStage() {
   // Continuous Canvas Renderer (60 FPS Synthesia Waterfall or Lateral Runway)
   const drawCanvas = useCallback(
     (beat: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      try {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-      const w = canvas.width;
-      const h = canvas.height;
+        const w = canvas.width;
+        const h = canvas.height;
 
-      ctx.clearRect(0, 0, w, h);
+        ctx.clearRect(0, 0, w, h);
 
-      // Deep dark cyber-stage background
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-      bgGrad.addColorStop(0, '#060a14');
-      bgGrad.addColorStop(0.5, '#080d1a');
-      bgGrad.addColorStop(1, '#050812');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, w, h);
+        // Deep dark cyber-stage background
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, '#060a14');
+        bgGrad.addColorStop(0.5, '#080d1a');
+        bgGrad.addColorStop(1, '#050812');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
 
       if (viewMode === 'waterfall') {
         // =====================================================================
@@ -638,7 +639,10 @@ export default function SynthesiaPracticeStage() {
         ctx.stroke();
         ctx.restore();
       }
-    },
+    } catch (drawErr) {
+      console.warn('[SynthesiaPracticeStage] drawCanvas error caught safely:', drawErr);
+    }
+  },
     [
       viewMode,
       totalBeats,

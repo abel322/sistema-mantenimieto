@@ -40,6 +40,7 @@ import WorkoutsDashboard from './WorkoutsDashboard';
 import JamStation from './JamStation';
 import CustomWorkoutModal from './CustomWorkoutModal';
 import CircleOfFifthsModal from './CircleOfFifthsModal';
+import PracticeErrorBoundary from './PracticeErrorBoundary';
 import {
   Headphones,
   Sliders,
@@ -538,20 +539,22 @@ export default function KeysStudio() {
       {/* ======================================================= */}
       {/* 4. PANEL DE VISTA PREVIA DE EDICIÓN & MASTER ACTION     */}
       {/* ======================================================= */}
-      <EditorSequenceInspector
-        title={inspectorTitle}
-        sourceTheory={inspectorTheoryText}
-        rootNote={rootNote}
-        bpm={bpm}
-        onBpmChange={setBpm}
-        handFocus={handFocus}
-        onHandFocusChange={setHandFocus}
-        sequenceNotes={sequenceNotes}
-        objective={inspectorObjective}
-        leftHandInstruction={activeRoutine?.leftHandInstruction}
-        rightHandInstruction={activeRoutine?.rightHandInstruction}
-        pedagogicalTip={activeRoutine?.pedagogicalTip}
-      />
+      <PracticeErrorBoundary>
+        <EditorSequenceInspector
+          title={inspectorTitle}
+          sourceTheory={inspectorTheoryText}
+          rootNote={rootNote}
+          bpm={bpm}
+          onBpmChange={setBpm}
+          handFocus={handFocus}
+          onHandFocusChange={setHandFocus}
+          sequenceNotes={sequenceNotes}
+          objective={inspectorObjective}
+          leftHandInstruction={activeRoutine?.leftHandInstruction}
+          rightHandInstruction={activeRoutine?.rightHandInstruction}
+          pedagogicalTip={activeRoutine?.pedagogicalTip}
+        />
+      </PracticeErrorBoundary>
 
       {/* ======================================================= */}
       {/* 5. COLLAPSIBLE TEST SEQUENCER IN EDITOR (Optional)      */}
@@ -567,20 +570,22 @@ export default function KeysStudio() {
         </button>
 
         {showEditorSequencer && (
-          <KeysRunwaySequencer
-            notes={sequenceNotes}
-            sequenceNotes={sequenceNotes}
-            onSequenceUpdate={setSequenceNotes}
-            onActiveNotesChange={setActiveNotesMap}
-            bpm={bpm}
-            onBpmChange={setBpm}
-            stepRecordActive={stepRecordActive}
-            onStepRecordToggle={setStepRecordActive}
-            lastKeyboardTriggerNote={lastKeyboardTriggerNote}
-            activeRoutine={activeRoutine}
-            autoPlayTrigger={autoPlayRunway}
-            handFocus={handFocus}
-          />
+          <PracticeErrorBoundary>
+            <KeysRunwaySequencer
+              notes={sequenceNotes}
+              sequenceNotes={sequenceNotes}
+              onSequenceUpdate={setSequenceNotes}
+              onActiveNotesChange={setActiveNotesMap}
+              bpm={bpm}
+              onBpmChange={setBpm}
+              stepRecordActive={stepRecordActive}
+              onStepRecordToggle={setStepRecordActive}
+              lastKeyboardTriggerNote={lastKeyboardTriggerNote}
+              activeRoutine={activeRoutine}
+              autoPlayTrigger={autoPlayRunway}
+              handFocus={handFocus}
+            />
+          </PracticeErrorBoundary>
         )}
       </div>
 

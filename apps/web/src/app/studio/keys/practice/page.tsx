@@ -1,6 +1,7 @@
 import React from 'react';
 import { Metadata } from 'next';
 import SynthesiaPracticeStage from '@/components/studio/keys/SynthesiaPracticeStage';
+import PracticeErrorBoundary from '@/components/studio/keys/PracticeErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'Synthesia Runway Practice Studio | Sonora Academy',
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default function KeysPracticePage() {
-  return <SynthesiaPracticeStage />;
+  return (
+    <PracticeErrorBoundary>
+      <SynthesiaPracticeStage />
+    </PracticeErrorBoundary>
+  );
 }

@@ -21,11 +21,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Hide Navbar completely on dedicated Synthesia practice page
-  if (pathname?.startsWith('/studio/keys/practice')) {
-    return null;
-  }
-
   const navLinks = [
     {
       label: 'Drum Lab',
@@ -84,6 +79,14 @@ export default function Navbar() {
       document.body.style.overflow = '';
     };
   }, [isMobileMenuOpen]);
+
+  // =========================================================================
+  // RETORNO CONDICIONAL ESTRICTAMENTE DESPUÉS DE EJECUTAR TODOS LOS HOOKS
+  // Regla absoluta: evita React Error #300 (Rendered fewer hooks than expected)
+  // =========================================================================
+  if (pathname?.startsWith('/studio/keys/practice')) {
+    return null;
+  }
 
   return (
     <>

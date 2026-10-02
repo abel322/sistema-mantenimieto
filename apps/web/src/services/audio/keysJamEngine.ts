@@ -1,4 +1,7 @@
 import * as Tone from 'tone';
+import { installAudioBufferProtections } from './safeAudioBuffer';
+
+installAudioBufferProtections();
 
 export type JamStyle = 'lofi' | 'funk' | 'jazz' | 'neo_soul';
 

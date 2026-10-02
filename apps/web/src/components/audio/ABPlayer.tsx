@@ -416,15 +416,20 @@ export default function ABPlayer({
 
 // Synthetic stem generator to guarantee zero broken audio states
 function createSyntheticStem(audioCtx: AudioContext, bpm: number, type: 'raw' | 'mastered'): AudioBuffer {
-  const sampleRate = audioCtx.sampleRate;
+  const sampleRate = audioCtx.sampleRate || 44100;
   const lengthInSeconds = 15;
-  const numSamples = sampleRate * lengthInSeconds;
-  const buffer = audioCtx.createBuffer(2, numSamples, sampleRate);
+  const safeLength = Math.max(1, Math.floor(sampleRate * (lengthInSeconds || 0.05)));
+  const buffer = audioCtx.createBuffer(2, safeLength, sampleRate);
 
   const left = buffer.getChannelData(0);
   const right = buffer.getChannelData(1);
 
-  for (let i = 0; i < numSamples; i++) {
+  if (!left || left.length === 0 || !right || right.length === 0) {
+    console.warn("Se previno la creación de un AudioBuffer vacío.");
+    return buffer;
+  }
+
+  for (let i = 0; i < safeLength; i++) {
     const t = i / sampleRate;
     // 4-on-the-floor beat
     const beatTime = (t * (bpm / 60)) % 1;
