@@ -280,14 +280,7 @@ export default function DrumLab() {
       metronomeVolume: audio.metronomeVolume,
     });
 
-    // 4. Intentar pantalla completa nativa (best-effort)
-    try {
-      if (typeof document !== 'undefined' && !document.fullscreenElement) {
-        await document.documentElement.requestFullscreen().catch(() => {});
-      }
-    } catch (_) {}
-
-    // 5. Navegar a la estación de práctica a pantalla completa
+    // 4. Navegar al reproductor de partitura estándar
     router.push('/studio/drums/practice');
   }, [audio, score, drumPractice, router]);
 
@@ -684,17 +677,17 @@ export default function DrumLab() {
               {/* Left: Icon & Master Title */}
               <div className="flex items-center gap-3.5 z-10">
                 <span className="w-12 h-12 rounded-xl bg-slate-950/90 text-cyan-300 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                  <Rocket className="w-6 h-6 animate-bounce" />
+                  <Music className="w-6 h-6 text-cyan-400" />
                 </span>
                 <div className="text-left">
                   <div className="text-base sm:text-lg lg:text-xl font-black tracking-tight uppercase flex items-center gap-2">
-                    <span>🚀 INICIAR PRÁCTICA EN VIVO</span>
+                    <span>🎼 ABRIR REPRODUCTOR DE PARTITURA</span>
                     <span className="hidden sm:inline-block text-[11px] px-2 py-0.5 rounded-full bg-slate-950 text-cyan-300 font-mono font-bold">
-                      Synthesia / Fullscreen Runway
+                      Pentagrama 5 Líneas & Cursor
                     </span>
                   </div>
                   <p className="text-[11px] sm:text-xs font-semibold text-slate-900/80">
-                    Pasa al escenario inmersivo a pantalla completa (100vh) • Pista continua a 60 FPS • Sin distracciones
+                    Reproduce en pentagrama estándar con cursor seguidor a 60 FPS, sticking analítico R/L y audio sincronizado
                   </p>
                 </div>
               </div>
@@ -702,7 +695,7 @@ export default function DrumLab() {
               {/* Right: Enter Stage Indicator */}
               <div className="flex items-center gap-2 z-10 bg-slate-950/90 text-white px-5 py-2.5 rounded-xl border border-cyan-400/40 text-xs font-mono font-bold shadow-md group-hover:border-cyan-300 flex-shrink-0">
                 <Play className="w-4 h-4 fill-cyan-400 text-cyan-400" />
-                <span>ABRIR ESCENARIO</span>
+                <span>ABRIR PARTITURA</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </div>
             </button>

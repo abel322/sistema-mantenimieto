@@ -4,9 +4,9 @@ import SynthesiaDrumStage from '@/components/drums/SynthesiaDrumStage';
 import DrumPracticeErrorBoundary from '@/components/drums/DrumPracticeErrorBoundary';
 
 export const metadata: Metadata = {
-  title: 'Synthesia Drum Practice Stage | Sonora Academy',
+  title: 'Reproductor de Partitura de Batería | Sonora Academy',
   description:
-    'Escenario inmersivo de práctica a pantalla completa para batería estilo Synthesia / Guitar Pro.',
+    'Reproductor interactivo de partitura estándar de percusión (5 líneas) con cursor seguidor en tiempo real a 60 FPS, sticking analítico R/L y audio sincronizado vía Tone.js.',
 };
 
 export default function DrumAliasPracticePage() {
