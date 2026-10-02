@@ -126,12 +126,12 @@ export default function DrumScoreRenderer({
     ? measures.length
     : Math.max(1, Math.min(measures.length, Math.floor((containerWidth - 40) / minMeasureWidth)));
 
-  const baseMeasureWidth = Math.round(520 * zoomLevel);
+  const baseMeasureWidth = Math.round(560 * zoomLevel);
   const currentMeasureWidth = isRunway
     ? baseMeasureWidth
     : Math.floor((containerWidth - 40) / measuresPerRow);
 
-  const rowHeight = Math.round(200 * zoomLevel);
+  const rowHeight = Math.round(270 * zoomLevel);
   const numRows = isRunway ? 1 : Math.ceil(measures.length / measuresPerRow);
 
   const totalWidth = isRunway
@@ -139,8 +139,8 @@ export default function DrumScoreRenderer({
     : containerWidth;
 
   const totalHeight = isRunway
-    ? Math.round(230 * zoomLevel)
-    : Math.max(220, numRows * rowHeight + 35);
+    ? Math.round(315 * zoomLevel)
+    : Math.max(300, numRows * rowHeight + 35);
 
   // Render VexFlow score onto container
   useEffect(() => {
@@ -178,12 +178,13 @@ export default function DrumScoreRenderer({
         renderer.resize(totalWidth, totalHeight);
         const context = renderer.getContext();
 
-        // High contrast adaptive engraving colors (Dark Mode vs Light Mode)
-        const staveColor = isDarkTheme ? '#F8FAFC' : '#0F172A';
-        const staveFill = isDarkTheme ? '#F8FAFC' : '#0F172A';
+        // Cyber-glass semi-translucent luminous slate lines
+        const staveColor = isDarkTheme ? 'rgba(148, 163, 184, 0.35)' : 'rgba(71, 85, 105, 0.45)';
+        const staveFill = isDarkTheme ? 'rgba(148, 163, 184, 0.35)' : 'rgba(71, 85, 105, 0.45)';
 
         context.setFillStyle(staveFill);
         context.setStrokeStyle(staveColor);
+        context.setLineWidth(1.8);
 
         const recordedPositions: NoteXPosition[] = [];
         const allRenderedNotes: any[] = [];
@@ -193,13 +194,13 @@ export default function DrumScoreRenderer({
           const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
           const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
           const measureX = 20 + colIndex * currentMeasureWidth;
-          const measureY = (isRunway ? 34 : 25) + rowIndex * rowHeight;
+          const measureY = (isRunway ? 24 : 16) + rowIndex * rowHeight;
 
-          // Create percussion stave with high-contrast lines and 40% increased height
+          // Create percussion stave with Cyber-Glass lines (spacing: 20px, +100% expansion)
           const stave = new Stave(measureX, measureY, currentMeasureWidth, {
-            spacingBetweenLinesPx: 14,
+            spacingBetweenLinesPx: 20,
           });
-          stave.setStyle({ fillStyle: staveFill, strokeStyle: staveColor });
+          stave.setStyle({ fillStyle: staveFill, strokeStyle: staveColor, lineWidth: 1.8 });
 
           // Clef at the start of each line
           if (colIndex === 0) {
@@ -282,22 +283,25 @@ export default function DrumScoreRenderer({
                   duration: vexDuration,
                   clef: 'percussion',
                 });
+                staveNote.fontScale = 1.35;
 
                 // Plicas (stems) bien definidas, nítidas y gruesas
                 try {
                   if (typeof staveNote.setStemStyle === 'function') {
                     staveNote.setStemStyle({
                       strokeStyle: isDarkTheme ? '#CBD5E1' : '#475569',
-                      lineWidth: 2.2,
+                      lineWidth: 2.6,
                     });
                   }
                 } catch (_) {}
 
-                // Accent articulation (a>)
+                // Accent articulation (a>) en dorado neón
                 const hasAccent = step.hits.some((h) => h.accent);
                 if (hasAccent) {
                   try {
-                    staveNote.addModifier(new Articulation('a>'), 0);
+                    const artic = new Articulation('a>');
+                    artic.setStyle({ fillStyle: '#F59E0B', strokeStyle: '#F59E0B' });
+                    staveNote.addModifier(artic, 0);
                   } catch (_) {}
                 }
 
@@ -324,28 +328,6 @@ export default function DrumScoreRenderer({
                     }
                   }
                 });
-
-                // Sticking Dinámico (R / L): Tamaño grande (16px bold), facilitando la lectura a distancia
-                const sticking = step.sticking || step.hits.find((h) => h.sticking)?.sticking;
-                if (sticking && Annotation) {
-                  try {
-                    const stickingAnn = new Annotation(sticking);
-                    stickingAnn.setFont('ui-monospace, SFMono-Regular, monospace', 16, 'bold');
-                    stickingAnn.setVerticalJustification(Annotation.VerticalJustify.BOTTOM);
-                    const stickLetter = sticking.trim().toUpperCase();
-                    // 'R' (Cyan neón #22d3ee), 'L' (Violeta/Índigo neón #c084fc)
-                    const stickColor =
-                      stickLetter === 'R'
-                        ? '#22D3EE'
-                        : stickLetter === 'L'
-                        ? '#C084FC'
-                        : '#10B981';
-                    try {
-                      stickingAnn.setStyle({ fillStyle: stickColor, strokeStyle: stickColor });
-                    } catch (_) {}
-                    staveNote.addModifier(stickingAnn, 0);
-                  } catch (_) {}
-                }
 
                 // Flam or Drag grace notes (or fallback annotation)
                 const isFlam = step.flam || step.hits.some((h) => h.flam);
@@ -396,7 +378,7 @@ export default function DrumScoreRenderer({
                   }
                 }
 
-                // Código de Colores Intuitivo por Instrumento y Técnica (Estilo Soundslice / Drumeo)
+                // Cabezas de Nota (Noteheads) llamativas y ampliadas al 180%
                 const isStepSyncopated =
                   step.isSyncopated ||
                   step.tiedToNext ||
@@ -409,47 +391,68 @@ export default function DrumScoreRenderer({
                     const pieceInfo = DRUM_PIECES[hit.pieceId];
                     const noteHead = staveNote.noteHeads[keyIndex];
 
-                    if (noteHead && noteHead.glyphProps) {
-                      if (pieceInfo?.notehead === 'x') {
-                        noteHead.glyphProps.codeHead = Glyphs.noteheadXBlack || '';
-                      } else if (pieceInfo?.notehead === 'circle-x') {
-                        noteHead.glyphProps.codeHead = Glyphs.noteheadCircleX || '';
+                    if (noteHead) {
+                      noteHead.fontScale = 1.35;
+                      if (noteHead.renderOptions) {
+                        noteHead.renderOptions.strokePx = 2.4;
                       }
-                    }
 
-                    // Paleta Intuitiva: Hi-Hat/Platillos Cyan (#22d3ee), Caja Blanco / Ámbar (#fbbf24), Bombo Esmeralda (#10b981)
-                    let headColor = isDarkTheme ? '#F8FAFC' : '#0F172A';
+                      if (noteHead.glyphProps) {
+                        if (pieceInfo?.notehead === 'x') {
+                          noteHead.glyphProps.codeHead = Glyphs.noteheadXBlack || '';
+                        } else if (pieceInfo?.notehead === 'circle-x') {
+                          noteHead.glyphProps.codeHead = Glyphs.noteheadCircleX || '';
+                        }
+                      }
 
-                    if (shouldHighlightSync && (isStepSyncopated || hit.isSyncopated)) {
-                      headColor = '#F59E0B'; // Ámbar neón si es síncopa destacada
-                    } else if (hit.ghost) {
-                      headColor = '#94A3B8'; // Ghost Note opacidad ~60%
-                    } else {
-                      const pId = hit.pieceId;
-                      if (
-                        pId === 'hihat' ||
-                        pId === 'hihatOpen' ||
-                        pId === 'hihatClosed' ||
-                        pId === 'crash' ||
-                        pId === 'ride' ||
-                        pId === 'china' ||
-                        pieceInfo?.notehead === 'x' ||
-                        pieceInfo?.notehead === 'circle-x'
-                      ) {
-                        headColor = '#22D3EE'; // Cyan neón brillante
-                      } else if (pId === 'kick' || pId === 'hihatFoot') {
-                        headColor = '#10B981'; // Esmeralda neón
-                      } else if (pId === 'snare') {
-                        headColor = hit.accent ? '#FBBF24' : '#FFFFFF'; // Blanco nítido con halo ámbar cuando lleva acento
-                      } else if (pId === 'tom1' || pId === 'tom2' || pId === 'floorTom') {
-                        headColor = '#38BDF8'; // Azul cielo brillante para toms
+                      // Código de colores de alta gama:
+                      // - Caja / Snare: Óvalos blancos con borde sutil cian
+                      // - Bombo / Kick: Círculos esmeralda luminosos (#10b981)
+                      // - Hi-Hat / Platillos: Cruces 'x' en cian brillante (#22d3ee) con stroke-width 2.8
+                      let fillCol = isDarkTheme ? '#F8FAFC' : '#0F172A';
+                      let strokeCol = fillCol;
+                      let strokeW = 1.8;
+
+                      if (shouldHighlightSync && (isStepSyncopated || hit.isSyncopated)) {
+                        fillCol = '#F59E0B'; // Ámbar neón síncopa
+                        strokeCol = '#F59E0B';
+                        strokeW = 2.2;
+                      } else if (hit.ghost) {
+                        fillCol = 'rgba(148, 163, 184, 0.6)'; // Ghost Note 60% opacidad
+                        strokeCol = 'rgba(148, 163, 184, 0.6)';
                       } else {
-                        headColor = isDarkTheme ? '#F8FAFC' : '#0F172A';
+                        const pId = hit.pieceId;
+                        if (
+                          pId === 'hihat' ||
+                          pId === 'hihatOpen' ||
+                          pId === 'hihatClosed' ||
+                          pId === 'crash' ||
+                          pId === 'ride' ||
+                          pId === 'china' ||
+                          pieceInfo?.notehead === 'x' ||
+                          pieceInfo?.notehead === 'circle-x'
+                        ) {
+                          fillCol = '#22D3EE'; // Cian brillante (#22d3ee)
+                          strokeCol = '#22D3EE';
+                          strokeW = 2.8; // Cruces '×' con stroke-width="2.8"
+                        } else if (pId === 'kick' || pId === 'hihatFoot') {
+                          fillCol = '#10B981'; // Círculos esmeralda luminosos (#10b981)
+                          strokeCol = '#10B981';
+                          strokeW = 2.2;
+                        } else if (pId === 'snare') {
+                          fillCol = hit.accent ? '#FBBF24' : '#FFFFFF'; // Óvalo moderno blanco
+                          strokeCol = hit.accent ? '#F59E0B' : '#22D3EE'; // Borde sutil cian
+                          strokeW = 1.8;
+                        } else if (pId === 'tom1' || pId === 'tom2' || pId === 'floorTom') {
+                          fillCol = '#38BDF8'; // Azul cielo brillante para toms
+                          strokeCol = '#38BDF8';
+                          strokeW = 2.0;
+                        }
                       }
-                    }
 
-                    if (noteHead && typeof noteHead.setStyle === 'function') {
-                      noteHead.setStyle({ fillStyle: headColor, strokeStyle: headColor });
+                      if (typeof noteHead.setStyle === 'function') {
+                        noteHead.setStyle({ fillStyle: fillCol, strokeStyle: strokeCol, lineWidth: strokeW });
+                      }
                     }
                   });
                 }
@@ -518,18 +521,18 @@ export default function DrumScoreRenderer({
 
             voice.draw(context, stave);
 
-            // Barras de unión (beams) bien definidas y gruesas
+            // Barras de unión (beams) gruesas y sólidas (4.8px) con esquinas limpias
             measureBeams.forEach((beam) => {
               try {
                 if (typeof (beam as any).setStyle === 'function') {
                   (beam as any).setStyle({
                     fillStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
                     strokeStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
-                    lineWidth: 3.8,
+                    lineWidth: 4.8,
                   });
                 }
                 if ((beam as any).renderOptions) {
-                  (beam as any).renderOptions.beamWidth = 6.5;
+                  (beam as any).renderOptions.beamWidth = 7.5;
                 }
                 beam.setContext(context).draw();
               } catch (_) {}
@@ -895,26 +898,26 @@ export default function DrumScoreRenderer({
   const selectedStep = selectedBeat?.steps[selectedStepIndex];
 
   return (
-    <div className="relative w-full h-full box-border bg-transparent overflow-hidden select-none text-slate-900 dark:text-slate-100 flex flex-col justify-between">
+    <div className="relative w-full h-full box-border bg-gradient-to-b from-slate-900/90 via-[#090e1a] to-[#060a12] border border-cyan-500/20 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.6)] overflow-hidden select-none text-slate-100 flex flex-col justify-between">
       {/* Main Score Scroll Container (Horizontal Runway or Paginated) */}
       <div
         ref={scrollContainerRef}
-        className={`relative overflow-y-hidden py-4 ${
+        className={`relative overflow-y-hidden py-3 ${
           isRunway
             ? 'overflow-x-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [will-change:scroll-position]'
-            : 'overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-white/10 scrollbar-track-transparent'
+            : 'overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent'
         }`}
       >
         <div
           className="relative mx-auto transition-all"
-          style={{ width: `${totalWidth}px`, height: `${totalHeight + (isRunway ? 28 : 0)}px`, minHeight: '190px' }}
+          style={{ width: `${totalWidth}px`, height: `${totalHeight + (isRunway ? 28 : 0)}px`, minHeight: '300px' }}
         >
           {/* Runway Continuous Scrub & Timeline Ruler */}
           {isRunway && (
             <div
               ref={timelineRulerRef}
               onMouseDown={handleTimelineMouseDown}
-              className="absolute top-0 left-0 right-0 h-7 bg-slate-100 border-b border-slate-200 dark:bg-slate-900/90 dark:border-b dark:border-white/10 backdrop-blur-sm rounded-t-xl overflow-hidden cursor-crosshair select-none z-25 group/timeline shadow-inner"
+              className="absolute top-0 left-0 right-0 h-7 bg-slate-950/90 border-b border-cyan-500/20 backdrop-blur-md rounded-t-xl overflow-hidden cursor-crosshair select-none z-25 group/timeline shadow-inner"
               title="Línea de Tiempo Runway: Haz clic o arrastra para situar el cursor / reproducir desde aquí"
             >
               {measures.map((m, mIdx) => {
@@ -928,12 +931,12 @@ export default function DrumScoreRenderer({
                     className={`absolute inset-y-0 border-r flex items-center text-xs font-mono transition-colors group/timeline-bar ${
                       isPlayingHere
                         ? 'border-cyan-500/40 bg-cyan-500/10'
-                        : 'border-slate-300 dark:border-white/10 hover:bg-slate-200/50 dark:hover:bg-white/[0.03]'
+                        : 'border-white/10 hover:bg-white/[0.04]'
                     }`}
                     style={{ left: `${measureX}px`, width: `${currentMeasureWidth}px` }}
                   >
-                    {/* Marcador de compás (C1, C2, C3...) integrado en la esquina superior izquierda */}
-                    <div className="flex items-center gap-1 pl-1.5 pr-2 flex-shrink-0">
+                    {/* Insignia flotante en cápsula moderna con borde cian tenue */}
+                    <div className="flex items-center gap-1.5 pl-2 pr-2.5 flex-shrink-0">
                       <button
                         type="button"
                         onClick={(e) => {
@@ -941,14 +944,15 @@ export default function DrumScoreRenderer({
                           onSelectStep(mIdx, 0, 0);
                           if (seekToStep) seekToStep(mIdx, 0, 0);
                         }}
-                        className={`text-xs px-1.5 py-0.5 rounded transition-all cursor-pointer border select-none ${
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 border select-none ${
                           isPlayingHere || selectedMeasureIndex === mIdx
-                            ? 'bg-cyan-100 border-cyan-400 text-cyan-950 font-bold dark:bg-cyan-950/80 dark:border-cyan-400 dark:text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.25)]'
-                            : 'bg-white border-slate-300 text-slate-700 hover:border-slate-400 hover:text-slate-900 dark:bg-slate-900/90 dark:border-slate-700/80 dark:text-slate-200 font-medium hover:dark:border-slate-500 hover:dark:text-white backdrop-blur-sm'
+                            ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_14px_rgba(34,211,238,0.4)]'
+                            : 'bg-slate-900/90 border-cyan-500/30 text-cyan-300 hover:border-cyan-400 hover:text-white backdrop-blur-md shadow-[0_0_8px_rgba(6,182,212,0.15)]'
                         }`}
                         title={`Compás ${mIdx + 1} (Clic para enfocar / reproducir)`}
                       >
-                        C{mIdx + 1}
+                        <span className={`w-1.5 h-1.5 rounded-full ${isPlayingHere ? 'bg-cyan-300 animate-ping' : 'bg-cyan-400'}`} />
+                        <span>Compás {mIdx + 1}</span>
                       </button>
 
                       {measures.length > 1 && onRemoveMeasure && (
@@ -958,7 +962,7 @@ export default function DrumScoreRenderer({
                             e.stopPropagation();
                             onRemoveMeasure(mIdx);
                           }}
-                          className="opacity-0 group-hover/timeline-bar:opacity-100 p-0.5 rounded hover:bg-rose-500/20 text-slate-400 dark:text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 transition-opacity cursor-pointer"
+                          className="opacity-0 group-hover/timeline-bar:opacity-100 p-0.5 rounded-full hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-opacity cursor-pointer"
                           title={`Eliminar Compás C${mIdx + 1}`}
                         >
                           <X className="w-3 h-3" />
@@ -973,10 +977,10 @@ export default function DrumScoreRenderer({
                         return (
                           <div
                             key={`tick-${mIdx}-${bIdx}`}
-                            className={`flex-1 h-full border-r border-slate-200 dark:border-white/5 flex items-center justify-center transition-all ${
+                            className={`flex-1 h-full border-r border-white/5 flex items-center justify-center transition-all ${
                               isCurrentBeat
-                                ? 'bg-cyan-500/20 dark:bg-cyan-500/25 text-cyan-900 dark:text-cyan-300 font-bold text-sm scale-110 shadow-xs'
-                                : 'text-slate-500 dark:text-slate-400 font-mono text-xs hover:text-slate-900 dark:hover:text-white hover:bg-cyan-500/10'
+                                ? 'bg-cyan-500/25 text-amber-300 font-bold text-sm scale-110 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)]'
+                                : 'text-slate-400 font-mono text-xs hover:text-white hover:bg-cyan-500/10'
                             }`}
                           >
                             <span>{bIdx + 1}</span>
@@ -999,7 +1003,7 @@ export default function DrumScoreRenderer({
             const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
             const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
             const measureX = 20 + colIndex * currentMeasureWidth;
-            const measureY = (isRunway ? 34 : 25) + rowIndex * rowHeight;
+            const measureY = (isRunway ? 24 : 16) + rowIndex * rowHeight;
 
             return Array.from({ length: beatsCount }).map((_, bIdx) => {
               const matchingPos = notePositions.find(
@@ -1014,27 +1018,27 @@ export default function DrumScoreRenderer({
                   className="absolute pointer-events-none z-10 flex flex-col items-center"
                   style={{
                     left: `${beatX}px`,
-                    top: `${measureY - 20}px`,
-                    height: `${rowHeight - 10}px`,
+                    top: `${measureY - 14}px`,
+                    height: `${rowHeight + 10}px`,
                     transform: 'translateX(-50%)',
                   }}
                 >
-                  {/* Número de Pulso en Ámbar/Dorado Tenue */}
+                  {/* Número de Pulso en Ámbar/Dorado Suave */}
                   <span
                     className={`font-mono text-xs font-black transition-all duration-75 select-none ${
                       isCurrentBeat
-                        ? 'text-amber-300 scale-110 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)]'
-                        : 'text-amber-400/40'
+                        ? 'text-amber-300 scale-125 drop-shadow-[0_0_10px_rgba(251,191,36,0.9)]'
+                        : 'text-amber-400/50'
                     }`}
                   >
                     {bIdx + 1}
                   </span>
-                  {/* Línea vertical guía translúcida */}
+                  {/* Línea vertical guía de puntos sutiles: stroke-dasharray="3,3" stroke="rgba(56, 189, 248, 0.15)" */}
                   <div
-                    className={`w-[1px] flex-1 mt-1 border-l border-dashed transition-colors duration-100 ${
+                    className={`w-[1px] flex-1 mt-1 transition-all duration-100 ${
                       isCurrentBeat
-                        ? 'border-amber-400/70 shadow-[0_0_8px_rgba(251,191,36,0.6)]'
-                        : 'border-amber-400/20'
+                        ? 'border-l-[1.5px] border-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.6)]'
+                        : 'border-l-[1.5px] border-dotted border-sky-400/20'
                     }`}
                   />
                 </div>
@@ -1047,7 +1051,7 @@ export default function DrumScoreRenderer({
             const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
             const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
             const measureX = 20 + colIndex * currentMeasureWidth;
-            const measureY = (isRunway ? 34 : 25) + rowIndex * rowHeight;
+            const measureY = (isRunway ? 24 : 16) + rowIndex * rowHeight;
             const isMeasureSelected = selectedMeasureIndex === mIdx;
             const isMeasurePlaying = isPlaying && playhead.measureIndex === mIdx;
 
@@ -1076,22 +1080,23 @@ export default function DrumScoreRenderer({
                 {/* Measure Section Badge with Contextual Delete Action (Paginated Mode only) */}
                 {!isRunway && (
                   <div
-                    className="group/stave-hdr absolute z-25 flex items-center gap-1 transition-all"
+                    className="group/stave-hdr absolute z-25 flex items-center gap-1.5 transition-all"
                     style={{
                       left: `${measureX + (colIndex === 0 ? 32 : 12)}px`,
-                      top: `${measureY - 14}px`,
+                      top: `${measureY - 16}px`,
                     }}
                   >
                     <button
                       type="button"
                       onClick={() => onSelectStep(mIdx, 0, 0)}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-mono transition-all cursor-pointer flex items-center gap-1 border select-none ${
+                      className={`px-3 py-0.5 rounded-full text-[11px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 border select-none ${
                         isMeasurePlaying || isMeasureSelected
-                          ? 'bg-cyan-100 border border-cyan-400 text-cyan-950 font-semibold shadow-[0_0_12px_rgba(34,211,238,0.25)] dark:bg-cyan-950/80 dark:border-cyan-400 dark:text-cyan-300 dark:shadow-[0_0_12px_rgba(34,211,238,0.25)]'
-                          : 'bg-white border border-slate-300 text-slate-700 hover:border-slate-400 hover:text-slate-900 dark:bg-slate-900/90 dark:border-slate-700/80 dark:text-slate-200 font-medium hover:dark:border-slate-500 hover:dark:text-white backdrop-blur-sm'
+                          ? 'bg-cyan-500/25 border-cyan-400 text-cyan-200 shadow-[0_0_14px_rgba(34,211,238,0.4)]'
+                          : 'bg-slate-900/90 border-cyan-500/30 text-cyan-300 hover:border-cyan-400 hover:text-white backdrop-blur-md shadow-[0_0_8px_rgba(6,182,212,0.15)]'
                       }`}
                       title={`Compás ${mIdx + 1} (Clic para enfocar)`}
                     >
+                      <span className={`w-1.5 h-1.5 rounded-full ${isMeasurePlaying ? 'bg-cyan-300 animate-ping' : 'bg-cyan-400'}`} />
                       <span>Compás {mIdx + 1}</span>
                     </button>
 
@@ -1102,7 +1107,7 @@ export default function DrumScoreRenderer({
                           e.stopPropagation();
                           onRemoveMeasure(mIdx);
                         }}
-                        className="opacity-0 group-hover/stave-hdr:opacity-100 p-0.5 rounded bg-white border border-slate-300 text-slate-400 hover:border-slate-400 hover:text-rose-600 dark:bg-slate-900/90 dark:border-slate-700/80 dark:text-slate-300 hover:dark:border-rose-500/40 hover:dark:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                        className="opacity-0 group-hover/stave-hdr:opacity-100 p-1 rounded-full bg-slate-900/80 border border-slate-700/80 text-slate-400 hover:border-rose-500/40 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                         title={`Eliminar Compás C${mIdx + 1}`}
                       >
                         <X className="w-3 h-3" />
@@ -1146,7 +1151,7 @@ export default function DrumScoreRenderer({
                       className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-bold border transition-all duration-75 flex items-center gap-1 ${
                         isBeatActive
                           ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_14px_#f59e0b] scale-110'
-                          : 'bg-white/95 dark:bg-surface-dark/95 border-amber-500/50 text-amber-900 dark:text-amber-300/90 shadow-sm'
+                          : 'bg-slate-900/90 border-amber-500/50 text-amber-300/90 shadow-sm'
                       }`}
                       title={`Tiempo a tierra ${pos.beatIndex + 1} silenciado por síncopa (referencia de anclaje)`}
                     >
@@ -1167,7 +1172,7 @@ export default function DrumScoreRenderer({
                 );
               })}
 
-          {/* Interactive Step Click Zones & Selection Highlights */}
+          {/* Interactive Step Click Zones, Note Hits & Floating Badges */}
           {notePositions.map((pos) => {
             const isSelected =
               pos.measureIndex === selectedMeasureIndex &&
@@ -1183,58 +1188,143 @@ export default function DrumScoreRenderer({
             const stepData =
               measures[pos.measureIndex]?.beats[pos.beatIndex]?.steps[pos.stepIndex];
             const hasHits = stepData && stepData.hits && stepData.hits.length > 0;
+            const hasAccent = Boolean(
+              (stepData as any)?.accent || (stepData?.hits && stepData.hits.some((h) => h.accent))
+            );
+            const rawSticking = stepData?.sticking || stepData?.hits?.find((h) => h.sticking)?.sticking;
+            const sticking = rawSticking ? String(rawSticking).trim().toUpperCase() : null;
 
             return (
-              <div
-                key={`step-hitbox-${pos.measureIndex}-${pos.beatIndex}-${pos.stepIndex}`}
-                onClick={() => onSelectStep(pos.measureIndex, pos.beatIndex, pos.stepIndex)}
-                className={`group absolute -translate-x-1/2 cursor-pointer transition-all flex flex-col items-center justify-between ${
-                  isSelected
-                    ? 'z-20'
-                    : isPlayheadHere
-                    ? 'z-10'
-                    : 'z-0 hover:bg-white/[0.04]'
-                }`}
-                style={{
-                  left: `${pos.x}px`,
-                  top: `${pos.y - 12}px`,
-                  height: '160px',
-                  width: `${Math.max(28, pos.width * 0.9)}px`,
-                }}
-              >
-                {/* Top Beat/Step Indicator Pill */}
+              <React.Fragment key={`step-pos-group-${pos.measureIndex}-${pos.beatIndex}-${pos.stepIndex}`}>
+                {/* Floating Accent Arrow (Neon Gold #F59E0B) */}
+                {hasAccent && (
+                  <div
+                    className="absolute -translate-x-1/2 pointer-events-none z-20 flex items-center justify-center transition-transform"
+                    style={{
+                      left: `${pos.x}px`,
+                      top: `${pos.y + 4}px`,
+                    }}
+                  >
+                    <span
+                      className={`font-black text-base select-none leading-none transition-all ${
+                        isPlayheadHere
+                          ? 'text-amber-300 scale-125 drop-shadow-[0_0_14px_rgba(251,191,36,1)]'
+                          : 'text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.85)]'
+                      }`}
+                    >
+                      &gt;
+                    </span>
+                  </div>
+                )}
+
+                {/* Modern Sticking Chip (Floating R / L / B / K Badge) */}
+                {sticking && (
+                  <div
+                    className="absolute -translate-x-1/2 pointer-events-none z-20 flex items-center justify-center transition-all duration-75 select-none"
+                    style={{
+                      left: `${pos.x}px`,
+                      top: `${pos.y + 138}px`,
+                    }}
+                  >
+                    {sticking === 'R' ? (
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-extrabold text-sm transition-all duration-75 select-none ${
+                          isPlayheadHere
+                            ? 'bg-cyan-400/40 border border-cyan-300 text-white font-black scale-110 shadow-[0_0_14px_rgba(34,211,238,0.8)] brightness-125'
+                            : 'bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.3)]'
+                        }`}
+                      >
+                        R
+                      </span>
+                    ) : sticking === 'L' ? (
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-extrabold text-sm transition-all duration-75 select-none ${
+                          isPlayheadHere
+                            ? 'bg-fuchsia-400/40 border border-fuchsia-300 text-white font-black scale-110 shadow-[0_0_14px_rgba(217,70,239,0.8)] brightness-125'
+                            : 'bg-fuchsia-500/20 border border-fuchsia-400/50 text-fuchsia-300 shadow-[0_0_8px_rgba(217,70,239,0.3)]'
+                        }`}
+                      >
+                        L
+                      </span>
+                    ) : sticking === 'B' ? (
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-extrabold text-sm transition-all duration-75 select-none ${
+                          isPlayheadHere
+                            ? 'bg-amber-400/40 border border-amber-300 text-white font-black scale-110 shadow-[0_0_14px_rgba(245,158,11,0.8)] brightness-125'
+                            : 'bg-amber-500/20 border border-amber-400/50 text-amber-300 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+                        }`}
+                      >
+                        B
+                      </span>
+                    ) : sticking === 'K' ? (
+                      <span
+                        className={`px-2 py-0.5 rounded-md font-extrabold text-sm transition-all duration-75 select-none ${
+                          isPlayheadHere
+                            ? 'bg-emerald-400/40 border border-emerald-300 text-white font-black scale-110 shadow-[0_0_14px_rgba(16,185,129,0.8)] brightness-125'
+                            : 'bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                        }`}
+                      >
+                        K
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-600/50 text-slate-300 font-extrabold text-sm shadow-[0_0_8px_rgba(148,163,184,0.2)]">
+                        {sticking}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Interactive Click Zone / Hitbox */}
                 <div
-                  className={`text-[9px] font-mono px-1 py-0.2 rounded transition-all ${
+                  onClick={() => onSelectStep(pos.measureIndex, pos.beatIndex, pos.stepIndex)}
+                  className={`group absolute -translate-x-1/2 cursor-pointer transition-all flex flex-col items-center justify-between ${
                     isSelected
-                      ? 'bg-cyan-400 text-black font-bold shadow-[0_0_10px_#22d3ee]'
+                      ? 'z-20'
                       : isPlayheadHere
-                      ? 'bg-purple-500 text-white font-bold'
-                      : 'text-gray-500 opacity-0 group-hover:opacity-100 bg-white/10'
+                      ? 'z-10'
+                      : 'z-0 hover:bg-white/[0.04]'
                   }`}
+                  style={{
+                    left: `${pos.x}px`,
+                    top: `${pos.y - 12}px`,
+                    height: '160px',
+                    width: `${Math.max(28, pos.width * 0.9)}px`,
+                  }}
                 >
-                  {pos.stepIndex === 0 ? `B${pos.beatIndex + 1}` : `.${pos.stepIndex + 1}`}
+                  {/* Top Beat/Step Indicator Pill */}
+                  <div
+                    className={`text-[9px] font-mono px-1 py-0.2 rounded transition-all ${
+                      isSelected
+                        ? 'bg-cyan-400 text-black font-bold shadow-[0_0_10px_#22d3ee]'
+                        : isPlayheadHere
+                        ? 'bg-purple-500 text-white font-bold'
+                        : 'text-gray-500 opacity-0 group-hover:opacity-100 bg-white/10'
+                    }`}
+                  >
+                    {pos.stepIndex === 0 ? `B${pos.beatIndex + 1}` : `.${pos.stepIndex + 1}`}
+                  </div>
+
+                  {/* Modern Neon Cursor (Replaces old bulky box) */}
+                  {isSelected && (
+                    <div className="absolute inset-y-2 inset-x-0 border-2 border-cyan-400/80 bg-cyan-400/10 rounded-xl shadow-[0_0_18px_rgba(34,211,238,0.35)] pointer-events-none animate-pulse-subtle" />
+                  )}
+
+                  {/* Active Note Hit Pulse: Flash de luz y aura al momento exacto del golpe */}
+                  {isPlayheadHere && hasHits && (
+                    <div className="absolute left-1/2 top-[58px] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-25">
+                      <div className="w-12 h-12 rounded-full bg-cyan-400/35 border border-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.9)] animate-ping" />
+                      <div className="absolute inset-0 m-auto w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_16px_#ffffff] scale-125" />
+                    </div>
+                  )}
+
+                  {/* Hits Summary Tag on Hover */}
+                  {hasHits && (
+                    <div className="opacity-0 group-hover:opacity-100 absolute -bottom-2 bg-slate-900/95 border border-slate-700/80 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-300 shadow-md whitespace-nowrap pointer-events-none transition-opacity z-30">
+                      {stepData.hits.map((h) => DRUM_PIECES[h.pieceId]?.shortName || h.pieceId).join('+')}
+                    </div>
+                  )}
                 </div>
-
-                {/* Modern Neon Cursor (Replaces old bulky box) */}
-                {isSelected && (
-                  <div className="absolute inset-y-2 inset-x-0 border-2 border-cyan-400/80 bg-cyan-400/10 rounded-xl shadow-[0_0_18px_rgba(34,211,238,0.35)] pointer-events-none animate-pulse-subtle" />
-                )}
-
-                {/* Active Note Hit Pulse: Flash de luz y aura al momento exacto del golpe */}
-                {isPlayheadHere && hasHits && (
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                    <div className="w-10 h-10 rounded-full bg-cyan-400/35 border border-cyan-300 shadow-[0_0_24px_#22d3ee] animate-ping" />
-                    <div className="absolute inset-0 m-auto w-3 h-3 rounded-full bg-white shadow-[0_0_12px_#ffffff] scale-125" />
-                  </div>
-                )}
-
-                {/* Hits Summary Tag on Hover */}
-                {hasHits && (
-                  <div className="opacity-0 group-hover:opacity-100 absolute -bottom-2 bg-slate-900/95 border border-slate-700/80 rounded px-1.5 py-0.5 text-[9px] font-mono text-cyan-300 shadow-md whitespace-nowrap pointer-events-none transition-opacity z-30">
-                    {stepData.hits.map((h) => DRUM_PIECES[h.pieceId]?.shortName || h.pieceId).join('+')}
-                  </div>
-                )}
-              </div>
+              </React.Fragment>
             );
           })}
 
@@ -1251,24 +1341,24 @@ export default function DrumScoreRenderer({
                 willChange: 'transform',
               }}
             >
-              {/* Laser Core Beam (Cyan when playing, Amber when paused) */}
+              {/* Laser Core Beam with vertical gradient & neon glow */}
               <div
                 className={`w-[2.5px] h-full ${
                   isPlaying
-                    ? 'bg-cyan-400 shadow-[0_0_16px_#22d3ee,0_0_32px_#06b6d4]'
-                    : 'bg-amber-400 shadow-[0_0_16px_#f59e0b,0_0_26px_#f59e0b]'
+                    ? 'bg-gradient-to-b from-cyan-400 via-cyan-300 to-transparent shadow-[0_0_16px_rgba(34,211,238,0.85),0_0_30px_rgba(6,182,212,0.6)]'
+                    : 'bg-gradient-to-b from-amber-400 via-amber-300 to-transparent shadow-[0_0_16px_rgba(245,158,11,0.85),0_0_24px_rgba(245,158,11,0.5)]'
                 }`}
               />
-              {/* Top Reading Diamond */}
+              {/* Puntero Superior Brillante: Pequeño Rombo Luminoso */}
               <div
-                className={`absolute -top-1 -left-[5px] w-3 h-3 rotate-45 ${
+                className={`absolute -top-1.5 -left-[4.5px] w-3 h-3 rotate-45 border ${
                   isPlaying
-                    ? 'bg-cyan-400 shadow-[0_0_14px_#22d3ee]'
-                    : 'bg-amber-400 shadow-[0_0_14px_#f59e0b]'
+                    ? 'bg-cyan-300 border-white shadow-[0_0_14px_rgba(34,211,238,0.95)]'
+                    : 'bg-amber-300 border-white shadow-[0_0_14px_rgba(245,158,11,0.95)]'
                 }`}
               />
               {/* Glowing reading core dot at stave center */}
-              <div className="absolute top-[88px] -left-[3px] w-2 h-2 rounded-full bg-white shadow-[0_0_12px_#fff]" />
+              <div className="absolute top-[88px] -left-[2.5px] w-2 h-2 rounded-full bg-white shadow-[0_0_12px_#ffffff]" />
             </div>
           )}
 
@@ -1282,10 +1372,10 @@ export default function DrumScoreRenderer({
                 height: `${rowHeight - 15}px`,
               }}
             >
-              {/* Laser Core Beam */}
-              <div className="w-[2.5px] h-full bg-cyan-400 shadow-[0_0_16px_#22d3ee,0_0_30px_#06b6d4]" />
-              {/* Laser Top Diamond Indicator */}
-              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-cyan-400 rotate-45 shadow-[0_0_12px_#22d3ee]" />
+              {/* Laser Core Beam with vertical gradient */}
+              <div className="w-[2.5px] h-full bg-gradient-to-b from-cyan-400 via-cyan-300 to-transparent shadow-[0_0_16px_rgba(34,211,238,0.85),0_0_30px_rgba(6,182,212,0.6)]" />
+              {/* Laser Top Rombo Pointer */}
+              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-cyan-300 border border-white shadow-[0_0_14px_rgba(34,211,238,0.95)]" />
             </div>
           )}
         </div>

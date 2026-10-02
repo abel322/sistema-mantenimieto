@@ -397,9 +397,9 @@ export default function SynthesiaDrumStage() {
         {/* ================================================================= */}
         {/* ESCENARIO PRINCIPAL: PENTAGRAMA DE BATERÍA ESTÁNDAR (FLEX-1)     */}
         {/* ================================================================= */}
-        <main className="w-full flex-1 min-h-0 bg-[#131b2e]/90 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-xl relative overflow-hidden flex flex-col justify-between gap-2">
+        <main className="w-full flex-1 min-h-0 bg-[#131b2e]/90 border border-slate-800 rounded-2xl p-2 sm:p-2.5 shadow-2xl backdrop-blur-xl relative overflow-hidden flex flex-col justify-between gap-1.5">
           {/* Header del Escenario de Partitura */}
-          <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2 font-mono text-xs shrink-0">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-1.5 font-mono text-xs shrink-0">
             <span className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
               <Music className="w-4 h-4 text-cyan-400" />
               <span>PENTAGRAMA ESTÁNDAR DE BATERÍA • CLAVE DE PERCUSIÓN (5 LÍNEAS)</span>
@@ -415,8 +415,8 @@ export default function SynthesiaDrumStage() {
             </div>
           </div>
 
-          {/* Renderizado de Partitura con VexFlow & Cursor Láser Seguidor */}
-          <div className="w-full flex-1 min-h-0 bg-[#0a0f1d] rounded-xl border border-slate-800/90 shadow-inner overflow-hidden flex flex-col justify-center relative">
+          {/* Renderizado de Partitura con VexFlow & Cyber-Glass Grid */}
+          <div className="w-full flex-1 min-h-0 bg-gradient-to-b from-slate-900/90 via-[#090e1a] to-[#060a12] border border-cyan-500/20 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col justify-center relative p-0">
             <DrumScoreRenderer
               measures={measures}
               selectedMeasureIndex={selectedMeasureIndex}
@@ -453,16 +453,17 @@ export default function SynthesiaDrumStage() {
               <span className="text-slate-400 font-bold uppercase text-[10px]">Sticking:</span>
               <span className="flex items-center gap-1 text-cyan-300 font-bold">
                 <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-                R: Mano Derecha
+                R (Derecha)
               </span>
-              <span className="flex items-center gap-1 text-purple-300 font-bold">
-                <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
-                L: Mano Izquierda
+              <span className="flex items-center gap-1 text-fuchsia-300 font-bold">
+                <span className="w-2 h-2 rounded-full bg-fuchsia-400 shadow-[0_0_8px_rgba(217,70,239,0.8)]" />
+                L (Izquierda)
               </span>
               <span className="text-slate-600">•</span>
               <span className="text-cyan-400 font-bold">× Platillos</span>
-              <span className="text-slate-200 font-bold">● Caja / Toms</span>
+              <span className="text-white font-bold">○ Caja</span>
               <span className="text-emerald-400 font-bold">● Bombo</span>
+              <span className="text-amber-400 font-bold">&gt; Acento</span>
             </div>
 
             <div className="text-[10px] text-slate-400 font-mono hidden md:flex items-center gap-2">
