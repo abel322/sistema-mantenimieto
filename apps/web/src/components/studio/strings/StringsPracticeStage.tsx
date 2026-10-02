@@ -296,7 +296,7 @@ export default function StringsPracticeStage() {
   // Safe early return placed strictly after all hooks
   if (!mounted) {
     return (
-      <div className="fixed inset-0 z-50 w-screen h-screen bg-[#080c14] flex items-center justify-center text-slate-400">
+      <div className="w-full min-h-[60vh] bg-[#080c14] flex items-center justify-center text-slate-400">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-full border-4 border-amber-500/30 border-t-amber-400 animate-spin" />
           <span className="text-xs font-mono font-bold tracking-wider uppercase text-amber-400">
@@ -308,11 +308,12 @@ export default function StringsPracticeStage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen overflow-hidden bg-[#080c14] text-slate-100 flex flex-col justify-between select-none">
-      {/* ================================================================= */}
-      {/* A) TOP HUD MINIMALISTA FLOTANTE                                   */}
-      {/* ================================================================= */}
-      <header className="w-full px-4 py-2.5 bg-[#0a0f1d]/95 border-b border-slate-800/80 shadow-2xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 z-50">
+    <div className="w-full min-h-[calc(100vh-5rem)] bg-[#080c14] text-slate-100 flex flex-col justify-start py-6 px-3 sm:px-6 lg:px-8">
+      <div className="w-full max-w-7xl mx-auto space-y-6 select-none">
+        {/* ================================================================= */}
+        {/* A) TOP HUD MINIMALISTA                                            */}
+        {/* ================================================================= */}
+        <header className="w-full p-3 sm:p-4 rounded-2xl bg-[#0a0f1d]/95 border border-slate-800/80 shadow-2xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-3">
         {/* Left: Botón Volver al Editor + Info de Rutina */}
         <div className="flex items-center gap-3">
           <Link
@@ -496,9 +497,9 @@ export default function StringsPracticeStage() {
       {/* ================================================================= */}
       {/* B) ESCENARIO PRINCIPAL SYNTHESIA / ROCKSMITH                      */}
       {/* ================================================================= */}
-      <main className="flex-1 min-h-0 w-full flex flex-col justify-between relative overflow-hidden bg-[#080c14] p-3 sm:p-4 gap-3">
+      <main className="w-full flex flex-col gap-6">
         {/* Pista Superior: Runway Multi-Cuerda a 60 FPS */}
-        <div className="w-full flex-1 min-h-[220px] rounded-2xl bg-[#0a0f1d] border border-slate-800/80 shadow-2xl relative overflow-hidden flex flex-col">
+        <div className="w-full rounded-2xl bg-[#0a0f1d] border border-slate-800/80 shadow-2xl relative overflow-hidden flex flex-col">
           {displayMode === 'runway' ? (
             <StringsRunwayView
               instrument={instrument}
@@ -516,7 +517,7 @@ export default function StringsPracticeStage() {
               onNoteTrigger={handleNoteTrigger}
             />
           ) : (
-            <div className="w-full h-full overflow-y-auto p-4 custom-scrollbar">
+            <div className="w-full h-full min-h-[260px] overflow-y-auto p-4 custom-scrollbar">
               <StringsSequencerGrid
                 instrument={instrument}
                 tracks={tracks}
@@ -585,5 +586,6 @@ export default function StringsPracticeStage() {
         </div>
       </main>
     </div>
+  </div>
   );
 }

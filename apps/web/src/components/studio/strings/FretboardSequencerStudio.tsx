@@ -1112,14 +1112,7 @@ export default function FretboardSequencerStudio() {
       isMetronomeActive: false,
     });
 
-    // 4. Intentar pantalla completa nativa (best-effort)
-    try {
-      if (typeof document !== 'undefined' && !document.fullscreenElement) {
-        await document.documentElement.requestFullscreen().catch(() => {});
-      }
-    } catch (_) {}
-
-    // 5. Navegar al escenario de práctica Synthesia Runway
+    // 4. Navegar al escenario de práctica Synthesia Runway
     router.push('/studio/strings/practice');
   }, [
     tracks,
