@@ -43,6 +43,8 @@ interface NoteXPosition {
   x: number;
   y: number;
   width: number;
+  staffTopY: number;
+  staffBottomY: number;
 }
 
 export default function DrumScoreRenderer({
@@ -194,17 +196,35 @@ export default function DrumScoreRenderer({
           const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
           const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
           const measureX = 20 + colIndex * currentMeasureWidth;
-          const measureY = (isRunway ? 24 : 16) + rowIndex * rowHeight;
+          const measureY = (isRunway ? 28 : 16) + rowIndex * rowHeight;
 
-          // Create percussion stave with Cyber-Glass lines (spacing: 20px, +100% expansion)
+          // Create percussion stave with Cyber-Glass lines (spacing: 22px, dominant & expanded)
           const stave = new Stave(measureX, measureY, currentMeasureWidth, {
-            spacingBetweenLinesPx: 20,
+            spacingBetweenLinesPx: 22,
+            spaceAboveStaffLn: 2.8,
+            spaceBelowStaffLn: 2.5,
           });
-          stave.setStyle({ fillStyle: staveFill, strokeStyle: staveColor, lineWidth: 1.8 });
+          stave.setStyle({ fillStyle: staveFill, strokeStyle: staveColor, lineWidth: 2.0 });
 
-          // Clef at the start of each line
+          // Clef at the start of each line (scaled to span lines 1 to 5)
           if (colIndex === 0) {
             stave.addClef('percussion');
+            try {
+              const clef = stave
+                .getModifiers()
+                .find(
+                  (m: any) =>
+                    m.type === 'percussion' ||
+                    (m.getCategory && m.getCategory() === 'clefs')
+                );
+              if (clef) {
+                clef.fontScale = 1.45;
+                clef.setStyle({
+                  fillStyle: isDarkTheme ? '#22D3EE' : '#0891B2',
+                  strokeStyle: isDarkTheme ? '#22D3EE' : '#0891B2',
+                });
+              }
+            } catch (_) {}
           }
 
           // Meter signature at the start of the score
@@ -392,9 +412,9 @@ export default function DrumScoreRenderer({
                     const noteHead = staveNote.noteHeads[keyIndex];
 
                     if (noteHead) {
-                      noteHead.fontScale = 1.35;
+                      noteHead.fontScale = 1.45;
                       if (noteHead.renderOptions) {
-                        noteHead.renderOptions.strokePx = 2.4;
+                        noteHead.renderOptions.strokePx = 2.8;
                       }
 
                       if (noteHead.glyphProps) {
@@ -455,6 +475,21 @@ export default function DrumScoreRenderer({
                       }
                     }
                   });
+                }
+
+                staveNote.fontScale = 1.45;
+                if (staveNote.renderOptions) {
+                  staveNote.renderOptions.strokePx = 2.8;
+                }
+                if (staveNote.stem) {
+                  staveNote.stem.stemExtension = 14;
+                  try {
+                    staveNote.stem.setStyle({
+                      fillStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
+                      strokeStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
+                      lineWidth: 3.2,
+                    });
+                  } catch (_) {}
                 }
               }
 
@@ -521,18 +556,18 @@ export default function DrumScoreRenderer({
 
             voice.draw(context, stave);
 
-            // Barras de unión (beams) gruesas y sólidas (4.8px) con esquinas limpias
+            // Barras de unión (beams) gruesas y sólidas (5.0px) con esquinas limpias
             measureBeams.forEach((beam) => {
               try {
                 if (typeof (beam as any).setStyle === 'function') {
                   (beam as any).setStyle({
                     fillStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
                     strokeStyle: isDarkTheme ? '#F8FAFC' : '#0F172A',
-                    lineWidth: 4.8,
+                    lineWidth: 5.0,
                   });
                 }
                 if ((beam as any).renderOptions) {
-                  (beam as any).renderOptions.beamWidth = 7.5;
+                  (beam as any).renderOptions.beamWidth = 8.5;
                 }
                 beam.setContext(context).draw();
               } catch (_) {}
@@ -552,6 +587,11 @@ export default function DrumScoreRenderer({
             });
 
             // Record exact X and Y coordinates for playhead and click interaction
+            const staffTopY =
+              typeof stave.getYForLine === 'function' ? stave.getYForLine(0) : measureY + 62;
+            const staffBottomY =
+              typeof stave.getYForLine === 'function' ? stave.getYForLine(4) : staffTopY + 4 * 22;
+
             stepMapping.forEach(({ bIdx, sIdx, note }) => {
               try {
                 const x = note.getAbsoluteX();
@@ -562,6 +602,8 @@ export default function DrumScoreRenderer({
                   x: typeof x === 'number' ? x : measureX + 50,
                   y: measureY,
                   width: currentMeasureWidth / (beatsCount * 2),
+                  staffTopY,
+                  staffBottomY,
                 });
               } catch (_) {}
             });
@@ -1003,7 +1045,10 @@ export default function DrumScoreRenderer({
             const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
             const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
             const measureX = 20 + colIndex * currentMeasureWidth;
-            const measureY = (isRunway ? 24 : 16) + rowIndex * rowHeight;
+            const measureY = (isRunway ? 28 : 16) + rowIndex * rowHeight;
+            const mPos = notePositions.find((p) => p.measureIndex === mIdx);
+            const staffTopY = mPos?.staffTopY || (measureY + 62);
+            const staffBottomY = mPos?.staffBottomY || (staffTopY + 88);
 
             return Array.from({ length: beatsCount }).map((_, bIdx) => {
               const matchingPos = notePositions.find(
@@ -1018,8 +1063,8 @@ export default function DrumScoreRenderer({
                   className="absolute pointer-events-none z-10 flex flex-col items-center"
                   style={{
                     left: `${beatX}px`,
-                    top: `${measureY - 14}px`,
-                    height: `${rowHeight + 10}px`,
+                    top: `${staffTopY - 48}px`,
+                    height: `${staffBottomY - staffTopY + 90}px`,
                     transform: 'translateX(-50%)',
                   }}
                 >
@@ -1051,7 +1096,10 @@ export default function DrumScoreRenderer({
             const rowIndex = isRunway ? 0 : Math.floor(mIdx / measuresPerRow);
             const colIndex = isRunway ? mIdx : mIdx % measuresPerRow;
             const measureX = 20 + colIndex * currentMeasureWidth;
-            const measureY = (isRunway ? 24 : 16) + rowIndex * rowHeight;
+            const measureY = (isRunway ? 28 : 16) + rowIndex * rowHeight;
+            const mPos = notePositions.find((p) => p.measureIndex === mIdx);
+            const staffTopY = mPos?.staffTopY || (measureY + 62);
+            const staffBottomY = mPos?.staffBottomY || (staffTopY + 88);
             const isMeasureSelected = selectedMeasureIndex === mIdx;
             const isMeasurePlaying = isPlaying && playhead.measureIndex === mIdx;
 
@@ -1063,9 +1111,9 @@ export default function DrumScoreRenderer({
                     className="absolute rounded-2xl pointer-events-none transition-all duration-150 z-5 border-2 border-synth-cyan/80 bg-gradient-to-b from-synth-cyan/[0.08] via-synth-violet/[0.04] to-transparent shadow-[0_0_24px_rgba(34,211,238,0.3),inset_0_0_12px_rgba(34,211,238,0.1)] animate-pulse-subtle"
                     style={{
                       left: `${measureX + 2}px`,
-                      top: isRunway ? '30px' : `${measureY - 16}px`,
+                      top: isRunway ? '30px' : `${staffTopY - 30}px`,
                       width: `${currentMeasureWidth - 4}px`,
-                      height: isRunway ? `${rowHeight}px` : `${rowHeight + 6}px`,
+                      height: isRunway ? `${staffBottomY - staffTopY + 110}px` : `${staffBottomY - staffTopY + 110}px`,
                     }}
                   >
                     {isRunway && (
@@ -1083,7 +1131,7 @@ export default function DrumScoreRenderer({
                     className="group/stave-hdr absolute z-25 flex items-center gap-1.5 transition-all"
                     style={{
                       left: `${measureX + (colIndex === 0 ? 32 : 12)}px`,
-                      top: `${measureY - 16}px`,
+                      top: `${staffTopY - 48}px`,
                     }}
                   >
                     <button
@@ -1142,8 +1190,8 @@ export default function DrumScoreRenderer({
                     className="absolute -translate-x-1/2 pointer-events-none z-15 flex flex-col items-center select-none transition-all"
                     style={{
                       left: `${pos.x}px`,
-                      top: `${pos.y - 14}px`,
-                      height: '146px',
+                      top: `${pos.staffTopY - 24}px`,
+                      height: `${pos.staffBottomY - pos.staffTopY + 48}px`,
                     }}
                   >
                     {/* Ground Anchor Pill Badge */}
@@ -1196,13 +1244,13 @@ export default function DrumScoreRenderer({
 
             return (
               <React.Fragment key={`step-pos-group-${pos.measureIndex}-${pos.beatIndex}-${pos.stepIndex}`}>
-                {/* Floating Accent Arrow (Neon Gold #F59E0B) */}
+                {/* Floating Accent Arrow (Neon Gold #F59E0B): Margin limpio por encima del pentagrama (staffTopY - 18px) */}
                 {hasAccent && (
                   <div
                     className="absolute -translate-x-1/2 pointer-events-none z-20 flex items-center justify-center transition-transform"
                     style={{
                       left: `${pos.x}px`,
-                      top: `${pos.y + 4}px`,
+                      top: `${pos.staffTopY - 18}px`,
                     }}
                   >
                     <span
@@ -1217,13 +1265,13 @@ export default function DrumScoreRenderer({
                   </div>
                 )}
 
-                {/* Modern Sticking Chip (Floating R / L / B / K Badge) */}
+                {/* Modern Sticking Chip (Floating R / L / B / K Badge): Estrictamente DEBAJO del pentagrama (staffBottomY + 32px) */}
                 {sticking && (
                   <div
                     className="absolute -translate-x-1/2 pointer-events-none z-20 flex items-center justify-center transition-all duration-75 select-none"
                     style={{
                       left: `${pos.x}px`,
-                      top: `${pos.y + 138}px`,
+                      top: `${pos.staffBottomY + 32}px`,
                     }}
                   >
                     {sticking === 'R' ? (
@@ -1286,8 +1334,8 @@ export default function DrumScoreRenderer({
                   }`}
                   style={{
                     left: `${pos.x}px`,
-                    top: `${pos.y - 12}px`,
-                    height: '160px',
+                    top: `${pos.staffTopY - 24}px`,
+                    height: `${pos.staffBottomY - pos.staffTopY + 84}px`,
                     width: `${Math.max(28, pos.width * 0.9)}px`,
                   }}
                 >
@@ -1306,12 +1354,17 @@ export default function DrumScoreRenderer({
 
                   {/* Modern Neon Cursor (Replaces old bulky box) */}
                   {isSelected && (
-                    <div className="absolute inset-y-2 inset-x-0 border-2 border-cyan-400/80 bg-cyan-400/10 rounded-xl shadow-[0_0_18px_rgba(34,211,238,0.35)] pointer-events-none animate-pulse-subtle" />
+                    <div className="absolute inset-y-1 inset-x-0 border-2 border-cyan-400/80 bg-cyan-400/10 rounded-xl shadow-[0_0_18px_rgba(34,211,238,0.35)] pointer-events-none animate-pulse-subtle" />
                   )}
 
                   {/* Active Note Hit Pulse: Flash de luz y aura al momento exacto del golpe */}
                   {isPlayheadHere && hasHits && (
-                    <div className="absolute left-1/2 top-[58px] -translate-x-1/2 -translate-y-1/2 pointer-events-none z-25">
+                    <div
+                      className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-25"
+                      style={{
+                        top: `${(pos.staffTopY + pos.staffBottomY) / 2 - (pos.staffTopY - 24)}px`,
+                      }}
+                    >
                       <div className="w-12 h-12 rounded-full bg-cyan-400/35 border border-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.9)] animate-ping" />
                       <div className="absolute inset-0 m-auto w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_16px_#ffffff] scale-125" />
                     </div>
@@ -1337,7 +1390,7 @@ export default function DrumScoreRenderer({
               }`}
               style={{
                 transform: 'translate3d(20px, 0, 0)',
-                height: `${totalHeight + 28}px`,
+                height: `${Math.max(260, totalHeight + 10)}px`,
                 willChange: 'transform',
               }}
             >
@@ -1358,7 +1411,7 @@ export default function DrumScoreRenderer({
                 }`}
               />
               {/* Glowing reading core dot at stave center */}
-              <div className="absolute top-[88px] -left-[2.5px] w-2 h-2 rounded-full bg-white shadow-[0_0_12px_#ffffff]" />
+              <div className="absolute top-[134px] -left-[2.5px] w-2 h-2 rounded-full bg-white shadow-[0_0_12px_#ffffff]" />
             </div>
           )}
 
@@ -1368,8 +1421,8 @@ export default function DrumScoreRenderer({
               className="absolute -translate-x-1/2 pointer-events-none z-30 transition-all duration-75 ease-linear"
               style={{
                 left: `${activePlayheadPos.x}px`,
-                top: `${activePlayheadPos.y - 6}px`,
-                height: `${rowHeight - 15}px`,
+                top: `${activePlayheadPos.staffTopY - 26}px`,
+                height: `${activePlayheadPos.staffBottomY - activePlayheadPos.staffTopY + 84}px`,
               }}
             >
               {/* Laser Core Beam with vertical gradient */}

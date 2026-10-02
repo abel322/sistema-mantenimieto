@@ -416,7 +416,7 @@ export default function SynthesiaDrumStage() {
           </div>
 
           {/* Renderizado de Partitura con VexFlow & Cyber-Glass Grid */}
-          <div className="w-full flex-1 min-h-0 bg-gradient-to-b from-slate-900/90 via-[#090e1a] to-[#060a12] border border-cyan-500/20 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col justify-center relative p-0">
+          <div className="w-full flex-1 min-h-[300px] bg-gradient-to-b from-slate-900/90 via-[#090e1a] to-[#060a12] border border-cyan-500/20 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col justify-center relative p-0">
             <DrumScoreRenderer
               measures={measures}
               selectedMeasureIndex={selectedMeasureIndex}
